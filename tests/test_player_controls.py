@@ -56,6 +56,24 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual(self.player.x, 160)
         self.assertEqual(self.player.feet_y, 96)
 
+    def test_fall_costs_health_and_restores_last_safe_position(self):
+        self.player.last_safe_position = (600, 160)
+        self.player.feet_y = -200
+        self.player.update(0.01, 1920, [])
+        self.assertEqual(self.player.health, 2)
+        self.assertEqual((self.player.x, self.player.feet_y), (600, 160))
+        self.assertEqual(self.player.invulnerability, 1)
+        self.assertFalse(self.player.jump_requested)
+        self.assertFalse(self.player.is_moving)
+
+    def test_health_exhaustion_restores_start(self):
+        self.player.health = 1
+        self.player.last_safe_position = (600, 160)
+        self.player.feet_y = -200
+        self.player.update(0.01, 1920, [])
+        self.assertEqual(self.player.health, 3)
+        self.assertEqual((self.player.x, self.player.feet_y), (160, 96))
+
 
 if __name__ == '__main__':
     unittest.main()

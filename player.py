@@ -39,6 +39,12 @@ class Player:
         self.walk_distance = 0.0
         self.walk_frame = 0
         self.jump_requested = False
+        self.spawn_position = (x, feet_y)
+        self.last_safe_position = self.spawn_position
+        self.health = 3
+        self.invulnerability = 0.0
+        self.notice = ""
+        self.notice_time = 0.0
 
     @property
     def x(self):
@@ -71,6 +77,8 @@ class Player:
         self.jump_requested = False
 
     def update(self, delta_time, area_width, solids=None):
+        self.invulnerability = max(0.0, self.invulnerability - delta_time)
+        self.notice_time = max(0.0, self.notice_time - delta_time)
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         if self.jump_requested:
@@ -92,6 +100,9 @@ class Player:
             / self.walk_data["reference_height"],
         )
         self.motion.step(delta_time, direction, solids, area_width, margin)
+        if self.feet_y + BODY_HEIGHT < -32:
+            self._return_after_fall()
+            return
 
         distance = abs(self.x - previous_x)
         self.is_moving = distance > 0.000001 and self.motion.on_ground
@@ -110,6 +121,8 @@ class Player:
             self.walk_frame = 0
 
     def draw(self):
+        if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
+            return
         if self.is_moving:
             frame = self.walk_data["frames"][self.walk_frame]
             image = self.walk_image
@@ -135,6 +148,24 @@ class Player:
     def get_bb(self):
         """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""
         return self.motion.get_bb()
+
+    def _return_after_fall(self):
+        self.health -= 1
+        if self.health <= 0:
+            self.health = 3
+            self.last_safe_position = self.spawn_position
+            self.notice = "체력 소진: 시작 지점으로 복귀"
+        else:
+            self.notice = "낙하 피해 -1: 마지막 안전 발판으로 복귀"
+        self.x, self.feet_y = self.last_safe_position
+        self.motion.velocity_y = 0
+        self.motion.on_ground = True
+        self.invulnerability = 1.0
+        self.notice_time = 2.0
+        self.clear_input()
+        self.is_moving = False
+        self.walk_distance = 0.0
+        self.walk_frame = 0
 
     def draw_debug(self):
         pico2d.draw_rectangle(*self.get_bb(), r=112, g=220, b=148)

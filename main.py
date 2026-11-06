@@ -2,6 +2,7 @@
 
 import pico2d
 from time import perf_counter
+from pathlib import Path
 
 from player import Player
 from stage import Stage
@@ -13,9 +14,13 @@ from window import (
 def main():
     open_game_window()
     player = None
+    font = None
     try:
         stage = Stage()
         player = Player(x=stage.start[0], feet_y=stage.start[1])
+        font = pico2d.load_font(
+            str(Path(pico2d.__file__).parent / 'data' / 'ConsolaMalgun.ttf'), 18,
+        )
         running = True
         show_debug = False
         previous_time = perf_counter()
@@ -41,17 +46,26 @@ def main():
             if not has_input_focus():
                 player.clear_input()
             player.update(delta_time, SCREEN_WIDTH, stage.solids)
+            safe_position = stage.safe_position(player.motion)
+            if safe_position is not None:
+                player.last_safe_position = safe_position
             clear_frame()
             stage.draw(0, SCREEN_WIDTH, SCREEN_HEIGHT)
             player.draw()
             if show_debug:
                 stage.draw_debug(0)
                 player.draw_debug()
+            font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
+            font.draw(20, 24, '← / → 이동     Space 점프     F1 판정 표시     Esc 종료',
+                      (210, 219, 230))
+            if player.notice_time > 0:
+                font.draw(20, SCREEN_HEIGHT - 58, player.notice, (255, 195, 110))
             pico2d.update_canvas()
             pico2d.delay(0.001)
     finally:
         # 렌더러를 닫기 전에 캐릭터의 이미지 자원을 해제한다.
         player = None
+        font = None
         pico2d.close_canvas()
 
 
