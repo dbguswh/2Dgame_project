@@ -4,33 +4,18 @@ import pico2d
 from time import perf_counter
 
 from player import Player
+from stage import Stage
 from window import (
     SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame, has_input_focus, open_game_window,
 )
-
-
-TILE_SIZE = 32
-GROUND_Y = TILE_SIZE * 3
-
-
-def draw_ground():
-    """이동과 충돌 구현에 사용할 임시 바닥을 표시한다."""
-    pico2d.draw_rectangle(
-        0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1,
-        19, 25, 38, filled=True,
-    )
-    pico2d.draw_rectangle(
-        0, 0, SCREEN_WIDTH - 1, GROUND_Y - 1,
-        51, 56, 65, filled=True,
-    )
-    pico2d.draw_line(0, GROUND_Y, SCREEN_WIDTH - 1, GROUND_Y, 137, 148, 159)
 
 
 def main():
     open_game_window()
     player = None
     try:
-        player = Player(x=TILE_SIZE * 5, feet_y=GROUND_Y)
+        stage = Stage()
+        player = Player(x=stage.start[0], feet_y=stage.start[1])
         running = True
         show_debug = False
         previous_time = perf_counter()
@@ -55,11 +40,12 @@ def main():
 
             if not has_input_focus():
                 player.clear_input()
-            player.update(delta_time, SCREEN_WIDTH)
+            player.update(delta_time, SCREEN_WIDTH, stage.solids)
             clear_frame()
-            draw_ground()
+            stage.draw(0, SCREEN_WIDTH, SCREEN_HEIGHT)
             player.draw()
             if show_debug:
+                stage.draw_debug(0)
                 player.draw_debug()
             pico2d.update_canvas()
             pico2d.delay(0.001)
