@@ -14,16 +14,16 @@ class Stage:
         self.width = 1920
         self.start = (160, GROUND_Y)
         self.enemy_spawn = (440, GROUND_Y)
-        self.combat_bounds = (288, 544)
+        self.combat_bounds = (288, 768)
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
             Solid(1024, 0, self.width, GROUND_Y),
             Solid(192, 224, 288, 240),
             Solid(320, 96, 384, 128),
-            Solid(480, 96, 544, 128),
-            Solid(544, 96, 608, 160),
-            Solid(608, 96, 672, 192),
-            Solid(672, 160, 800, 208),
+            Solid(704, 96, 768, 128),
+            Solid(768, 96, 832, 160),
+            Solid(832, 96, 896, 192),
+            Solid(896, 160, 960, 208),
             Solid(1248, 96, 1312, 128),
             Solid(1312, 96, 1376, 160),
             Solid(1376, 96, 1440, 192),

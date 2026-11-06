@@ -15,7 +15,7 @@ class ShadeTests(unittest.TestCase):
         self.addCleanup(image_patch.stop)
         self.stage = Stage()
         self.player = Player(*self.stage.start)
-        self.enemy = Shade(*self.stage.enemy_spawn)
+        self.enemy = Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)
 
     def test_unseen_player_causes_patrol_at_48_pixels_per_second(self):
         self.enemy.update(1 / 60, self.player, self.stage)
@@ -29,7 +29,7 @@ class ShadeTests(unittest.TestCase):
         self.assertAlmostEqual(self.enemy.x, 440 - 80 / 60)
 
     def test_player_outside_section_or_on_other_floor_is_not_chased(self):
-        self.player.x = 550
+        self.player.x = self.stage.combat_bounds[1] + 8
         self.enemy.update(1 / 60, self.player, self.stage)
         self.assertEqual(self.enemy.state, 'PATROL')
         self.player.x, self.player.feet_y = 440, 250
