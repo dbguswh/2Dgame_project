@@ -3,10 +3,9 @@
 import pico2d
 
 from player import Player
+from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame, open_game_window
 
 
-SCREEN_WIDTH = 960
-SCREEN_HEIGHT = 540
 TILE_SIZE = 32
 GROUND_Y = TILE_SIZE * 3
 
@@ -25,10 +24,9 @@ def draw_ground():
 
 
 def main():
-    pico2d.open_canvas(SCREEN_WIDTH, SCREEN_HEIGHT, sync=True)
+    open_game_window()
     player = None
     try:
-        pico2d.hide_lattice()
         player = Player(x=TILE_SIZE * 5, feet_y=GROUND_Y)
         running = True
         show_debug = False
@@ -46,7 +44,7 @@ def main():
             if not running:
                 break
 
-            pico2d.clear_canvas()
+            clear_frame()
             draw_ground()
             player.draw()
             if show_debug:
