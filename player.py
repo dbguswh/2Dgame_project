@@ -264,6 +264,9 @@ class Player:
             self.feet_y + (height / 2 - feet_y) * scale,
             width * scale, height * scale,
         )
+        if self.light_cast > 0:
+            pico2d.draw_circle(self.x - camera_x + self.face_dir * 14, self.feet_y + 52,
+                               4, r=255, g=224, b=142, filled=True)
 
     def get_bb(self):
         """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""

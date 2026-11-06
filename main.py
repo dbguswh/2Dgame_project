@@ -3,6 +3,7 @@
 import pico2d
 from time import perf_counter
 from pathlib import Path
+from math import ceil
 
 from player import Player
 from enemy import Shade
@@ -87,6 +88,8 @@ def main():
             camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
             clear_frame()
             stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+            if player.light is not None:
+                player.light.draw(camera_x)
             for enemy in enemies:
                 enemy.draw(camera_x)
             player.draw(camera_x)
@@ -96,7 +99,13 @@ def main():
                 for enemy in enemies:
                     enemy.draw_debug(camera_x)
             font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
-            font.draw(20, 24, '방향키 이동    Space 점프    W 베기    F1 판정 표시    Esc 종료',
+            battery_color = (255, 215, 126) if player.battery >= 50 else (238, 145, 118)
+            font.draw(170, SCREEN_HEIGHT - 28,
+                      f'배터리 {player.battery} / {player.max_battery}', battery_color)
+            if player.light is not None:
+                seconds = ceil(player.light.remaining * 10) / 10
+                font.draw(440, SCREEN_HEIGHT - 28, f'조명 {seconds:.1f}초', (255, 221, 146))
+            font.draw(20, 24, '방향키 이동   Space 점프   W 베기   R 조명(50)   F1 판정   Esc 종료',
                       (210, 219, 230))
             if player.notice_time > 0:
                 font.draw(20, SCREEN_HEIGHT - 58, player.notice, (255, 195, 110))
