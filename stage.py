@@ -3,6 +3,7 @@
 import pico2d
 
 from physics import EPSILON, Solid
+from lighting import LightRegion
 
 
 TILE_SIZE = 32
@@ -15,6 +16,7 @@ class Stage:
         self.start = (160, GROUND_Y)
         self.enemy_spawn = (440, GROUND_Y)
         self.combat_bounds = (288, 768)
+        self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
             Solid(1024, 0, self.width, GROUND_Y),
