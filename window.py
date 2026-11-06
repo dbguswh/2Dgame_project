@@ -51,3 +51,7 @@ def clear_frame():
     # 창 비율이 바뀌어 생긴 여백까지 같은 배경색으로 지운다.
     sdl2.SDL_SetRenderDrawColor(canvas.renderer, *BACKGROUND_COLOR, 255)
     sdl2.SDL_RenderClear(canvas.renderer)
+
+
+def has_input_focus():
+    return bool(sdl2.SDL_GetWindowFlags(canvas.window) & sdl2.SDL_WINDOW_INPUT_FOCUS)

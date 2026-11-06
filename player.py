@@ -18,6 +18,7 @@ SOURCE_FEET_X = 660 - SOURCE_LEFT
 DRAW_HEIGHT = 96
 BODY_WIDTH = 24
 BODY_HEIGHT = 80
+MOVE_SPEED = 128  # 초당 4타일. 표시 창의 배율과 무관한 게임 좌표 기준이다.
 
 
 class Player:
@@ -26,12 +27,40 @@ class Player:
         self.x = x
         self.feet_y = feet_y
         self.image = pico2d.load_image(str(IMAGE_PATH))
+        self.pressed_keys = set()
+        self.face_dir = 1
+
+    def handle_event(self, event):
+        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
+            return
+        if event.type == pico2d.SDL_KEYDOWN:
+            self.pressed_keys.add(event.key)
+        elif event.type == pico2d.SDL_KEYUP:
+            self.pressed_keys.discard(event.key)
+
+    def clear_input(self):
+        self.pressed_keys.clear()
+
+    def update(self, delta_time, area_width):
+        direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
+            pico2d.SDLK_LEFT in self.pressed_keys
+        )
+        if direction:
+            self.face_dir = direction
+        self.x += direction * MOVE_SPEED * delta_time
+
+        # 두 방향 모두에서 전체 그림이 화면 안에 남도록 초기 경계를 제한한다.
+        scale = DRAW_HEIGHT / SOURCE_HEIGHT
+        margin = max(SOURCE_FEET_X, SOURCE_WIDTH - SOURCE_FEET_X) * scale
+        self.x = max(margin, min(area_width - margin, self.x))
 
     def draw(self):
         scale = DRAW_HEIGHT / SOURCE_HEIGHT
-        self.image.clip_draw_to_origin(
+        center_offset = (SOURCE_WIDTH / 2 - SOURCE_FEET_X) * scale
+        self.image.clip_composite_draw(
             SOURCE_LEFT, SOURCE_BOTTOM, SOURCE_WIDTH, SOURCE_HEIGHT,
-            self.x - SOURCE_FEET_X * scale, self.feet_y,
+            0, "h" if self.face_dir < 0 else "",
+            self.x + center_offset * self.face_dir, self.feet_y + DRAW_HEIGHT / 2,
             SOURCE_WIDTH * scale, DRAW_HEIGHT,
         )
 

@@ -1,9 +1,12 @@
 """Blackout: 게임 창과 플레이어의 기본 출력을 시작한다."""
 
 import pico2d
+from time import perf_counter
 
 from player import Player
-from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame, open_game_window
+from window import (
+    SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame, has_input_focus, open_game_window,
+)
 
 
 TILE_SIZE = 32
@@ -30,8 +33,13 @@ def main():
         player = Player(x=TILE_SIZE * 5, feet_y=GROUND_Y)
         running = True
         show_debug = False
+        previous_time = perf_counter()
 
         while running:
+            now = perf_counter()
+            # 창 이동·중단 뒤 한 프레임에 멀리 이동하는 현상을 방지한다.
+            delta_time = min(now - previous_time, 0.05)
+            previous_time = now
             for event in pico2d.get_events():
                 if event.type == pico2d.SDL_QUIT:
                     running = False
@@ -40,10 +48,14 @@ def main():
                         running = False
                     elif event.key == pico2d.SDLK_F1:
                         show_debug = not show_debug
+                player.handle_event(event)
 
             if not running:
                 break
 
+            if not has_input_focus():
+                player.clear_input()
+            player.update(delta_time, SCREEN_WIDTH)
             clear_frame()
             draw_ground()
             player.draw()
