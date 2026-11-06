@@ -59,6 +59,44 @@ class ShadeTests(unittest.TestCase):
         self.enemy.update(0.05, self.player, self.stage)
         self.assertEqual(self.player.health, 3)
 
+    def test_attack_requires_warning_and_emits_only_one_event(self):
+        self.player.x = 410
+        self.enemy.update(0.01, self.player, self.stage)
+        self.assertEqual(self.enemy.state, 'WINDUP')
+        for _ in range(40):
+            self.enemy.update(1 / 60, self.player, self.stage)
+            self.assertIsNone(self.enemy.consume_attack())
+        self.enemy.update(0.04, self.player, self.stage)
+        self.assertEqual(self.enemy.state, 'STRIKE')
+        self.assertIsNotNone(self.enemy.consume_attack())
+        self.assertIsNone(self.enemy.consume_attack())
+        self.enemy.update(0.01, self.player, self.stage)
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_jumping_above_attack_causes_miss(self):
+        self.player.x = 410
+        self.enemy.update(0.01, self.player, self.stage)
+        self.player.feet_y = 160
+        self.enemy.update(0.71, self.player, self.stage)
+        self.assertEqual(self.enemy.state, 'CHASE')
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_cannot_instantly_turn_attack_during_warning(self):
+        self.player.x = 410
+        self.enemy.update(0.01, self.player, self.stage)
+        self.player.x = 470
+        self.enemy.update(0.71, self.player, self.stage)
+        self.assertEqual(self.enemy.face_dir, -1)
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_leaving_section_cancels_warning(self):
+        self.player.x = 410
+        self.enemy.update(0.01, self.player, self.stage)
+        self.player.x = 800
+        self.enemy.update(0.1, self.player, self.stage)
+        self.assertEqual(self.enemy.state, 'PATROL')
+        self.assertIsNone(self.enemy.consume_attack())
+
 
 if __name__ == '__main__':
     unittest.main()

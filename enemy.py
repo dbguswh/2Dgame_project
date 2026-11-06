@@ -12,6 +12,9 @@ IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.p
 DRAW_HEIGHT = 104
 BODY_WIDTH = 36
 BODY_HEIGHT = 88
+WINDUP_TIME = 0.7
+STRIKE_TIME = 0.18
+RECOVER_TIME = 1.0 - STRIKE_TIME
 
 
 class Shade:
@@ -28,6 +31,8 @@ class Shade:
         self.is_moving = False
         self.walk_distance = 0.0
         self.solids = []
+        self.state_time = 0.0
+        self.attack_event = None
 
     @property
     def x(self):
@@ -59,6 +64,19 @@ class Shade:
         return front_box(self.x, self.face_dir, -4, BODY_WIDTH / 2 + 32,
                          self.feet_y + 10, self.feet_y + 58, self.solids)
 
+    def _enter(self, state):
+        self.state = state
+        self.state_time = 0.0
+        self.is_moving = False
+
+    def get_attack_box(self):
+        return self._reach_box() if self.state == 'STRIKE' else None
+
+    def consume_attack(self):
+        attack = self.attack_event
+        self.attack_event = None
+        return attack
+
     def _move(self, delta_time, direction, speed, stage):
         old_x = self.x
         probe = self.x + direction * (BODY_WIDTH / 2 + 2 + speed * delta_time)
@@ -78,12 +96,31 @@ class Shade:
 
     def update(self, delta_time, player, stage):
         self.solids = stage.solids
+        self.attack_event = None
+        self.state_time += delta_time
+        if self.state in ('WINDUP', 'STRIKE', 'RECOVER'):
+            self.is_moving = False
+            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+                self._enter('PATROL')
+            elif self.state == 'WINDUP' and self.state_time >= WINDUP_TIME:
+                if overlaps(self._reach_box(), player.get_bb()):
+                    self._enter('STRIKE')
+                    self.attack_event = self._reach_box()
+                else:
+                    self._enter('CHASE')
+            elif self.state == 'STRIKE' and self.state_time >= STRIKE_TIME:
+                self._enter('RECOVER')
+            elif self.state == 'RECOVER' and self.state_time >= RECOVER_TIME:
+                self._enter('CHASE')
+            return
         if self.can_see(player):
             self.state = 'CHASE'
             if abs(player.x - self.x) > 1:
                 self.face_dir = 1 if player.x > self.x else -1
-            direction = 0 if overlaps(self._reach_box(), player.get_bb()) else self.face_dir
-            self._move(delta_time, direction, 80, stage)
+            if overlaps(self._reach_box(), player.get_bb()):
+                self._enter('WINDUP')
+            else:
+                self._move(delta_time, self.face_dir, 80, stage)
         else:
             self.state = 'PATROL'
             if self.x <= self.patrol_bounds[0]:
@@ -106,8 +143,20 @@ class Shade:
             color = (202, 91, 214) if index < self.health else (69, 57, 78)
             pico2d.draw_rectangle(left, self.feet_y + 112, left + 10,
                                   self.feet_y + 116, *color, filled=True)
+        if self.state == 'WINDUP':
+            left = self.x - camera_x - 12
+            top = self.feet_y + 124
+            pico2d.draw_rectangle(left, top - 3, left + 24, top,
+                                  66, 38, 63, filled=True)
+            pico2d.draw_rectangle(left, top - 3, left + 24 * self.state_time / WINDUP_TIME,
+                                  top, 255, 108, 160, filled=True)
 
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()
         pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
                               r=195, g=119, b=230)
+        attack = self.get_attack_box()
+        if attack is not None:
+            left, bottom, right, top = attack
+            pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
+                                  r=255, g=100, b=140)
