@@ -7,6 +7,7 @@ import pico2d
 
 from physics import Motion, MOVE_SPEED, Solid
 from combat import front_box, overlaps
+from lighting import LIGHT_COST, LightRegion, PortableLight, find_region
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
@@ -66,6 +67,11 @@ class Player:
         self.attack_hits = set()
         self.solids = []
         self.respawn_count = 0
+        self.max_battery = 100
+        self.battery = self.max_battery
+        self.light = None
+        self.light_requested = False
+        self.light_cast = 0.0
 
     @property
     def x(self):
@@ -85,13 +91,15 @@ class Player:
 
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
-                              pico2d.SDLK_SPACE, pico2d.SDLK_w):
+                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r):
             return
         if event.type == pico2d.SDL_KEYDOWN:
             if event.key == pico2d.SDLK_SPACE and event.key not in self.pressed_keys:
                 self.jump_requested = True
             elif event.key == pico2d.SDLK_w and event.key not in self.pressed_keys:
                 self.attack_requested = True
+            elif event.key == pico2d.SDLK_r and event.key not in self.pressed_keys:
+                self.light_requested = True
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
@@ -100,6 +108,7 @@ class Player:
         self.pressed_keys.clear()
         self.jump_requested = False
         self.attack_requested = False
+        self.light_requested = False
 
     @property
     def is_attacking(self):
@@ -123,11 +132,37 @@ class Player:
             if abs(self.motion.velocity_y) < 50:
                 return 'jump_apex'
             return 'jump_rise' if self.motion.velocity_y > 0 else 'jump_fall'
+        if self.light_cast > 0:
+            return 'light_cast'
         return 'walk' if self.is_moving else 'idle'
 
-    def update(self, delta_time, area_width, solids=None):
+    def _install_light(self, regions):
+        if self.is_attacking or self.light_cast > 0:
+            return False
+        if self.battery < LIGHT_COST:
+            self.notice, self.notice_time = '배터리 부족: 조명 설치에는 50이 필요합니다', 1.2
+            return False
+        x, y = self.x, self.feet_y + 24
+        region = find_region(regions, x, y)
+        if region is None:
+            self.notice, self.notice_time = '이 위치에는 조명을 설치할 수 없습니다', 1.2
+            return False
+        self.light = PortableLight(x, y, region)
+        self.battery -= LIGHT_COST
+        self.light_cast = 0.18
+        self.attack_requested = False
+        self.jump_requested = False
+        self.notice, self.notice_time = '휴대 조명 설치', 0.7
+        return True
+
+    def update(self, delta_time, area_width, solids=None, light_regions=None):
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
         self.notice_time = max(0.0, self.notice_time - delta_time)
+        self.light_cast = max(0.0, self.light_cast - delta_time)
+        if self.light is not None:
+            self.light.update(delta_time)
+            if not self.light.active:
+                self.light = None
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         self.solids = solids
@@ -137,19 +172,23 @@ class Player:
             if self.attack_elapsed >= ATTACK_DURATION:
                 self.attack_elapsed = None
                 self.attack_cooldown = ATTACK_RECOVERY
+        if self.light_requested:
+            regions = light_regions if light_regions is not None else [LightRegion(0, 96, area_width, 540)]
+            self._install_light(regions)
+        self.light_requested = False
         if (self.attack_requested and not self.is_attacking
-                and self.attack_cooldown <= 0 and self.motion.on_ground):
+                and self.light_cast <= 0 and self.attack_cooldown <= 0 and self.motion.on_ground):
             self.attack_elapsed = 0.0
             self.attack_id += 1
             self.attack_hits.clear()
         self.attack_requested = False
-        if self.jump_requested and not self.is_attacking:
+        if self.jump_requested and not self.is_attacking and self.light_cast <= 0:
             self.motion.jump()
         self.jump_requested = False
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
-        if self.is_attacking:
+        if self.is_attacking or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
         if direction:
@@ -282,6 +321,7 @@ class Player:
         self.respawn_count += 1
         self.notice = '체력 소진: 시작 지점으로 복귀'
         self.notice_time = 2.0
+        self.light = None
         self._reset_actions_after_return()
 
     def _reset_actions_after_return(self):
@@ -295,6 +335,7 @@ class Player:
         self.attack_elapsed = None
         self.attack_cooldown = 0.0
         self.attack_hits.clear()
+        self.light_cast = 0.0
 
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()

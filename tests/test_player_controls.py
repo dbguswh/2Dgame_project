@@ -194,6 +194,81 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual((self.player.x, self.player.feet_y), (160, 96))
         self.assertEqual(self.player.invulnerability, 1)
 
+    def install_light(self):
+        key(self.player, pico2d.SDLK_r, False)
+        key(self.player, pico2d.SDLK_r)
+        self.player.update(0.01, 960)
+
+    def test_r_costs_50_only_once_when_held(self):
+        self.install_light()
+        first_light = self.player.light
+        for _ in range(30):
+            key(self.player, pico2d.SDLK_r)
+            self.player.update(1 / 60, 960)
+        self.assertEqual(self.player.battery, 50)
+        self.assertIs(self.player.light, first_light)
+
+    def test_second_install_replaces_old_light_and_third_is_rejected(self):
+        self.install_light()
+        old_light = self.player.light
+        for _ in range(12):
+            self.player.update(1 / 60, 960)
+        self.player.x = 240
+        self.install_light()
+        self.assertEqual(self.player.battery, 0)
+        self.assertIsNot(self.player.light, old_light)
+        self.assertEqual(self.player.light.x, 240)
+        current_light = self.player.light
+        for _ in range(12):
+            self.player.update(1 / 60, 960)
+        self.install_light()
+        self.assertIs(self.player.light, current_light)
+        self.assertEqual(self.player.battery, 0)
+
+    def test_battery_zero_still_allows_move_jump_and_w(self):
+        self.player.battery = 0
+        key(self.player, pico2d.SDLK_RIGHT)
+        key(self.player, pico2d.SDLK_SPACE)
+        self.player.update(0.05, 960)
+        self.assertGreater(self.player.x, 160)
+        self.assertFalse(self.player.motion.on_ground)
+        key(self.player, pico2d.SDLK_SPACE, False)
+        key(self.player, pico2d.SDLK_RIGHT, False)
+        for _ in range(60):
+            self.player.update(1 / 60, 960)
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960)
+        self.assertTrue(self.player.is_attacking)
+
+    def test_same_frame_r_takes_priority_over_w_without_double_action(self):
+        key(self.player, pico2d.SDLK_w)
+        key(self.player, pico2d.SDLK_r)
+        self.player.update(0.01, 960)
+        self.assertIsNotNone(self.player.light)
+        self.assertEqual(self.player.battery, 50)
+        self.assertFalse(self.player.is_attacking)
+
+    def test_r_is_ignored_during_an_existing_w_attack(self):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960)
+        self.install_light()
+        self.assertIsNone(self.player.light)
+        self.assertEqual(self.player.battery, 100)
+
+    def test_death_ends_light_without_recharging_battery(self):
+        self.install_light()
+        self.player.health = 1
+        self.player.take_damage()
+        self.assertEqual(self.player.battery, 50)
+        self.assertIsNone(self.player.light)
+        self.player.invulnerability = 0
+        self.player.battery = 0
+        self.player.health = 1
+        self.player.feet_y = -200
+        self.player.update(0.01, 960, [])
+        self.assertEqual(self.player.battery, 0)
+        self.assertEqual(self.player.health, 3)
+
 
 if __name__ == '__main__':
     unittest.main()

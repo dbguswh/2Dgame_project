@@ -17,7 +17,7 @@ from window import (
 def update_world(delta_time, player, enemies, stage):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
     life_before = player.respawn_count
-    player.update(delta_time, stage.width, stage.solids)
+    player.update(delta_time, stage.width, stage.solids, stage.light_regions)
     if player.respawn_count != life_before:
         for enemy in enemies:
             enemy.reset()
