@@ -1,0 +1,14 @@
+{
+  "image": "player_walk.png",
+  "reference_height": 456,
+  "cycle_distance": 64,
+  "visible_half_width": 163,
+  "frames": [
+    {"rect": [0, 512, 512, 512], "feet": [256, 31]},
+    {"rect": [512, 512, 512, 512], "feet": [256, 32]},
+    {"rect": [1024, 512, 512, 512], "feet": [256, 31]},
+    {"rect": [0, 0, 512, 512], "feet": [256, 31]},
+    {"rect": [512, 0, 512, 512], "feet": [256, 31]},
+    {"rect": [1024, 0, 512, 512], "feet": [256, 31]}
+  ]
+}
