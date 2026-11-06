@@ -269,6 +269,23 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual(self.player.battery, 0)
         self.assertEqual(self.player.health, 3)
 
+    def test_nonfatal_fall_keeps_existing_light_and_battery(self):
+        self.player.x = 240
+        self.install_light()
+        light = self.player.light
+        self.player.feet_y = -200
+        self.player.update(0.01, 960, [])
+        self.assertEqual(self.player.health, 2)
+        self.assertEqual(self.player.battery, 50)
+        self.assertIs(self.player.light, light)
+        self.assertEqual(light.x, 240)
+
+    def test_invalid_light_region_does_not_spend_battery(self):
+        key(self.player, pico2d.SDLK_r)
+        self.player.update(0.01, 960, light_regions=[])
+        self.assertEqual(self.player.battery, 100)
+        self.assertIsNone(self.player.light)
+
 
 if __name__ == '__main__':
     unittest.main()
