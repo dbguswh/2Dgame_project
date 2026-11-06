@@ -40,12 +40,12 @@ class Motion:
         self.on_ground = False
         return True
 
-    def step(self, delta_time, direction, solids, area_width, edge_margin=12):
+    def step(self, delta_time, direction, solids, area_width, edge_margin=12, speed=MOVE_SPEED):
         # 작은 간격으로 분할해 낮은 프레임에서도 얇은 발판을 건너뛰지 않는다.
         remaining = max(0.0, min(delta_time, 0.1))
         while remaining > EPSILON:
             dt = min(remaining, 1 / 120)
-            self._move_x(direction * MOVE_SPEED * dt, solids, area_width, edge_margin)
+            self._move_x(direction * speed * dt, solids, area_width, edge_margin)
             next_velocity = max(-MAX_FALL_SPEED, self.velocity_y - GRAVITY * dt)
             dy = (self.velocity_y + next_velocity) * dt / 2
             self.velocity_y = next_velocity

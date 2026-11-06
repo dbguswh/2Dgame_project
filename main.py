@@ -22,7 +22,7 @@ def main():
     try:
         stage = Stage()
         player = Player(x=stage.start[0], feet_y=stage.start[1])
-        enemies = [Shade(*stage.enemy_spawn)]
+        enemies = [Shade(*stage.enemy_spawn, combat_bounds=stage.combat_bounds)]
         font = pico2d.load_font(
             str(Path(pico2d.__file__).parent / 'data' / 'ConsolaMalgun.ttf'), 18,
         )
@@ -51,6 +51,8 @@ def main():
             if not has_input_focus():
                 player.clear_input()
             player.update(delta_time, stage.width, stage.solids)
+            for enemy in enemies:
+                enemy.update(delta_time, player, stage)
             safe_position = stage.safe_position(player.motion)
             if safe_position is not None:
                 player.last_safe_position = safe_position
