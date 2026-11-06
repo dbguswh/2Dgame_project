@@ -5,6 +5,7 @@ from time import perf_counter
 from pathlib import Path
 
 from player import Player
+from physics import camera_offset
 from stage import Stage
 from window import (
     SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame, has_input_focus, open_game_window,
@@ -45,16 +46,17 @@ def main():
 
             if not has_input_focus():
                 player.clear_input()
-            player.update(delta_time, SCREEN_WIDTH, stage.solids)
+            player.update(delta_time, stage.width, stage.solids)
             safe_position = stage.safe_position(player.motion)
             if safe_position is not None:
                 player.last_safe_position = safe_position
+            camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
             clear_frame()
-            stage.draw(0, SCREEN_WIDTH, SCREEN_HEIGHT)
-            player.draw()
+            stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+            player.draw(camera_x)
             if show_debug:
-                stage.draw_debug(0)
-                player.draw_debug()
+                stage.draw_debug(camera_x)
+                player.draw_debug(camera_x)
             font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
             font.draw(20, 24, '← / → 이동     Space 점프     F1 판정 표시     Esc 종료',
                       (210, 219, 230))

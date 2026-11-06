@@ -120,7 +120,7 @@ class Player:
             self.walk_distance = 0.0
             self.walk_frame = 0
 
-    def draw(self):
+    def draw(self, camera_x=0):
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         if self.is_moving:
@@ -140,7 +140,7 @@ class Player:
         image.clip_composite_draw(
             left, bottom, width, height,
             0, "h" if self.face_dir < 0 else "",
-            self.x + center_offset * self.face_dir,
+            self.x - camera_x + center_offset * self.face_dir,
             self.feet_y + (height / 2 - feet_y) * scale,
             width * scale, height * scale,
         )
@@ -167,13 +167,15 @@ class Player:
         self.walk_distance = 0.0
         self.walk_frame = 0
 
-    def draw_debug(self):
-        pico2d.draw_rectangle(*self.get_bb(), r=112, g=220, b=148)
+    def draw_debug(self, camera_x=0):
+        left, bottom, right, top = self.get_bb()
+        pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
+                              r=112, g=220, b=148)
         pico2d.draw_line(
-            self.x - 5, self.feet_y, self.x + 5, self.feet_y,
+            self.x - camera_x - 5, self.feet_y, self.x - camera_x + 5, self.feet_y,
             r=255, g=196, b=80,
         )
         pico2d.draw_line(
-            self.x, self.feet_y - 5, self.x, self.feet_y + 5,
+            self.x - camera_x, self.feet_y - 5, self.x - camera_x, self.feet_y + 5,
             r=255, g=196, b=80,
         )
