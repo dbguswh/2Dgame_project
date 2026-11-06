@@ -25,7 +25,7 @@ class Motion:
     x: float
     feet_y: float
     width: float = 24
-    height: float = 80
+    height: float = 92
     velocity_y: float = 0
     on_ground: bool = True
 

@@ -58,7 +58,7 @@ def main():
                 stage.draw_debug(camera_x)
                 player.draw_debug(camera_x)
             font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
-            font.draw(20, 24, '← / → 이동    Space 점프    W 베기    F1 판정 표시    Esc 종료',
+            font.draw(20, 24, '방향키 이동    Space 점프    W 베기    F1 판정 표시    Esc 종료',
                       (210, 219, 230))
             if player.notice_time > 0:
                 font.draw(20, SCREEN_HEIGHT - 58, player.notice, (255, 195, 110))
