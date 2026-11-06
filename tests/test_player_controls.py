@@ -167,6 +167,33 @@ class PlayerControlsTests(unittest.TestCase):
         self.player.update(0.07, 960)
         self.assertFalse(self.player.is_attacking)
 
+    def test_enemy_damage_grants_one_second_invulnerability(self):
+        self.assertTrue(self.player.take_damage())
+        self.assertEqual(self.player.health, 2)
+        self.assertFalse(self.player.take_damage())
+        self.assertEqual(self.player.health, 2)
+        for _ in range(61):
+            self.player.update(1 / 60, 960)
+        self.assertTrue(self.player.take_damage())
+        self.assertEqual(self.player.health, 1)
+
+    def test_enemy_damage_cancels_player_attack(self):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960)
+        self.assertTrue(self.player.is_attacking)
+        self.player.take_damage()
+        self.assertFalse(self.player.is_attacking)
+        self.assertIsNone(self.player.get_attack_box())
+
+    def test_fatal_enemy_hit_restores_start_and_changes_life_counter(self):
+        self.player.health = 1
+        self.player.x = 410
+        self.player.take_damage()
+        self.assertEqual(self.player.health, 3)
+        self.assertEqual(self.player.respawn_count, 1)
+        self.assertEqual((self.player.x, self.player.feet_y), (160, 96))
+        self.assertEqual(self.player.invulnerability, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

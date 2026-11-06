@@ -77,6 +77,16 @@ class Shade:
         self.attack_event = None
         return attack
 
+    def reset(self):
+        self.motion.x, self.motion.feet_y = self.spawn_position
+        self.motion.velocity_y = 0
+        self.motion.on_ground = True
+        self.health = 2
+        self.face_dir = -1
+        self.walk_distance = 0.0
+        self.attack_event = None
+        self._enter('PATROL')
+
     def _move(self, delta_time, direction, speed, stage):
         old_x = self.x
         probe = self.x + direction * (BODY_WIDTH / 2 + 2 + speed * delta_time)

@@ -65,6 +65,7 @@ class Player:
         self.attack_id = 0
         self.attack_hits = set()
         self.solids = []
+        self.respawn_count = 0
 
     @property
     def x(self):
@@ -252,22 +253,48 @@ class Player:
     def _return_after_fall(self):
         self.health -= 1
         if self.health <= 0:
-            self.health = 3
-            self.last_safe_position = self.spawn_position
-            self.notice = "체력 소진: 시작 지점으로 복귀"
-        else:
-            self.notice = "낙하 피해 -1: 마지막 안전 발판으로 복귀"
+            self._respawn()
+            return
+        self.notice = "낙하 피해 -1: 마지막 안전 발판으로 복귀"
         self.x, self.feet_y = self.last_safe_position
+        self._reset_actions_after_return()
+        self.notice_time = 2.0
+
+    def take_damage(self):
+        if self.invulnerability > 0 or self.health <= 0:
+            return False
+        self.health -= 1
+        self.attack_elapsed = None
+        self.attack_requested = False
+        self.jump_requested = False
+        if self.health <= 0:
+            self._respawn()
+        else:
+            self.invulnerability = 1.0
+            self.notice = '공격 피해 -1'
+            self.notice_time = 0.7
+        return True
+
+    def _respawn(self):
+        self.health = 3
+        self.last_safe_position = self.spawn_position
+        self.x, self.feet_y = self.spawn_position
+        self.respawn_count += 1
+        self.notice = '체력 소진: 시작 지점으로 복귀'
+        self.notice_time = 2.0
+        self._reset_actions_after_return()
+
+    def _reset_actions_after_return(self):
         self.motion.velocity_y = 0
         self.motion.on_ground = True
         self.invulnerability = 1.0
-        self.notice_time = 2.0
         self.clear_input()
         self.is_moving = False
         self.walk_distance = 0.0
         self.walk_frame = 0
         self.attack_elapsed = None
         self.attack_cooldown = 0.0
+        self.attack_hits.clear()
 
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from player import Player
 from enemy import Shade
+from combat import overlaps
 from physics import camera_offset
 from stage import Stage
 from window import (
@@ -50,9 +51,22 @@ def main():
 
             if not has_input_focus():
                 player.clear_input()
+            life_before = player.respawn_count
             player.update(delta_time, stage.width, stage.solids)
+            if player.respawn_count != life_before:
+                for enemy in enemies:
+                    enemy.reset()
+            life_before = player.respawn_count
             for enemy in enemies:
                 enemy.update(delta_time, player, stage)
+            for enemy in enemies:
+                attack = enemy.consume_attack()
+                if enemy.alive and overlaps(attack, player.get_bb()):
+                    player.take_damage()
+                if player.respawn_count != life_before:
+                    for reset_enemy in enemies:
+                        reset_enemy.reset()
+                    break
             safe_position = stage.safe_position(player.motion)
             if safe_position is not None:
                 player.last_safe_position = safe_position
@@ -79,6 +93,7 @@ def main():
         player = None
         font = None
         enemy = None
+        reset_enemy = None
         enemies.clear()
         pico2d.close_canvas()
 
