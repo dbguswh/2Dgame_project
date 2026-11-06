@@ -6,6 +6,7 @@ from pathlib import Path
 import pico2d
 
 from physics import Motion, MOVE_SPEED, Solid
+from combat import front_box, overlaps
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
@@ -232,28 +233,16 @@ class Player:
         """타격 프레임에서만 전방 1타일의 범위를 반환한다. 벽 뒤는 잘라낸다."""
         if not self.is_attacking or not 0.1 <= self.attack_elapsed < 0.2:
             return None
-        bottom, top = self.feet_y + 12, self.feet_y + 64
-        if self.face_dir > 0:
-            left, right = self.x + BODY_WIDTH / 2, self.x + BODY_WIDTH / 2 + 32
-            for solid in self.solids:
-                if bottom < solid.top and top > solid.bottom and left <= solid.left < right:
-                    right = solid.left
-        else:
-            left, right = self.x - BODY_WIDTH / 2 - 32, self.x - BODY_WIDTH / 2
-            for solid in self.solids:
-                if bottom < solid.top and top > solid.bottom and left < solid.right <= right:
-                    left = solid.right
-        return (left, bottom, right, top) if right > left else None
+        return front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + 32,
+                         self.feet_y + 12, self.feet_y + 64, self.solids)
 
     def get_attack_target(self, targets):
         """(대상 ID, 피격 영역) 목록 중 가까운 한 명을 공격당 한 번만 선택한다."""
         attack = self.get_attack_box()
         if attack is None or self.attack_hits:
             return None
-        left, bottom, right, top = attack
         candidates = [(identity, box) for identity, box in targets
-                      if box[0] < right and box[2] > left
-                      and box[1] < top and box[3] > bottom]
+                      if overlaps(attack, box)]
         if not candidates:
             return None
         identity, _ = min(candidates, key=lambda item: abs((item[1][0] + item[1][2]) / 2 - self.x))
