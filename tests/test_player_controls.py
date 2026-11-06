@@ -74,6 +74,15 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual(self.player.health, 3)
         self.assertEqual((self.player.x, self.player.feet_y), (160, 96))
 
+    def test_jump_selects_rise_apex_fall_then_idle(self):
+        key(self.player, pico2d.SDLK_SPACE)
+        states = set()
+        for _ in range(60):
+            self.player.update(1 / 60, 960)
+            states.add(self.player.animation_state)
+        self.assertEqual(states, {'jump_rise', 'jump_apex', 'jump_fall', 'idle'})
+        self.assertEqual(self.player.animation_state, 'idle')
+
 
 if __name__ == '__main__':
     unittest.main()

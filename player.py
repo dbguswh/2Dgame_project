@@ -10,6 +10,7 @@ from physics import Motion, MOVE_SPEED, Solid
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
+ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -32,6 +33,10 @@ class Player:
         self.walk_data = json.loads(WALK_DATA_PATH.read_text(encoding="utf-8"))
         self.walk_image = pico2d.load_image(
             str(WALK_DATA_PATH.with_name(self.walk_data["image"]))
+        )
+        self.action_data = json.loads(ACTION_DATA_PATH.read_text(encoding="utf-8"))
+        self.action_image = pico2d.load_image(
+            str(ACTION_DATA_PATH.with_name(self.action_data["image"]))
         )
         self.pressed_keys = set()
         self.face_dir = 1
@@ -75,6 +80,14 @@ class Player:
     def clear_input(self):
         self.pressed_keys.clear()
         self.jump_requested = False
+
+    @property
+    def animation_state(self):
+        if not self.motion.on_ground:
+            if abs(self.motion.velocity_y) < 50:
+                return 'jump_apex'
+            return 'jump_rise' if self.motion.velocity_y > 0 else 'jump_fall'
+        return 'walk' if self.is_moving else 'idle'
 
     def update(self, delta_time, area_width, solids=None):
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
@@ -123,7 +136,15 @@ class Player:
     def draw(self, camera_x=0):
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
-        if self.is_moving:
+        state = self.animation_state
+        if state.startswith('jump_'):
+            phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
+            frame = self.action_data["frames"][self.action_data["jump"][phase]]
+            image = self.action_image
+            left, bottom, width, height = frame["rect"]
+            feet_x, feet_y = frame["feet"]
+            scale = DRAW_HEIGHT / self.action_data["reference_height"]
+        elif self.is_moving:
             frame = self.walk_data["frames"][self.walk_frame]
             image = self.walk_image
             left, bottom, width, height = frame["rect"]
