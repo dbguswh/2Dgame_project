@@ -57,7 +57,7 @@ class PortableLight:
         if not self.active:
             return
         from ctypes import byref, c_int
-        from math import ceil, floor
+        from math import ceil, floor, cos, sin, tau
         import pico2d
         from pico2d import pico2d as canvas
         import sdl2
@@ -78,9 +78,22 @@ class PortableLight:
             sdl2.SDL_RenderSetClipRect(canvas.renderer, byref(clip))
             sdl2.SDL_SetRenderDrawBlendMode(canvas.renderer, sdl2.SDL_BLENDMODE_BLEND)
             x = self.x - camera_x
-            for ratio, alpha in ((1.0, 28), (0.75, 30), (0.5, 34), (0.25, 45)):
-                pico2d.draw_circle(x, self.y, int(self.radius * ratio),
-                                   r=255, g=192, b=82, a=alpha, filled=True)
+            # 면으로 채워 비정수 배율의 창에서도 한 픽셀짜리 줄 사이가 벌어지지 않게 한다.
+            segments = 64
+            vertices = (sdl2.SDL_Vertex * (segments * 3))()
+            center_y = screen_height - 1 - self.y
+            for index in range(segments):
+                vertices[index * 3] = sdl2.SDL_Vertex((x, center_y), (255, 192, 82, 140))
+                for offset in (0, 1):
+                    angle = (index + offset) * tau / segments
+                    point = (x + cos(angle) * self.radius,
+                             center_y + sin(angle) * self.radius)
+                    vertices[index * 3 + offset + 1] = sdl2.SDL_Vertex(point, (255, 192, 82, 26))
+            result = sdl2.SDL_RenderGeometry(canvas.renderer, None, vertices, len(vertices), None, 0)
+            if result != 0:
+                # 구형 렌더러에서도 조명의 표시와 판정은 유지한다.
+                pico2d.draw_circle(x, self.y, int(self.radius),
+                                   r=255, g=192, b=82, a=45, filled=True)
             # 밝은 테두리가 실제 반경을 나타내며 영역 경계 밖으로는 그리지 않는다.
             pico2d.draw_circle(x, self.y, int(self.radius), r=255, g=207, b=111, a=200)
             base_y = self.y - 24
