@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pico2d
 
+from physics import Motion, MOVE_SPEED, Solid
+
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
@@ -20,14 +22,12 @@ SOURCE_FEET_X = 660 - SOURCE_LEFT
 DRAW_HEIGHT = 96
 BODY_WIDTH = 24
 BODY_HEIGHT = 80
-MOVE_SPEED = 128  # 초당 4타일. 표시 창의 배율과 무관한 게임 좌표 기준이다.
 
 
 class Player:
     def __init__(self, x, feet_y):
         # x는 양발의 가운데, feet_y는 지면에 닿는 발바닥 위치다.
-        self.x = x
-        self.feet_y = feet_y
+        self.motion = Motion(x, feet_y, BODY_WIDTH, BODY_HEIGHT)
         self.image = pico2d.load_image(str(IMAGE_PATH))
         self.walk_data = json.loads(WALK_DATA_PATH.read_text(encoding="utf-8"))
         self.walk_image = pico2d.load_image(
@@ -38,19 +38,44 @@ class Player:
         self.is_moving = False
         self.walk_distance = 0.0
         self.walk_frame = 0
+        self.jump_requested = False
+
+    @property
+    def x(self):
+        return self.motion.x
+
+    @x.setter
+    def x(self, value):
+        self.motion.x = value
+
+    @property
+    def feet_y(self):
+        return self.motion.feet_y
+
+    @feet_y.setter
+    def feet_y(self, value):
+        self.motion.feet_y = value
 
     def handle_event(self, event):
-        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
+        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT, pico2d.SDLK_SPACE):
             return
         if event.type == pico2d.SDL_KEYDOWN:
+            if event.key == pico2d.SDLK_SPACE and event.key not in self.pressed_keys:
+                self.jump_requested = True
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
 
     def clear_input(self):
         self.pressed_keys.clear()
+        self.jump_requested = False
 
-    def update(self, delta_time, area_width):
+    def update(self, delta_time, area_width, solids=None):
+        if solids is None:
+            solids = [Solid(0, 0, area_width, 96)]
+        if self.jump_requested:
+            self.motion.jump()
+        self.jump_requested = False
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
@@ -58,7 +83,6 @@ class Player:
         if direction:
             self.face_dir = direction
         previous_x = self.x
-        self.x += direction * MOVE_SPEED * delta_time
 
         # 두 방향 모두에서 전체 그림이 화면 안에 남도록 초기 경계를 제한한다.
         scale = DRAW_HEIGHT / SOURCE_HEIGHT
@@ -67,10 +91,10 @@ class Player:
             self.walk_data["visible_half_width"] * DRAW_HEIGHT
             / self.walk_data["reference_height"],
         )
-        self.x = max(margin, min(area_width - margin, self.x))
+        self.motion.step(delta_time, direction, solids, area_width, margin)
 
         distance = abs(self.x - previous_x)
-        self.is_moving = distance > 0.000001
+        self.is_moving = distance > 0.000001 and self.motion.on_ground
         if self.is_moving:
             if self.face_dir != previous_direction:
                 self.walk_distance = 0.0
@@ -109,11 +133,8 @@ class Player:
         )
 
     def get_bb(self):
-        """다음 이동 단계에서 사용할 몸통 충돌 영역의 초기 크기다."""
-        return (
-            self.x - BODY_WIDTH / 2, self.feet_y,
-            self.x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT,
-        )
+        """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""
+        return self.motion.get_bb()
 
     def draw_debug(self):
         pico2d.draw_rectangle(*self.get_bb(), r=112, g=220, b=148)
