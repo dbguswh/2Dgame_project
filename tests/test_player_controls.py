@@ -145,6 +145,28 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertIsNone(self.player.get_attack_target([(1, (130, 200, 145, 280))]))
         self.assertEqual(self.player.get_attack_target([(2, (125, 96, 145, 176))]), 2)
 
+    def test_six_attack_poses_match_the_active_hit_window(self):
+        body = self.player.get_bb()
+        for index, time in enumerate((0.025, 0.075, 0.125, 0.175, 0.24, 0.32)):
+            with self.subTest(pose=index):
+                self.player.attack_elapsed = time
+                self.assertEqual(self.player.attack_frame, index)
+                self.assertEqual(self.player.get_bb(), body)
+                self.assertEqual(self.player.get_attack_box() is not None, index in (2, 3))
+                if index in (2, 3):
+                    box = self.player.get_attack_box()
+                    self.assertEqual(box[2] - box[0], 32)
+
+    def test_attack_finishes_after_visible_recovery(self):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960)
+        for _ in range(3):
+            self.player.update(0.1, 960)
+        self.assertTrue(self.player.is_attacking)
+        self.assertEqual(self.player.attack_frame, 5)
+        self.player.update(0.07, 960)
+        self.assertFalse(self.player.is_attacking)
+
 
 if __name__ == '__main__':
     unittest.main()

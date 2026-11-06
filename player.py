@@ -11,6 +11,7 @@ from physics import Motion, MOVE_SPEED, Solid
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
 ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
+ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -23,7 +24,8 @@ SOURCE_FEET_X = 660 - SOURCE_LEFT
 DRAW_HEIGHT = 96
 BODY_WIDTH = 24
 BODY_HEIGHT = 92  # 후드가 천장 안으로 깊이 들어가지 않도록 실제 키에 맞춘 초기값.
-ATTACK_DURATION = 0.3
+ATTACK_FRAME_ENDS = (0.05, 0.10, 0.15, 0.20, 0.28, 0.36)
+ATTACK_DURATION = ATTACK_FRAME_ENDS[-1]
 ATTACK_RECOVERY = 0.15
 
 
@@ -39,6 +41,10 @@ class Player:
         self.action_data = json.loads(ACTION_DATA_PATH.read_text(encoding="utf-8"))
         self.action_image = pico2d.load_image(
             str(ACTION_DATA_PATH.with_name(self.action_data["image"]))
+        )
+        self.attack_data = json.loads(ATTACK_DATA_PATH.read_text(encoding="utf-8"))
+        self.attack_image = pico2d.load_image(
+            str(ATTACK_DATA_PATH.with_name(self.attack_data["image"]))
         )
         self.pressed_keys = set()
         self.face_dir = 1
@@ -98,6 +104,16 @@ class Player:
         return self.attack_elapsed is not None
 
     @property
+    def attack_frame(self):
+        if not self.is_attacking:
+            return None
+        # 짧은 준비, 빠른 타격, 조금 긴 회수로 베기의 힘과 흐름을 구분한다.
+        for index, end in enumerate(ATTACK_FRAME_ENDS):
+            if self.attack_elapsed < end:
+                return index
+        return len(ATTACK_FRAME_ENDS) - 1
+
+    @property
     def animation_state(self):
         if self.is_attacking:
             return 'attack'
@@ -144,6 +160,8 @@ class Player:
             max(SOURCE_FEET_X, SOURCE_WIDTH - SOURCE_FEET_X) * scale,
             self.walk_data["visible_half_width"] * DRAW_HEIGHT
             / self.walk_data["reference_height"],
+            self.attack_data["visible_half_width"] * DRAW_HEIGHT
+            / self.attack_data["reference_height"],
         )
         self.motion.step(delta_time, direction, solids, area_width, margin)
         if self.feet_y + BODY_HEIGHT < -32:
@@ -170,13 +188,15 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state == 'attack' or state.startswith('jump_'):
-            if state == 'attack':
-                phase = min(2, int(self.attack_elapsed / ATTACK_DURATION * 3))
-                index = self.action_data['attack'][phase]
-            else:
-                phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
-                index = self.action_data['jump'][phase]
+        if state == 'attack':
+            frame = self.attack_data['frames'][self.attack_frame]
+            image = self.attack_image
+            left, bottom, width, height = frame['rect']
+            feet_x, feet_y = frame['feet']
+            scale = DRAW_HEIGHT / self.attack_data['reference_height']
+        elif state.startswith('jump_'):
+            phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
+            index = self.action_data['jump'][phase]
             frame = self.action_data['frames'][index]
             image = self.action_image
             left, bottom, width, height = frame["rect"]
