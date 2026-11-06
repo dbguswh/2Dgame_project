@@ -56,6 +56,8 @@ class Player:
         self.attack_elapsed = None
         self.attack_cooldown = 0.0
         self.attack_id = 0
+        self.attack_hits = set()
+        self.solids = []
 
     @property
     def x(self):
@@ -110,6 +112,7 @@ class Player:
         self.notice_time = max(0.0, self.notice_time - delta_time)
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
+        self.solids = solids
         self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
         if self.is_attacking:
             self.attack_elapsed += delta_time
@@ -120,6 +123,7 @@ class Player:
                 and self.attack_cooldown <= 0 and self.motion.on_ground):
             self.attack_elapsed = 0.0
             self.attack_id += 1
+            self.attack_hits.clear()
         self.attack_requested = False
         if self.jump_requested and not self.is_attacking:
             self.motion.jump()
@@ -204,6 +208,38 @@ class Player:
         """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""
         return self.motion.get_bb()
 
+    def get_attack_box(self):
+        """타격 프레임에서만 전방 1타일의 범위를 반환한다. 벽 뒤는 잘라낸다."""
+        if not self.is_attacking or not 0.1 <= self.attack_elapsed < 0.2:
+            return None
+        bottom, top = self.feet_y + 12, self.feet_y + 64
+        if self.face_dir > 0:
+            left, right = self.x + BODY_WIDTH / 2, self.x + BODY_WIDTH / 2 + 32
+            for solid in self.solids:
+                if bottom < solid.top and top > solid.bottom and left <= solid.left < right:
+                    right = solid.left
+        else:
+            left, right = self.x - BODY_WIDTH / 2 - 32, self.x - BODY_WIDTH / 2
+            for solid in self.solids:
+                if bottom < solid.top and top > solid.bottom and left < solid.right <= right:
+                    left = solid.right
+        return (left, bottom, right, top) if right > left else None
+
+    def get_attack_target(self, targets):
+        """(대상 ID, 피격 영역) 목록 중 가까운 한 명을 공격당 한 번만 선택한다."""
+        attack = self.get_attack_box()
+        if attack is None or self.attack_hits:
+            return None
+        left, bottom, right, top = attack
+        candidates = [(identity, box) for identity, box in targets
+                      if box[0] < right and box[2] > left
+                      and box[1] < top and box[3] > bottom]
+        if not candidates:
+            return None
+        identity, _ = min(candidates, key=lambda item: abs((item[1][0] + item[1][2]) / 2 - self.x))
+        self.attack_hits.add(identity)
+        return identity
+
     def _return_after_fall(self):
         self.health -= 1
         if self.health <= 0:
@@ -236,3 +272,8 @@ class Player:
             self.x - camera_x, self.feet_y - 5, self.x - camera_x, self.feet_y + 5,
             r=255, g=196, b=80,
         )
+        attack = self.get_attack_box()
+        if attack is not None:
+            left, bottom, right, top = attack
+            pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
+                                  r=255, g=111, b=92)

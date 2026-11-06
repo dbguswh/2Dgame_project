@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pico2d
 
 from player import Player
+from physics import Solid
 
 
 def key(player, value, down=True):
@@ -113,6 +114,36 @@ class PlayerControlsTests(unittest.TestCase):
         key(self.player, pico2d.SDLK_w)
         self.player.update(1 / 60, 960)
         self.assertFalse(self.player.is_attacking)
+
+    def start_active_attack(self, solids=None):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960, solids)
+        self.player.update(0.11, 960, solids)
+
+    def test_attack_box_only_exists_during_strike(self):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(0.01, 960)
+        self.assertIsNone(self.player.get_attack_box())
+        self.player.update(0.11, 960)
+        self.assertIsNotNone(self.player.get_attack_box())
+        self.player.update(0.11, 960)
+        self.assertIsNone(self.player.get_attack_box())
+
+    def test_only_closest_target_is_selected_once_per_attack(self):
+        self.start_active_attack()
+        targets = [(2, (190, 96, 214, 176)), (1, (175, 96, 185, 176))]
+        self.assertEqual(self.player.get_attack_target(targets), 1)
+        self.assertIsNone(self.player.get_attack_target(targets))
+
+    def test_wall_blocks_attack_target(self):
+        self.start_active_attack([Solid(0, 0, 960, 96), Solid(176, 96, 192, 240)])
+        self.assertIsNone(self.player.get_attack_target([(1, (193, 96, 210, 176))]))
+
+    def test_other_floor_is_not_hit_and_left_attack_is_mirrored(self):
+        self.player.face_dir = -1
+        self.start_active_attack()
+        self.assertIsNone(self.player.get_attack_target([(1, (130, 200, 145, 280))]))
+        self.assertEqual(self.player.get_attack_target([(2, (125, 96, 145, 176))]), 2)
 
 
 if __name__ == '__main__':
