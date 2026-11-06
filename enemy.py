@@ -15,6 +15,7 @@ BODY_HEIGHT = 88
 WINDUP_TIME = 0.7
 STRIKE_TIME = 0.18
 RECOVER_TIME = 1.0 - STRIKE_TIME
+DEATH_TIME = 0.8
 
 
 class Shade:
@@ -33,6 +34,7 @@ class Shade:
         self.solids = []
         self.state_time = 0.0
         self.attack_event = None
+        self.hurt_time = 0.0
 
     @property
     def x(self):
@@ -77,6 +79,16 @@ class Shade:
         self.attack_event = None
         return attack
 
+    def take_damage(self):
+        if not self.alive:
+            return False
+        self.health -= 1
+        self.hurt_time = 0.18
+        if not self.alive:
+            self.attack_event = None
+            self._enter('DYING')
+        return True
+
     def reset(self):
         self.motion.x, self.motion.feet_y = self.spawn_position
         self.motion.velocity_y = 0
@@ -85,6 +97,7 @@ class Shade:
         self.face_dir = -1
         self.walk_distance = 0.0
         self.attack_event = None
+        self.hurt_time = 0.0
         self._enter('PATROL')
 
     def _move(self, delta_time, direction, speed, stage):
@@ -108,6 +121,12 @@ class Shade:
         self.solids = stage.solids
         self.attack_event = None
         self.state_time += delta_time
+        self.hurt_time = max(0.0, self.hurt_time - delta_time)
+        if not self.alive:
+            self.is_moving = False
+            if self.state != 'DEAD' and self.state_time >= DEATH_TIME:
+                self._enter('DEAD')
+            return
         if self.state in ('WINDUP', 'STRIKE', 'RECOVER'):
             self.is_moving = False
             if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
@@ -141,13 +160,24 @@ class Shade:
                 self.face_dir *= -1
 
     def draw(self, camera_x=0):
+        if self.state == 'DEAD':
+            return
+        opacity = 1.0
+        if self.state == 'DYING':
+            opacity = max(0.0, 1 - self.state_time / DEATH_TIME)
+        elif self.hurt_time > 0:
+            opacity = 0.35 if int(self.hurt_time * 40) % 2 else 1.0
         scale = DRAW_HEIGHT / 1101
         # 기본 이미지는 왼쪽을 본다. 긴 팔을 제외하고 양발 기준으로 정렬한다.
+        self.image.opacify(opacity)
         self.image.clip_composite_draw(
             103, 12, 1265, 1101, 0, 'h' if self.face_dir > 0 else '',
             self.x - camera_x + (1265 / 2 - 803) * scale * -self.face_dir,
             self.feet_y + DRAW_HEIGHT / 2, 1265 * scale, DRAW_HEIGHT,
         )
+        self.image.opacify(1.0)
+        if not self.alive:
+            return
         for index in range(2):
             left = self.x - camera_x - 12 + index * 13
             color = (202, 91, 214) if index < self.health else (69, 57, 78)
@@ -162,6 +192,8 @@ class Shade:
                                   top, 255, 108, 160, filled=True)
 
     def draw_debug(self, camera_x=0):
+        if not self.alive:
+            return
         left, bottom, right, top = self.get_bb()
         pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
                               r=195, g=119, b=230)

@@ -59,6 +59,14 @@ def main():
             life_before = player.respawn_count
             for enemy in enemies:
                 enemy.update(delta_time, player, stage)
+            target = player.get_attack_target(
+                [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive]
+            )
+            for enemy in enemies:
+                if enemy.alive and enemy.identity == target:
+                    enemy.take_damage()
+                    player.notice = 'Shade 처치' if not enemy.alive else 'Shade 명중'
+                    player.notice_time = 1.0
             for enemy in enemies:
                 attack = enemy.consume_attack()
                 if enemy.alive and overlaps(attack, player.get_bb()):
