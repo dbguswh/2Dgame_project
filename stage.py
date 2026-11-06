@@ -13,6 +13,8 @@ class Stage:
     def __init__(self):
         self.width = 1920
         self.start = (160, GROUND_Y)
+        self.enemy_spawn = (440, GROUND_Y)
+        self.combat_bounds = (288, 544)
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
             Solid(1024, 0, self.width, GROUND_Y),

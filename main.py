@@ -5,6 +5,7 @@ from time import perf_counter
 from pathlib import Path
 
 from player import Player
+from enemy import Shade
 from physics import camera_offset
 from stage import Stage
 from window import (
@@ -16,9 +17,12 @@ def main():
     open_game_window()
     player = None
     font = None
+    enemies = []
+    enemy = None
     try:
         stage = Stage()
         player = Player(x=stage.start[0], feet_y=stage.start[1])
+        enemies = [Shade(*stage.enemy_spawn)]
         font = pico2d.load_font(
             str(Path(pico2d.__file__).parent / 'data' / 'ConsolaMalgun.ttf'), 18,
         )
@@ -53,10 +57,14 @@ def main():
             camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
             clear_frame()
             stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+            for enemy in enemies:
+                enemy.draw(camera_x)
             player.draw(camera_x)
             if show_debug:
                 stage.draw_debug(camera_x)
                 player.draw_debug(camera_x)
+                for enemy in enemies:
+                    enemy.draw_debug(camera_x)
             font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
             font.draw(20, 24, '방향키 이동    Space 점프    W 베기    F1 판정 표시    Esc 종료',
                       (210, 219, 230))
@@ -68,6 +76,8 @@ def main():
         # 렌더러를 닫기 전에 캐릭터의 이미지 자원을 해제한다.
         player = None
         font = None
+        enemy = None
+        enemies.clear()
         pico2d.close_canvas()
 
 
