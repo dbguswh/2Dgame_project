@@ -135,6 +135,21 @@ class ShadeTests(unittest.TestCase):
         self.assertEqual(self.enemy.state, 'PATROL')
         self.assertEqual(self.enemy.hurt_time, 0)
 
+    def test_motion_frames_follow_walking_warning_and_strike(self):
+        frames = set()
+        for _ in range(120):
+            self.enemy.update(1 / 60, self.player, self.stage)
+            frames.add(self.enemy.animation_frame)
+        self.assertEqual(frames, {0, 1, 2, 3})
+        self.player.x = self.enemy.x - 20
+        self.enemy.update(0.01, self.player, self.stage)
+        self.assertEqual(self.enemy.animation_frame, 4)
+        self.enemy.update(0.71, self.player, self.stage)
+        self.assertEqual(self.enemy.animation_frame, 5)
+        self.enemy.take_damage()
+        self.enemy.take_damage()
+        self.assertEqual(self.enemy.animation_frame, 5)
+
 
 if __name__ == '__main__':
     unittest.main()

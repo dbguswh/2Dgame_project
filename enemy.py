@@ -1,6 +1,7 @@
 """Shade의 위치·이미지와 전투 상태를 관리한다."""
 
 from pathlib import Path
+import json
 
 import pico2d
 
@@ -9,8 +10,9 @@ from combat import front_box, overlaps
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
+MOTION_DATA_PATH = IMAGE_PATH.with_name('shade_motion.json')
 DRAW_HEIGHT = 104
-BODY_WIDTH = 36
+BODY_WIDTH = 48
 BODY_HEIGHT = 88
 WINDUP_TIME = 0.7
 STRIKE_TIME = 0.18
@@ -22,7 +24,8 @@ class Shade:
     def __init__(self, x, feet_y, identity=0, combat_bounds=(288, 544)):
         self.identity = identity
         self.motion = Motion(x, feet_y, BODY_WIDTH, BODY_HEIGHT)
-        self.image = pico2d.load_image(str(IMAGE_PATH))
+        self.motion_data = json.loads(MOTION_DATA_PATH.read_text(encoding='utf-8'))
+        self.image = pico2d.load_image(str(MOTION_DATA_PATH.with_name(self.motion_data['image'])))
         self.face_dir = -1
         self.health = 2
         self.spawn_position = (x, feet_y)
@@ -35,6 +38,7 @@ class Shade:
         self.state_time = 0.0
         self.attack_event = None
         self.hurt_time = 0.0
+        self.death_pose = 0
 
     @property
     def x(self):
@@ -47,6 +51,19 @@ class Shade:
     @property
     def alive(self):
         return self.health > 0
+
+    @property
+    def animation_frame(self):
+        if self.state in ('DYING', 'DEAD'):
+            return self.death_pose
+        if self.state == 'WINDUP':
+            return self.motion_data['windup']
+        if self.state == 'STRIKE':
+            return self.motion_data['strike']
+        if self.is_moving:
+            phase = int(self.walk_distance / self.motion_data['cycle_distance'] * 4) % 4
+            return self.motion_data['walk'][phase]
+        return self.motion_data['walk'][0]
 
     def get_bb(self):
         return self.motion.get_bb()
@@ -82,9 +99,11 @@ class Shade:
     def take_damage(self):
         if not self.alive:
             return False
+        pose = self.animation_frame
         self.health -= 1
         self.hurt_time = 0.18
         if not self.alive:
+            self.death_pose = pose
             self.attack_event = None
             self._enter('DYING')
         return True
@@ -98,6 +117,7 @@ class Shade:
         self.walk_distance = 0.0
         self.attack_event = None
         self.hurt_time = 0.0
+        self.death_pose = 0
         self._enter('PATROL')
 
     def _move(self, delta_time, direction, speed, stage):
@@ -167,13 +187,16 @@ class Shade:
             opacity = max(0.0, 1 - self.state_time / DEATH_TIME)
         elif self.hurt_time > 0:
             opacity = 0.35 if int(self.hurt_time * 40) % 2 else 1.0
-        scale = DRAW_HEIGHT / 1101
-        # 기본 이미지는 왼쪽을 본다. 긴 팔을 제외하고 양발 기준으로 정렬한다.
+        frame = self.motion_data['frames'][self.animation_frame]
+        left, bottom, width, height = frame['rect']
+        feet_x, feet_y = frame['feet']
+        scale = DRAW_HEIGHT / self.motion_data['reference_height']
+        # 원본 동작은 왼쪽을 본다. 반전해도 각 프레임의 발 기준은 유지한다.
         self.image.opacify(opacity)
         self.image.clip_composite_draw(
-            103, 12, 1265, 1101, 0, 'h' if self.face_dir > 0 else '',
-            self.x - camera_x + (1265 / 2 - 803) * scale * -self.face_dir,
-            self.feet_y + DRAW_HEIGHT / 2, 1265 * scale, DRAW_HEIGHT,
+            left, bottom, width, height, 0, 'h' if self.face_dir > 0 else '',
+            self.x - camera_x + (width / 2 - feet_x) * scale * -self.face_dir,
+            self.feet_y + (height / 2 - feet_y) * scale, width * scale, height * scale,
         )
         self.image.opacify(1.0)
         if not self.alive:
