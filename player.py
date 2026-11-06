@@ -1,11 +1,13 @@
-"""Warden의 정지 이미지와 발 기준 좌표를 관리한다."""
+"""Warden의 이동과 대기·걷기 애니메이션을 관리한다."""
 
+import json
 from pathlib import Path
 
 import pico2d
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
+WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -27,8 +29,15 @@ class Player:
         self.x = x
         self.feet_y = feet_y
         self.image = pico2d.load_image(str(IMAGE_PATH))
+        self.walk_data = json.loads(WALK_DATA_PATH.read_text(encoding="utf-8"))
+        self.walk_image = pico2d.load_image(
+            str(WALK_DATA_PATH.with_name(self.walk_data["image"]))
+        )
         self.pressed_keys = set()
         self.face_dir = 1
+        self.is_moving = False
+        self.walk_distance = 0.0
+        self.walk_frame = 0
 
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
@@ -45,23 +54,58 @@ class Player:
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
+        previous_direction = self.face_dir
         if direction:
             self.face_dir = direction
+        previous_x = self.x
         self.x += direction * MOVE_SPEED * delta_time
 
         # 두 방향 모두에서 전체 그림이 화면 안에 남도록 초기 경계를 제한한다.
         scale = DRAW_HEIGHT / SOURCE_HEIGHT
-        margin = max(SOURCE_FEET_X, SOURCE_WIDTH - SOURCE_FEET_X) * scale
+        margin = max(
+            max(SOURCE_FEET_X, SOURCE_WIDTH - SOURCE_FEET_X) * scale,
+            self.walk_data["visible_half_width"] * DRAW_HEIGHT
+            / self.walk_data["reference_height"],
+        )
         self.x = max(margin, min(area_width - margin, self.x))
 
+        distance = abs(self.x - previous_x)
+        self.is_moving = distance > 0.000001
+        if self.is_moving:
+            if self.face_dir != previous_direction:
+                self.walk_distance = 0.0
+            # 실제 이동 거리를 기준으로 재생해 화면 갱신 횟수에 영향을 받지 않는다.
+            cycle = self.walk_data["cycle_distance"]
+            self.walk_distance = (self.walk_distance + distance) % cycle
+            self.walk_frame = int(
+                self.walk_distance / cycle * len(self.walk_data["frames"])
+            )
+        else:
+            # 키를 놓거나 양쪽 키·화면 끝 때문에 멈추면 원래 대기 자세로 돌아간다.
+            self.walk_distance = 0.0
+            self.walk_frame = 0
+
     def draw(self):
-        scale = DRAW_HEIGHT / SOURCE_HEIGHT
-        center_offset = (SOURCE_WIDTH / 2 - SOURCE_FEET_X) * scale
-        self.image.clip_composite_draw(
-            SOURCE_LEFT, SOURCE_BOTTOM, SOURCE_WIDTH, SOURCE_HEIGHT,
+        if self.is_moving:
+            frame = self.walk_data["frames"][self.walk_frame]
+            image = self.walk_image
+            left, bottom, width, height = frame["rect"]
+            feet_x, feet_y = frame["feet"]
+            scale = DRAW_HEIGHT / self.walk_data["reference_height"]
+        else:
+            image = self.image
+            left, bottom = SOURCE_LEFT, SOURCE_BOTTOM
+            width, height = SOURCE_WIDTH, SOURCE_HEIGHT
+            feet_x, feet_y = SOURCE_FEET_X, 0
+            scale = DRAW_HEIGHT / SOURCE_HEIGHT
+
+        center_offset = (width / 2 - feet_x) * scale
+        image.clip_composite_draw(
+            left, bottom, width, height,
             0, "h" if self.face_dir < 0 else "",
-            self.x + center_offset * self.face_dir, self.feet_y + DRAW_HEIGHT / 2,
-            SOURCE_WIDTH * scale, DRAW_HEIGHT,
+            self.x + center_offset * self.face_dir,
+            self.feet_y + (height / 2 - feet_y) * scale,
+            width * scale, height * scale,
         )
 
     def get_bb(self):
