@@ -83,6 +83,37 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual(states, {'jump_rise', 'jump_apex', 'jump_fall', 'idle'})
         self.assertEqual(self.player.animation_state, 'idle')
 
+    def test_w_is_one_ground_attack_per_new_press(self):
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(1 / 60, 960)
+        self.assertEqual(self.player.animation_state, 'attack')
+        first_id = self.player.attack_id
+        for _ in range(60):
+            key(self.player, pico2d.SDLK_w)
+            self.player.update(1 / 60, 960)
+        self.assertEqual(self.player.attack_id, first_id)
+        self.assertFalse(self.player.is_attacking)
+        key(self.player, pico2d.SDLK_w, False)
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(1 / 60, 960)
+        self.assertEqual(self.player.attack_id, first_id + 1)
+
+    def test_attack_holds_facing_and_blocks_overlapping_jump(self):
+        key(self.player, pico2d.SDLK_LEFT)
+        key(self.player, pico2d.SDLK_w)
+        key(self.player, pico2d.SDLK_SPACE)
+        self.player.update(1 / 60, 960)
+        self.assertEqual(self.player.x, 160)
+        self.assertEqual(self.player.face_dir, 1)
+        self.assertTrue(self.player.motion.on_ground)
+
+    def test_week_one_w_does_not_trigger_air_attack(self):
+        key(self.player, pico2d.SDLK_SPACE)
+        self.player.update(1 / 60, 960)
+        key(self.player, pico2d.SDLK_w)
+        self.player.update(1 / 60, 960)
+        self.assertFalse(self.player.is_attacking)
+
 
 if __name__ == '__main__':
     unittest.main()

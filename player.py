@@ -23,6 +23,8 @@ SOURCE_FEET_X = 660 - SOURCE_LEFT
 DRAW_HEIGHT = 96
 BODY_WIDTH = 24
 BODY_HEIGHT = 80
+ATTACK_DURATION = 0.3
+ATTACK_RECOVERY = 0.15
 
 
 class Player:
@@ -50,6 +52,10 @@ class Player:
         self.invulnerability = 0.0
         self.notice = ""
         self.notice_time = 0.0
+        self.attack_requested = False
+        self.attack_elapsed = None
+        self.attack_cooldown = 0.0
+        self.attack_id = 0
 
     @property
     def x(self):
@@ -68,11 +74,14 @@ class Player:
         self.motion.feet_y = value
 
     def handle_event(self, event):
-        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT, pico2d.SDLK_SPACE):
+        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
+                              pico2d.SDLK_SPACE, pico2d.SDLK_w):
             return
         if event.type == pico2d.SDL_KEYDOWN:
             if event.key == pico2d.SDLK_SPACE and event.key not in self.pressed_keys:
                 self.jump_requested = True
+            elif event.key == pico2d.SDLK_w and event.key not in self.pressed_keys:
+                self.attack_requested = True
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
@@ -80,9 +89,16 @@ class Player:
     def clear_input(self):
         self.pressed_keys.clear()
         self.jump_requested = False
+        self.attack_requested = False
+
+    @property
+    def is_attacking(self):
+        return self.attack_elapsed is not None
 
     @property
     def animation_state(self):
+        if self.is_attacking:
+            return 'attack'
         if not self.motion.on_ground:
             if abs(self.motion.velocity_y) < 50:
                 return 'jump_apex'
@@ -94,12 +110,25 @@ class Player:
         self.notice_time = max(0.0, self.notice_time - delta_time)
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
-        if self.jump_requested:
+        self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
+        if self.is_attacking:
+            self.attack_elapsed += delta_time
+            if self.attack_elapsed >= ATTACK_DURATION:
+                self.attack_elapsed = None
+                self.attack_cooldown = ATTACK_RECOVERY
+        if (self.attack_requested and not self.is_attacking
+                and self.attack_cooldown <= 0 and self.motion.on_ground):
+            self.attack_elapsed = 0.0
+            self.attack_id += 1
+        self.attack_requested = False
+        if self.jump_requested and not self.is_attacking:
             self.motion.jump()
         self.jump_requested = False
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
+        if self.is_attacking:
+            direction = 0
         previous_direction = self.face_dir
         if direction:
             self.face_dir = direction
@@ -137,9 +166,14 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state.startswith('jump_'):
-            phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
-            frame = self.action_data["frames"][self.action_data["jump"][phase]]
+        if state == 'attack' or state.startswith('jump_'):
+            if state == 'attack':
+                phase = min(2, int(self.attack_elapsed / ATTACK_DURATION * 3))
+                index = self.action_data['attack'][phase]
+            else:
+                phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
+                index = self.action_data['jump'][phase]
+            frame = self.action_data['frames'][index]
             image = self.action_image
             left, bottom, width, height = frame["rect"]
             feet_x, feet_y = frame["feet"]
@@ -187,6 +221,8 @@ class Player:
         self.is_moving = False
         self.walk_distance = 0.0
         self.walk_frame = 0
+        self.attack_elapsed = None
+        self.attack_cooldown = 0.0
 
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()
