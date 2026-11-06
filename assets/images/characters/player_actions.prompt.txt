@@ -1,0 +1,12 @@
+Use case: identity-preserve. Asset type: 2D game sprite sheet for the approved Blackout player Warden, using input image 1 as the exact character design reference.
+Create ONE genuinely transparent RGBA PNG, exactly 1536 x 1024 pixels, arranged as THREE equal 512x512 columns and TWO equal 512x512 rows. Exactly SIX full-body frames. All six frames face RIGHT in the same side / slight three-quarter side view as the reference. Preserve the navy ninja hood, face mask, amber eye, orange trailing scarf, leather belt pouches, shin wraps, boots, wrist armor and warm glowing lantern. Match the reference pixel-art shading, character proportions, face and costume. Keep a single consistent scale: the character would be approximately 448 pixels tall when standing, head near local y=32, standing soles near local y=480, pelvis centered around local x=256. Leave generous transparent gutters and keep the entire body and equipment inside each cell. Do not crop heads, lanterns, hands, blades or boots.
+UPPER ROW, frames 1-3 are JUMP phases, with no dagger:
+1: ASCENDING, legs slightly bent under body and toes pointing downward, free arm balancing, lantern held firmly.
+2: APEX, both knees tucked slightly, compact controlled airborne pose, torso upright, scarf trailing.
+3: FALLING, legs extending down to prepare landing, free arm balancing, lantern held firmly.
+These are readable consecutive airborne poses, not three walking poses. Keep the same body proportions and limb lengths; bending changes silhouette but does not resize the person.
+LOWER ROW, frames 4-6 are a SINGLE short folding DAGGER attack on the ground:
+4: WINDUP, grounded boots on local y=480, free hand raises a short steel dagger near chest, coiled torso.
+5: ACTIVE SLASH, a fast forward diagonal cut with the short dagger in the free hand, lantern remains held in the other hand. A short subtle pale slash streak follows only the blade. Both boots stay grounded.
+6: RECOVERY, dagger hand finishing the swing and withdrawing, body returning toward the ready stance, grounded boots on the SAME baseline.
+No long sword, no extra weapons, no new armor or gear, no extra arms, no mirrored or front-facing frames. Keep the same character and pixel style across all six frames. Background and all gaps must be truly transparent. NO floor, NO cast shadows, NO scene, NO text, NO labels, NO numbers, NO grid lines, NO borders, NO watermark.
