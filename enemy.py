@@ -39,6 +39,8 @@ class Shade:
         self.attack_event = None
         self.hurt_time = 0.0
         self.death_pose = 0
+        self.retreat_light = None
+        self.retreat_direction = 0
 
     @property
     def x(self):
@@ -118,17 +120,68 @@ class Shade:
         self.attack_event = None
         self.hurt_time = 0.0
         self.death_pose = 0
+        self.retreat_light = None
+        self.retreat_direction = 0
         self._enter('PATROL')
+
+    def _can_move_to(self, x, direction):
+        if not (self.combat_bounds[0] + BODY_WIDTH / 2 <= x
+                <= self.combat_bounds[1] - BODY_WIDTH / 2):
+            return False
+        box = (x - BODY_WIDTH / 2, self.feet_y, x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
+        if any(overlaps(box, (s.left, s.bottom, s.right, s.top)) for s in self.solids):
+            return False
+        probe = x + direction * (BODY_WIDTH / 2 + 2)
+        return any(s.left <= probe <= s.right and abs(s.top - self.feet_y) < EPSILON
+                   for s in self.solids)
+
+    def _choose_retreat_direction(self, light):
+        candidates = []
+        for direction in (-1, 1):
+            for distance in range(4, int(self.combat_bounds[1] - self.combat_bounds[0]) + 4, 4):
+                x = self.x + direction * distance
+                if not self._can_move_to(x, direction):
+                    break
+                box = (x - BODY_WIDTH / 2, self.feet_y,
+                       x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
+                if not light.illuminates(box):
+                    candidates.append((distance, direction))
+                    break
+        if candidates:
+            return min(candidates, key=lambda item: item[0])[1]
+        return 1 if self.x >= light.x else -1
+
+    def _update_light_response(self, delta_time, player, stage, light):
+        if light is None or not light.active:
+            self.retreat_light = None
+            if self.state in ('RETREAT', 'LIGHT_WAIT'):
+                self._enter('CHASE')
+            return False
+        if light.illuminates(self.get_bb()):
+            if light is not self.retreat_light or self.state not in ('RETREAT', 'LIGHT_WAIT'):
+                self.retreat_light = light
+                self.retreat_direction = self._choose_retreat_direction(light)
+                self._enter('RETREAT')
+            self.attack_event = None
+            if self.state == 'RETREAT':
+                self.face_dir = self.retreat_direction
+                moved = self._move(delta_time, self.retreat_direction, 80, stage)
+                if not moved or not light.illuminates(self.get_bb()):
+                    self._enter('LIGHT_WAIT')
+            return True
+        if light.illuminates(player.get_bb()) and self.can_see(player):
+            self.retreat_light = light
+            self._enter('LIGHT_WAIT')
+            self.attack_event = None
+            return True
+        if self.state in ('RETREAT', 'LIGHT_WAIT'):
+            self._enter('CHASE')
+        return False
 
     def _move(self, delta_time, direction, speed, stage):
         old_x = self.x
-        probe = self.x + direction * (BODY_WIDTH / 2 + 2 + speed * delta_time)
-        has_floor = any(s.left <= probe <= s.right and abs(s.top - self.feet_y) < EPSILON
-                        for s in self.solids)
         next_x = self.x + direction * speed * delta_time
-        inside = (self.combat_bounds[0] + BODY_WIDTH / 2 <= next_x
-                  <= self.combat_bounds[1] - BODY_WIDTH / 2)
-        if not has_floor or not inside:
+        if direction and not self._can_move_to(next_x, direction):
             direction = 0
         self.motion.step(delta_time, direction, self.solids, stage.width,
                          edge_margin=BODY_WIDTH / 2, speed=speed)
@@ -137,7 +190,7 @@ class Shade:
         self.walk_distance += distance
         return self.is_moving
 
-    def update(self, delta_time, player, stage):
+    def update(self, delta_time, player, stage, light=None):
         self.solids = stage.solids
         self.attack_event = None
         self.state_time += delta_time
@@ -146,6 +199,8 @@ class Shade:
             self.is_moving = False
             if self.state != 'DEAD' and self.state_time >= DEATH_TIME:
                 self._enter('DEAD')
+            return
+        if self._update_light_response(delta_time, player, stage, light):
             return
         if self.state in ('WINDUP', 'STRIKE', 'RECOVER'):
             self.is_moving = False

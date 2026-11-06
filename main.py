@@ -23,7 +23,7 @@ def update_world(delta_time, player, enemies, stage):
             enemy.reset()
     life_before = player.respawn_count
     for enemy in enemies:
-        enemy.update(delta_time, player, stage)
+        enemy.update(delta_time, player, stage, player.light)
     target = player.get_attack_target(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive]
     )
