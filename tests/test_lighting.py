@@ -31,6 +31,13 @@ class LightingTests(unittest.TestCase):
         self.light.update(0)
         self.assertEqual(self.light.remaining, 8)
 
+    def test_eight_seconds_expires_at_different_frame_rates(self):
+        for fps in (30, 60, 144):
+            light = PortableLight(160, 120, self.region)
+            for _ in range(8 * fps):
+                light.update(1 / fps)
+            self.assertFalse(light.active, fps)
+
     def test_outside_room_has_no_installation_region(self):
         self.assertIs(find_region([self.region], 160, 120), self.region)
         self.assertIsNone(find_region([self.region], 160, 70))

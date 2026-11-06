@@ -169,7 +169,8 @@ class Shade:
                 if not moved or not light.illuminates(self.get_bb()):
                     self._enter('LIGHT_WAIT')
             return True
-        if light.illuminates(player.get_bb()) and self.can_see(player):
+        if light.illuminates(player.get_bb()) and (
+                self.state in ('RETREAT', 'LIGHT_WAIT') or self.can_see(player)):
             self.retreat_light = light
             self._enter('LIGHT_WAIT')
             self.attack_event = None

@@ -67,6 +67,46 @@ class LightResponseTests(unittest.TestCase):
         self.assertEqual(self.enemy.state, 'WINDUP')
         self.assertIsNone(self.enemy.consume_attack())
 
+    def test_dark_wait_does_not_walk_back_into_light_when_view_is_blocked(self):
+        self.stage.solids.append(Solid(460, 96, 472, 300))
+        self.enemy.motion.x = 500
+        self.enemy._enter('LIGHT_WAIT')
+        self.enemy.retreat_light = self.light
+        for _ in range(60):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            self.assertEqual(self.enemy.x, 500)
+            self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+
+    def test_retreat_blocked_by_wall_never_attacks(self):
+        self.stage.solids.append(Solid(480, 96, 512, 300))
+        light = PortableLight(440, 120, self.stage.light_regions[0])
+        for _ in range(120):
+            self.enemy.update(1 / 60, self.player, self.stage, light)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertTrue(light.illuminates(self.enemy.get_bb()))
+        self.assertLessEqual(self.enemy.get_bb()[2], 480)
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_retreat_stops_at_ledge_even_with_room_to_chase_beyond_it(self):
+        stage = SimpleNamespace(width=960, solids=[Solid(0, 0, 160, 96)])
+        enemy = Shade(80, 96, combat_bounds=(0, 960))
+        light = PortableLight(80, 120, LightRegion(0, 96, 960, 540))
+        self.player.x = 80
+        for _ in range(120):
+            enemy.update(1 / 60, self.player, stage, light)
+            self.assertEqual(enemy.feet_y, 96)
+        self.assertEqual(enemy.state, 'LIGHT_WAIT')
+        self.assertIsNone(enemy.consume_attack())
+
+    def test_reinstall_recalculates_retreat_direction(self):
+        self.enemy.update(0.01, self.player, self.stage, self.light)
+        self.assertEqual(self.enemy.retreat_direction, 1)
+        previous_x = self.enemy.x
+        replacement = PortableLight(500, 120, self.stage.light_regions[0])
+        self.enemy.update(0.01, self.player, self.stage, replacement)
+        self.assertEqual(self.enemy.retreat_direction, -1)
+        self.assertLess(self.enemy.x, previous_x)
+
 
 if __name__ == '__main__':
     unittest.main()

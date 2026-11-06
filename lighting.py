@@ -37,6 +37,8 @@ class PortableLight:
 
     def update(self, delta_time):
         self.remaining = max(0.0, self.remaining - max(0.0, delta_time))
+        if self.remaining < 0.000000001:
+            self.remaining = 0.0
 
     def illuminates(self, box):
         if not self.active:
