@@ -40,6 +40,9 @@ class InteractionTests(unittest.TestCase):
         self.player.x = 640
         self.player.attack_elapsed = 0.1
         self.assertFalse(self.stage.activate_fixture(self.player))
+        self.player.attack_elapsed = None
+        self.player.light_cast = 0.1
+        self.assertFalse(self.stage.activate_fixture(self.player))
 
     def press_e(self, down=True):
         event = pico2d.Event(pico2d.SDL_KEYDOWN if down else pico2d.SDL_KEYUP)
@@ -86,9 +89,6 @@ class InteractionTests(unittest.TestCase):
         self.assertEqual(self.player.battery, 20)
         self.assertTrue(self.stage.fixture_powered)
         self.assertFalse(enemy.alive)
-        self.player.attack_elapsed = None
-        self.player.light_cast = 0.1
-        self.assertFalse(self.stage.activate_fixture(self.player))
 
 
 if __name__ == '__main__':

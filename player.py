@@ -304,7 +304,7 @@ class Player:
             return
         self.notice = "낙하 피해 -1: 마지막 안전 발판으로 복귀"
         self.x, self.feet_y = self.last_safe_position
-        self._reset_actions_after_return()
+        self.reset_actions_after_return()
         self.notice_time = 2.0
 
     def take_damage(self):
@@ -330,12 +330,12 @@ class Player:
         self.notice = '체력 소진: 안전 지점으로 복귀'
         self.notice_time = 2.0
         self.light = None
-        self._reset_actions_after_return()
+        self.reset_actions_after_return()
 
-    def _reset_actions_after_return(self):
+    def reset_actions_after_return(self, invulnerability=1.0):
         self.motion.velocity_y = 0
         self.motion.on_ground = True
-        self.invulnerability = 1.0
+        self.invulnerability = invulnerability
         self.clear_input()
         self.is_moving = False
         self.walk_distance = 0.0
