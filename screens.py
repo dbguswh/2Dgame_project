@@ -1,0 +1,55 @@
+"""화면 상태에 맞춰 메뉴와 플레이 화면을 그린다."""
+
+from math import ceil
+
+import pico2d
+
+from physics import camera_offset
+from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
+
+
+def draw_choices(font, items, selection, start_y=270):
+    for index, text in enumerate(items):
+        color = (255, 218, 134) if index == selection else (164, 175, 192)
+        if index == selection:
+            font.draw(370, start_y - index * 44, '>', color)
+        font.draw(410, start_y - index * 44, text, color)
+
+
+def draw_game(game, font):
+    player, stage = game.player, game.stage
+    camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
+    stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    if player.light is not None:
+        player.light.draw(camera_x)
+    for enemy in game.enemies:
+        enemy.draw(camera_x)
+    player.draw(camera_x)
+    if game.show_debug:
+        stage.draw_debug(camera_x)
+        player.draw_debug(camera_x)
+        for enemy in game.enemies:
+            enemy.draw_debug(camera_x)
+    font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
+    battery_color = (255, 215, 126) if player.battery >= 50 else (238, 145, 118)
+    font.draw(170, SCREEN_HEIGHT - 28,
+              f'배터리 {player.battery} / {player.max_battery}', battery_color)
+    if player.light is not None:
+        seconds = ceil(player.light.remaining * 10) / 10
+        font.draw(440, SCREEN_HEIGHT - 28, f'조명 {seconds:.1f}초', (255, 221, 146))
+    minutes, seconds = divmod(int(game.play_time), 60)
+    font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
+    font.draw(20, 24, '방향키 이동   Space 점프   W 베기   R 조명(50)   F1 판정   Esc 종료',
+              (210, 219, 230))
+    if player.notice_time > 0:
+        font.draw(20, SCREEN_HEIGHT - 58, player.notice, (255, 195, 110))
+
+
+def draw_session(game, font, menu_font, title_font):
+    clear_frame()
+    if game.state == 'TITLE':
+        title_font.draw(350, 365, 'Blackout', (242, 225, 191))
+        draw_choices(menu_font, ('시작', '나가기'), game.selection)
+        font.draw(320, 105, '위/아래 선택    E 확인    Esc 종료', (164, 175, 192))
+    elif game.state == 'PLAY':
+        draw_game(game, font)
