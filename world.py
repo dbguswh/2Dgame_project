@@ -3,13 +3,29 @@
 from combat import overlaps
 
 
+def restore_enemies(enemies, stage):
+    for enemy in enemies:
+        if stage.fixture_powered:
+            enemy.dissolve()
+        else:
+            enemy.reset()
+
+
 def update_world(delta_time, player, enemies, stage):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
     life_before = player.respawn_count
     player.update(delta_time, stage.width, stage.solids, stage.light_regions)
     if player.respawn_count != life_before:
+        restore_enemies(enemies, stage)
+    interaction_requested = player.interaction_requested
+    player.interaction_requested = False
+    if interaction_requested and stage.activate_fixture(player):
+        player.checkpoint_position = stage.fixture_checkpoint
+        player.notice = '구역 조명 복구 · 안전 지점 확보'
+        player.notice_time = 2.2
+    if stage.fixture_powered:
         for enemy in enemies:
-            enemy.reset()
+            enemy.dissolve()
     life_before = player.respawn_count
     for enemy in enemies:
         enemy.update(delta_time, player, stage, player.light)
@@ -26,8 +42,7 @@ def update_world(delta_time, player, enemies, stage):
         if enemy.alive and overlaps(attack, player.get_bb()):
             player.take_damage()
         if player.respawn_count != life_before:
-            for reset_enemy in enemies:
-                reset_enemy.reset()
+            restore_enemies(enemies, stage)
             break
     safe_position = stage.safe_position(player.motion)
     if safe_position is not None:

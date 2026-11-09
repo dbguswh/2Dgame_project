@@ -93,6 +93,13 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(self.game.player.battery, 100)
         self.assertEqual(self.game.play_time, 0)
 
+    def test_start_menu_e_cannot_leak_into_fixture_interaction(self):
+        key(self.game, pico2d.SDLK_e)
+        self.game.player.x = 640
+        key(self.game, pico2d.SDLK_e)
+        self.game.update(0.01)
+        self.assertFalse(self.game.stage.fixture_powered)
+
 
 if __name__ == '__main__':
     unittest.main()

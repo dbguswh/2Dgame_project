@@ -55,6 +55,7 @@ class Player:
         self.walk_frame = 0
         self.jump_requested = False
         self.spawn_position = (x, feet_y)
+        self.checkpoint_position = self.spawn_position
         self.last_safe_position = self.spawn_position
         self.health = 3
         self.invulnerability = 0.0
@@ -72,6 +73,7 @@ class Player:
         self.light = None
         self.light_requested = False
         self.light_cast = 0.0
+        self.interaction_requested = False
 
     @property
     def x(self):
@@ -91,7 +93,7 @@ class Player:
 
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
-                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r):
+                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e):
             return
         if event.type == pico2d.SDL_KEYDOWN:
             if event.key == pico2d.SDLK_SPACE and event.key not in self.pressed_keys:
@@ -100,6 +102,8 @@ class Player:
                 self.attack_requested = True
             elif event.key == pico2d.SDLK_r and event.key not in self.pressed_keys:
                 self.light_requested = True
+            elif event.key == pico2d.SDLK_e and event.key not in self.pressed_keys:
+                self.interaction_requested = True
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
@@ -109,6 +113,7 @@ class Player:
         self.jump_requested = False
         self.attack_requested = False
         self.light_requested = False
+        self.interaction_requested = False
 
     @property
     def is_attacking(self):
@@ -319,10 +324,10 @@ class Player:
 
     def _respawn(self):
         self.health = 3
-        self.last_safe_position = self.spawn_position
-        self.x, self.feet_y = self.spawn_position
+        self.last_safe_position = self.checkpoint_position
+        self.x, self.feet_y = self.checkpoint_position
         self.respawn_count += 1
-        self.notice = '체력 소진: 시작 지점으로 복귀'
+        self.notice = '체력 소진: 안전 지점으로 복귀'
         self.notice_time = 2.0
         self.light = None
         self._reset_actions_after_return()

@@ -124,6 +124,15 @@ class Shade:
         self.retreat_direction = 0
         self._enter('PATROL')
 
+    def dissolve(self):
+        if not self.alive:
+            return False
+        self.death_pose = self.animation_frame
+        self.health = 0
+        self.attack_event = None
+        self._enter('DYING')
+        return True
+
     def _can_move_to(self, x, direction):
         if not (self.combat_bounds[0] + BODY_WIDTH / 2 <= x
                 <= self.combat_bounds[1] - BODY_WIDTH / 2):
