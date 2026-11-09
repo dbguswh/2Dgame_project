@@ -39,7 +39,7 @@ def draw_game(game, font):
         font.draw(440, SCREEN_HEIGHT - 28, f'조명 {seconds:.1f}초', (255, 221, 146))
     minutes, seconds = divmod(int(game.play_time), 60)
     font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
-    font.draw(20, 24, '방향키 이동   Space 점프   W 베기   R 조명(50)   F1 판정   Esc 종료',
+    font.draw(20, 24, '방향키 이동   Space 점프   W 베기   R 조명(50)   F1 판정   Esc 일시정지',
               (210, 219, 230))
     if player.notice_time > 0:
         font.draw(20, SCREEN_HEIGHT - 58, player.notice, (255, 195, 110))
@@ -51,5 +51,11 @@ def draw_session(game, font, menu_font, title_font):
         title_font.draw(350, 365, 'Blackout', (242, 225, 191))
         draw_choices(menu_font, ('시작', '나가기'), game.selection)
         font.draw(320, 105, '위/아래 선택    E 확인    Esc 종료', (164, 175, 192))
-    elif game.state == 'PLAY':
+    elif game.state in ('PLAY', 'PAUSED'):
         draw_game(game, font)
+        if game.state == 'PAUSED':
+            pico2d.draw_rectangle(270, 125, 690, 430, 15, 21, 32, filled=True)
+            pico2d.draw_rectangle(270, 125, 690, 430, 120, 108, 83)
+            menu_font.draw(410, 390, '일시정지', (242, 225, 191))
+            draw_choices(menu_font, game.PAUSE_ITEMS, game.selection, start_y=310)
+            font.draw(345, 155, 'E 확인    Esc 계속하기', (164, 175, 192))

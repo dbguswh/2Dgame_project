@@ -9,6 +9,8 @@ from world import update_world
 
 
 class GameSession:
+    PAUSE_ITEMS = ('계속하기', '타이틀로', '나가기')
+
     def __init__(self):
         self.state = 'TITLE'
         self.selection = 0
@@ -63,11 +65,30 @@ class GameSession:
             if event.type == pico2d.SDL_KEYDOWN and not new_press:
                 return
             if new_press and event.key == pico2d.SDLK_ESCAPE:
-                self.state = 'QUIT'
+                self.state = 'PAUSED'
+                self.selection = 0
+                self.player.clear_input()
             elif new_press and event.key == pico2d.SDLK_F1:
                 self.show_debug = not self.show_debug
             else:
                 self.player.handle_event(event)
+        elif self.state == 'PAUSED' and new_press:
+            if event.key == pico2d.SDLK_ESCAPE:
+                self.state = 'PLAY'
+                self.player.clear_input()
+            elif event.key in (pico2d.SDLK_UP, pico2d.SDLK_DOWN):
+                step = -1 if event.key == pico2d.SDLK_UP else 1
+                self.selection = (self.selection + step) % len(self.PAUSE_ITEMS)
+            elif event.key == pico2d.SDLK_e:
+                if self.selection == 0:
+                    self.state = 'PLAY'
+                    self.player.clear_input()
+                elif self.selection == 1:
+                    self.close_world()
+                    self.state = 'TITLE'
+                    self.selection = 0
+                else:
+                    self.state = 'QUIT'
 
     def update(self, delta_time, focused=True):
         if not focused:
