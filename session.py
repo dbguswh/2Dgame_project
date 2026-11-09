@@ -5,11 +5,12 @@ import pico2d
 from enemy import Shade
 from player import Player
 from stage import Stage
-from world import update_world
+from world import update_world, restore_enemies
+from progress import ProgressRecords
 
 
 class GameSession:
-    PAUSE_ITEMS = ('계속하기', '타이틀로', '나가기')
+    PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
 
     def __init__(self):
         self.state = 'TITLE'
@@ -20,6 +21,7 @@ class GameSession:
         self.enemies = []
         self.show_debug = False
         self.play_time = 0.0
+        self.records = None
 
     @property
     def running(self):
@@ -30,8 +32,16 @@ class GameSession:
         self.stage = Stage()
         self.player = Player(*self.stage.start)
         self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]
+        self.records = ProgressRecords(self.player, self.stage)
         self.play_time = 0.0
         self.state = 'PLAY'
+
+    def restart_stage(self):
+        self.records.restore_entry(self.player, self.stage)
+        restore_enemies(self.enemies, self.stage)
+        self.player.clear_input()
+        self.state = 'PLAY'
+        self.selection = 0
 
     def clear_input(self):
         self.pressed_keys.clear()
@@ -84,6 +94,8 @@ class GameSession:
                     self.state = 'PLAY'
                     self.player.clear_input()
                 elif self.selection == 1:
+                    self.restart_stage()
+                elif self.selection == 2:
                     self.close_world()
                     self.state = 'TITLE'
                     self.selection = 0
@@ -95,10 +107,11 @@ class GameSession:
             self.clear_input()
             return
         if self.state == 'PLAY':
-            update_world(delta_time, self.player, self.enemies, self.stage)
+            update_world(delta_time, self.player, self.enemies, self.stage, self.records)
             self.play_time += delta_time
 
     def close_world(self):
         self.player = None
         self.enemies.clear()
         self.stage = None
+        self.records = None

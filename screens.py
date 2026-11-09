@@ -60,8 +60,10 @@ def draw_session(game, font, menu_font, title_font):
     elif game.state in ('PLAY', 'PAUSED'):
         draw_game(game, font)
         if game.state == 'PAUSED':
-            pico2d.draw_rectangle(270, 125, 690, 430, 15, 21, 32, filled=True)
-            pico2d.draw_rectangle(270, 125, 690, 430, 120, 108, 83)
-            menu_font.draw(410, 390, '일시정지', (242, 225, 191))
-            draw_choices(menu_font, game.PAUSE_ITEMS, game.selection, start_y=310)
-            font.draw(345, 155, 'E 확인    Esc 계속하기', (164, 175, 192))
+            pico2d.draw_rectangle(250, 90, 710, 440, 15, 21, 32, filled=True)
+            pico2d.draw_rectangle(250, 90, 710, 440, 120, 108, 83)
+            menu_font.draw(410, 405, '일시정지', (242, 225, 191))
+            draw_choices(menu_font, game.PAUSE_ITEMS, game.selection, start_y=320)
+            if game.PAUSE_ITEMS[game.selection] == '스테이지 재시작':
+                font.draw(290, 150, '구간의 진행과 자원을 모두 되돌립니다', (220, 180, 125))
+            font.draw(345, 115, 'E 확인    Esc 계속하기', (164, 175, 192))

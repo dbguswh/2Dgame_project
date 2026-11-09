@@ -11,11 +11,14 @@ def restore_enemies(enemies, stage):
             enemy.reset()
 
 
-def update_world(delta_time, player, enemies, stage):
+def update_world(delta_time, player, enemies, stage, records=None):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
     life_before = player.respawn_count
     player.update(delta_time, stage.width, stage.solids, stage.light_regions)
     if player.respawn_count != life_before:
+        if records is not None:
+            records.remember(player, stage)
+            records.restore_after_death(player, stage)
         restore_enemies(enemies, stage)
     interaction_requested = player.interaction_requested
     player.interaction_requested = False
@@ -26,6 +29,9 @@ def update_world(delta_time, player, enemies, stage):
     if stage.fixture_powered:
         for enemy in enemies:
             enemy.dissolve()
+    if records is not None:
+        # R 소비와 E 복구를 적의 타격보다 먼저 최신 기록에 반영한다.
+        records.remember(player, stage)
     life_before = player.respawn_count
     for enemy in enemies:
         enemy.update(delta_time, player, stage, player.light)
@@ -42,8 +48,12 @@ def update_world(delta_time, player, enemies, stage):
         if enemy.alive and overlaps(attack, player.get_bb()):
             player.take_damage()
         if player.respawn_count != life_before:
+            if records is not None:
+                records.restore_after_death(player, stage)
             restore_enemies(enemies, stage)
             break
     safe_position = stage.safe_position(player.motion)
     if safe_position is not None:
         player.last_safe_position = safe_position
+    if records is not None:
+        records.remember(player, stage)

@@ -100,6 +100,57 @@ class SessionTests(unittest.TestCase):
         self.game.update(0.01)
         self.assertFalse(self.game.stage.fixture_powered)
 
+    def repair(self):
+        self.game.player.x = 640
+        key(self.game, pico2d.SDLK_e)
+        key(self.game, pico2d.SDLK_e, False)
+        self.game.update(0.01)
+
+    def test_manual_restart_restores_progress_and_battery_together(self):
+        self.start()
+        self.game.player.battery = 0
+        self.repair()
+        self.assertTrue(self.game.records.latest.fixture_powered)
+        elapsed = self.game.play_time
+        self.pause()
+        self.game.selection = self.game.PAUSE_ITEMS.index('스테이지 재시작')
+        key(self.game, pico2d.SDLK_e)
+        self.assertEqual(self.game.state, 'PLAY')
+        self.assertEqual(self.game.player.battery, 100)
+        self.assertFalse(self.game.stage.fixture_powered)
+        self.assertEqual(self.game.player.checkpoint_position, (160, 96))
+        self.assertEqual(self.game.enemies[0].health, 2)
+        self.assertEqual(self.game.enemies[0].state, 'PATROL')
+        self.assertEqual(self.game.play_time, elapsed)
+        self.assertEqual(self.game.records.latest, self.game.records.entry)
+
+    def test_death_uses_latest_battery_after_checkpoint_not_old_value(self):
+        self.start()
+        self.repair()
+        self.assertEqual(self.game.records.latest.battery, 100)
+        key(self.game, pico2d.SDLK_r)
+        self.game.update(0.01)
+        self.assertEqual(self.game.records.latest.battery, 50)
+        self.game.player.health = 1
+        self.game.player.feet_y = -200
+        self.game.update(0.01)
+        self.assertEqual(self.game.player.health, 3)
+        self.assertEqual(self.game.player.battery, 50)
+        self.assertIsNone(self.game.player.light)
+        self.assertTrue(self.game.stage.fixture_powered)
+        self.assertFalse(self.game.enemies[0].alive)
+        self.assertEqual((self.game.player.x, self.game.player.feet_y), (608, 96))
+        self.assertEqual(self.game.records.entry.battery, 100)
+
+    def test_pause_menu_e_cannot_activate_fixture_after_resume(self):
+        self.start()
+        self.game.player.x = 640
+        self.pause()
+        key(self.game, pico2d.SDLK_e)
+        key(self.game, pico2d.SDLK_e)
+        self.game.update(0.01)
+        self.assertFalse(self.game.stage.fixture_powered)
+
 
 if __name__ == '__main__':
     unittest.main()
