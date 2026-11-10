@@ -14,6 +14,7 @@ IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
 ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
+SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_second.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -50,6 +51,10 @@ class Player:
         self.attack_data = json.loads(ATTACK_DATA_PATH.read_text(encoding="utf-8"))
         self.attack_image = pico2d.load_image(
             str(ATTACK_DATA_PATH.with_name(self.attack_data["image"]))
+        )
+        self.second_attack_data = json.loads(SECOND_ATTACK_DATA_PATH.read_text(encoding='utf-8'))
+        self.second_attack_image = pico2d.load_image(
+            str(SECOND_ATTACK_DATA_PATH.with_name(self.second_attack_data['image']))
         )
         self.pressed_keys = set()
         self.face_dir = 1
@@ -279,11 +284,12 @@ class Player:
             return
         state = self.animation_state
         if state == 'attack':
-            frame = self.attack_data['frames'][self.attack_frame]
-            image = self.attack_image
+            data = self.second_attack_data if self.attack_stage == 2 else self.attack_data
+            frame = data['frames'][self.attack_frame]
+            image = self.second_attack_image if self.attack_stage == 2 else self.attack_image
             left, bottom, width, height = frame['rect']
             feet_x, feet_y = frame['feet']
-            scale = DRAW_HEIGHT / self.attack_data['reference_height']
+            scale = DRAW_HEIGHT / data['reference_height']
         elif state.startswith('jump_'):
             phase = ('jump_rise', 'jump_apex', 'jump_fall').index(state)
             index = self.action_data['jump'][phase]
