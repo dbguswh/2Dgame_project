@@ -4,7 +4,7 @@ import pico2d
 
 from enemy import Shade
 from player import Player
-from stage import Stage
+from residential import ResidentialStage
 from world import update_world, restore_enemies
 from progress import ProgressRecords
 
@@ -12,7 +12,8 @@ from progress import ProgressRecords
 class GameSession:
     PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
 
-    def __init__(self):
+    def __init__(self, stage_factory=ResidentialStage):
+        self.stage_factory = stage_factory
         self.state = 'TITLE'
         self.selection = 0
         self.pressed_keys = set()
@@ -29,9 +30,13 @@ class GameSession:
 
     def start_game(self):
         self.close_world()
-        self.stage = Stage()
+        self.stage = self.stage_factory()
         self.player = Player(*self.stage.start)
-        self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]
+        if self.stage.enemy_placements:
+            self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds)
+                            for e in self.stage.enemy_placements]
+        else:
+            self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]
         self.records = ProgressRecords(self.player, self.stage)
         self.play_time = 0.0
         self.state = 'PLAY'

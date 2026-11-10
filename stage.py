@@ -16,6 +16,7 @@ class Stage:
         self.start = (160, GROUND_Y)
         self.enemy_spawn = (440, GROUND_Y)
         self.combat_bounds = (288, 768)
+        self.enemy_placements = ()
         self.fixture_position = (640, GROUND_Y)
         self.fixture_checkpoint = (608, GROUND_Y)
         self.fixture_powered = False

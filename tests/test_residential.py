@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import Mock, patch
 
 from physics import Motion, MOVE_SPEED, camera_offset
 from residential import ResidentialStage
+from session import GameSession
 
 
 class ResidentialLayoutTests(unittest.TestCase):
@@ -53,6 +55,26 @@ class ResidentialLayoutTests(unittest.TestCase):
                     if motion.feet_y >= 96:
                         self.assertLess(motion.x + motion.width / 2, right)
                     self.assertFalse(motion.on_ground and motion.x >= right)
+
+    @patch('pico2d.load_image', return_value=Mock())
+    def test_new_game_loads_residential_and_six_independent_enemies(self, _):
+        game = GameSession()
+        game.start_game()
+        self.assertIsInstance(game.stage, ResidentialStage)
+        self.assertEqual(len(game.enemies), 6)
+        self.assertEqual(len({e.identity for e in game.enemies}), 6)
+        # 한 번의 W는 여러 적이 겹쳐도 가장 가까운 한 마리만 친다.
+        game.player.x = 450
+        game.player.attack_elapsed = 0.11
+        game.enemies[0].motion.x = 480
+        game.enemies[1].motion.x = 482
+        game.update(0.01)
+        self.assertEqual(sorted(e.health for e in game.enemies[:2]), [1, 2])
+        for _ in range(100):
+            game.update(1 / 60)
+        for enemy in game.enemies:
+            self.assertGreaterEqual(enemy.x - 24, enemy.combat_bounds[0])
+            self.assertLessEqual(enemy.x + 24, enemy.combat_bounds[1])
 
 
 if __name__ == '__main__':

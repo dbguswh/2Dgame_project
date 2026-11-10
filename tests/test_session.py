@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pico2d
 
 from session import GameSession
+from stage import Stage
 
 
 def key(game, value, down=True):
@@ -17,7 +18,8 @@ class SessionTests(unittest.TestCase):
         image_patch = patch('pico2d.load_image', return_value=Mock())
         image_patch.start()
         self.addCleanup(image_patch.stop)
-        self.game = GameSession()
+        # 기존의 짧은 구간으로 메뉴·복귀 규칙을 독립 검증한다.
+        self.game = GameSession(stage_factory=Stage)
 
     def start(self):
         key(self.game, pico2d.SDLK_e)
