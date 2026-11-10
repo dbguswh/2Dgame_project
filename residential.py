@@ -30,6 +30,7 @@ class ResidentialStage(Stage):
         self.fixture_checkpoint = (2400, GROUND_Y)
         self.fixture_powered = False
         self.canal = (2496, 2688)
+        self.bridge_solid = Solid(self.canal[0], GROUND_Y - 16, self.canal[1], GROUND_Y)
         self.exit_position = (2800, GROUND_Y)
         self.fuse_position = (1328, 208)
         self.fuse_checkpoint = (1456, GROUND_Y)
@@ -69,11 +70,34 @@ class ResidentialStage(Stage):
             return False
         self.fuse_state = 'INSTALLED'
         self.fixture_powered = True
+        self.bridge_elapsed = 0.0
         return True
+
+    @property
+    def bridge_ready(self):
+        return self.fixture_powered and self.bridge_elapsed >= self.BRIDGE_TIME
+
+    def update(self, delta_time):
+        if self.fixture_powered:
+            self.bridge_elapsed = min(self.BRIDGE_TIME, self.bridge_elapsed + max(0, delta_time))
+        self.sync_bridge()
+
+    def sync_bridge(self):
+        if self.bridge_ready and self.bridge_solid not in self.solids:
+            self.solids.append(self.bridge_solid)
+        elif not self.bridge_ready and self.bridge_solid in self.solids:
+            self.solids.remove(self.bridge_solid)
+
+    def restore_after_death(self):
+        if self.fixture_powered:
+            self.bridge_elapsed = self.BRIDGE_TIME
+        self.sync_bridge()
 
     @property
     def objective(self):
         if self.fixture_powered:
+            if not self.bridge_ready:
+                return '운하 주택가 · 다리 전개 중'
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
             return '운하 주택가 · 오른쪽 제어함에 퓨즈를 설치하세요'
@@ -115,6 +139,7 @@ class ResidentialStage(Stage):
         for lamp_x in (160, 816, 1488, 2384, 2768):
             self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or self.fixture_powered)
         self.draw_fixture(camera_x)
+        self.draw_bridge(camera_x)
         if self.fuse_state == 'WORLD':
             x, y = self.fuse_position
             x -= camera_x
@@ -122,6 +147,26 @@ class ResidentialStage(Stage):
                                   255, 214, 112, filled=True)
             pico2d.draw_rectangle(x - 5, y - 7, x + 5, y + 7,
                                   80, 106, 123, filled=True)
+
+    def draw_bridge(self, camera_x):
+        from math import cos, sin, pi
+        left, right = self.canal
+        # 펼쳐지는 두 반쪽은 기동 중 장식이다. 바닥 판정은 전개 완료 시 한 번에 추가한다.
+        fraction = self.bridge_elapsed / self.BRIDGE_TIME if self.fixture_powered else 0
+        angle = (1 - fraction) * pi / 2
+        length = (right - left) / 2
+        for hinge, direction in ((left, 1), (right, -1)):
+            x = hinge - camera_x
+            tip_x = x + direction * length * cos(angle)
+            tip_y = GROUND_Y + length * sin(angle)
+            for offset in range(8):
+                pico2d.draw_line(x, GROUND_Y - offset, tip_x, tip_y - offset, 151, 128, 86)
+        if self.bridge_ready:
+            pico2d.draw_line(left - camera_x, GROUND_Y + 28,
+                              right - camera_x, GROUND_Y + 28, 133, 138, 139)
+            for post in range(left, right + 1, 32):
+                pico2d.draw_line(post - camera_x, GROUND_Y,
+                                  post - camera_x, GROUND_Y + 28, 133, 138, 139)
 
     @staticmethod
     def draw_lamp(x, powered):

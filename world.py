@@ -13,12 +13,15 @@ def restore_enemies(enemies, stage):
 
 def update_world(delta_time, player, enemies, stage, records=None):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
+    stage.update(delta_time)
     life_before = player.respawn_count
     player.update(delta_time, stage.width, stage.solids, stage.light_regions)
     if player.respawn_count != life_before:
         if records is not None:
             records.remember(player, stage)
             records.restore_after_death(player, stage)
+        else:
+            stage.restore_after_death()
         restore_enemies(enemies, stage)
     stage.collect_pickups(player)
     interaction_requested = player.interaction_requested
@@ -51,6 +54,8 @@ def update_world(delta_time, player, enemies, stage, records=None):
         if player.respawn_count != life_before:
             if records is not None:
                 records.restore_after_death(player, stage)
+            else:
+                stage.restore_after_death()
             restore_enemies(enemies, stage)
             break
     safe_position = stage.safe_position(player.motion)

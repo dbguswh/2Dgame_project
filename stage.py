@@ -21,6 +21,7 @@ class Stage:
         self.fixture_checkpoint = (608, GROUND_Y)
         self.fixture_powered = False
         self.fuse_state = 'ABSENT'
+        self.bridge_elapsed = 0.0
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
@@ -48,6 +49,12 @@ class Stage:
 
     def collect_pickups(self, player):
         """각 스테이지의 접촉 획득을 처리한다."""
+
+    def update(self, delta_time):
+        """설비의 시간 기반 상태를 갱신한다."""
+
+    def restore_after_death(self):
+        """스테이지별 부활 시 설비의 안정된 상태를 적용한다."""
 
     @property
     def objective(self):

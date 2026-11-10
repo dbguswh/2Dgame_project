@@ -4,8 +4,10 @@ from unittest.mock import Mock, patch
 import pico2d
 
 from player import Player
+from physics import Motion
 from progress import ProgressRecords
 from residential import ResidentialStage
+from session import GameSession
 from world import update_world
 
 
@@ -76,3 +78,49 @@ class ResidentialProgressTests(unittest.TestCase):
         self.assertFalse(self.stage.fixture_powered)
         self.assertEqual(self.stage.fuse_state, 'WORLD')
         self.assertEqual(self.player.checkpoint_position, self.stage.start)
+
+    def test_bridge_collision_is_added_only_after_deployment_completes(self):
+        self.repair()
+        self.assertFalse(self.stage.bridge_ready)
+        self.assertNotIn(self.stage.bridge_solid, self.stage.solids)
+        self.stage.update(1.19)
+        self.assertFalse(self.stage.bridge_ready)
+        self.assertNotIn(self.stage.bridge_solid, self.stage.solids)
+        self.stage.update(0.02)
+        self.assertTrue(self.stage.bridge_ready)
+        self.assertIn(self.stage.bridge_solid, self.stage.solids)
+        self.stage.update(1)
+        self.assertEqual(self.stage.solids.count(self.stage.bridge_solid), 1)
+        motion = Motion(*self.stage.fixture_checkpoint)
+        for _ in range(200):
+            motion.step(1 / 60, 1, self.stage.solids, self.stage.width)
+            self.assertEqual(motion.feet_y, 96)
+        self.assertGreater(motion.x, self.stage.exit_position[0])
+
+    def test_death_finishes_repaired_bridge_and_restart_removes_it(self):
+        self.repair()
+        self.player.health = 1
+        self.player.battery = 0
+        self.player.feet_y = -200
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertTrue(self.stage.bridge_ready)
+        self.assertIn(self.stage.bridge_solid, self.stage.solids)
+        self.assertEqual(self.player.battery, 0)
+        self.assertEqual((self.player.x, self.player.feet_y), self.stage.fixture_checkpoint)
+        self.records.restore_entry(self.player, self.stage)
+        self.assertFalse(self.stage.bridge_ready)
+        self.assertNotIn(self.stage.bridge_solid, self.stage.solids)
+
+    def test_pause_freezes_bridge_deployment(self):
+        game = GameSession()
+        game.start_game()
+        game.stage.fixture_powered = True
+        game.stage.fuse_state = 'INSTALLED'
+        game.update(0.1)
+        game.state = 'PAUSED'
+        elapsed = game.stage.bridge_elapsed
+        game.update(2)
+        self.assertEqual(game.stage.bridge_elapsed, elapsed)
+        game.state = 'PLAY'
+        game.update(0.1)
+        self.assertGreater(game.stage.bridge_elapsed, elapsed)
