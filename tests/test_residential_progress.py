@@ -145,3 +145,32 @@ class ResidentialProgressTests(unittest.TestCase):
         self.records.restore_entry(self.player, self.stage)
         self.assertEqual(self.player.fragments, 0)
         self.assertFalse(self.stage.reward_claimed)
+
+    def test_full_battery_leaves_pack_in_world_and_partial_charge_is_clamped(self):
+        self.player.x, self.player.feet_y = 1520, 96
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertFalse(self.stage.battery_pack_collected)
+        self.player.battery = 90
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.battery, 100)
+        self.assertTrue(self.stage.battery_pack_collected)
+        self.player.battery = 10
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.battery, 10)
+
+    def test_battery_pickup_and_spending_survive_death_and_reset_together(self):
+        self.collect_fuse()
+        self.player.x, self.player.feet_y = 1520, 96
+        self.player.battery = 20
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.battery, 70)
+        self.player.health = 1
+        self.player.feet_y = -200
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.battery, 70)
+        self.assertTrue(self.stage.battery_pack_collected)
+        self.assertTrue(self.records.latest.battery_pack_collected)
+        self.assertFalse(self.records.entry.battery_pack_collected)
+        self.records.restore_entry(self.player, self.stage)
+        self.assertEqual(self.player.battery, 100)
+        self.assertFalse(self.stage.battery_pack_collected)

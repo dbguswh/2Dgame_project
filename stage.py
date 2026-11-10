@@ -24,6 +24,7 @@ class Stage:
         self.bridge_elapsed = 0.0
         self.completed = False
         self.reward_claimed = False
+        self.battery_pack_collected = False
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),

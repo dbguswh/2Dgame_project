@@ -34,6 +34,7 @@ class ResidentialStage(Stage):
         self.bridge_solid = Solid(self.canal[0], GROUND_Y - 16, self.canal[1], GROUND_Y)
         self.exit_position = (2800, GROUND_Y)
         self.fuse_position = (1328, 208)
+        self.battery_pack_position = (1520, 108)
         self.fuse_checkpoint = (1456, GROUND_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -63,6 +64,14 @@ class ResidentialStage(Stage):
             player.checkpoint_position = self.fuse_checkpoint
             player.notice = '퓨즈 획득 · 오른쪽 제어함에 설치하세요'
             player.notice_time = 2.5
+        x, y = self.battery_pack_position
+        if (not self.battery_pack_collected and player.battery < player.max_battery
+                and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12))):
+            amount = min(50, player.max_battery - player.battery)
+            player.battery += amount
+            self.battery_pack_collected = True
+            player.notice = f'배터리 팩 획득 · 배터리 +{amount}'
+            player.notice_time = 1.8
 
     def activate_fixture(self, player):
         if self.fixture_powered or not self.can_interact(player):
@@ -163,6 +172,15 @@ class ResidentialStage(Stage):
                 pico2d.draw_rectangle(x - 7, cap_y, x + 7, cap_y + 4,
                                       199, 173, 115, filled=True)
             pico2d.draw_line(x, y - 6, x, y + 6, 245, 218, 146)
+        if not self.battery_pack_collected:
+            x, y = self.battery_pack_position
+            x -= camera_x
+            pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 63, 82, 97, filled=True)
+            pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 134, 159, 170)
+            pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 13, 164, 170, 165, filled=True)
+            for bar_y in (y - 6, y - 1, y + 4):
+                pico2d.draw_rectangle(x - 5, bar_y, x + 5, bar_y + 2,
+                                      137, 195, 203, filled=True)
 
     def draw_labels(self, font, camera_x):
         for x, label in ((133, '대피소'), (1305, '정비소'), (2782, '병원')):
@@ -171,6 +189,9 @@ class ResidentialStage(Stage):
         pico2d.draw_line(x - 12, y, x, y, 192, 178, 146)
         pico2d.draw_line(x - 5, y + 5, x, y, 192, 178, 146)
         pico2d.draw_line(x - 5, y - 5, x, y, 192, 178, 146)
+        if not self.battery_pack_collected:
+            x, y = self.battery_pack_position
+            font.draw(x - camera_x - 40, y + 39, '배터리 +50', (157, 197, 208))
 
     def draw_bridge(self, camera_x):
         from math import cos, sin, pi
