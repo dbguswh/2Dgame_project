@@ -107,6 +107,37 @@ class LightResponseTests(unittest.TestCase):
         self.assertEqual(self.enemy.retreat_direction, -1)
         self.assertLess(self.enemy.x, previous_x)
 
+    def test_unexposed_enemy_approaches_then_stops_before_light_boundary(self):
+        self.enemy.motion.x = 550
+        for _ in range(120):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+            self.assertIsNone(self.enemy.consume_attack())
+        self.assertLess(self.enemy.x, 520)
+        self.assertGreaterEqual(self.enemy.x, 488)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.health, 2)
+
+    def test_light_between_two_dark_actors_cannot_be_walked_through(self):
+        self.enemy.motion.x = 550
+        self.player.x = 340
+        for _ in range(180):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+        self.assertGreaterEqual(self.enemy.x, 488)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+
+    def test_boundary_guard_releases_when_light_expires(self):
+        self.enemy.motion.x = 550
+        for _ in range(120):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+        position = self.enemy.x
+        self.light.remaining = 0
+        for _ in range(20):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+        self.assertLess(self.enemy.x, position)
+        self.assertIsNone(self.enemy.consume_attack())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -41,6 +41,7 @@ class Shade:
         self.death_pose = 0
         self.retreat_light = None
         self.retreat_direction = 0
+        self.active_light = None
 
     @property
     def x(self):
@@ -122,6 +123,7 @@ class Shade:
         self.death_pose = 0
         self.retreat_light = None
         self.retreat_direction = 0
+        self.active_light = None
         self._enter('PATROL')
 
     def dissolve(self):
@@ -178,19 +180,36 @@ class Shade:
                 if not moved or not light.illuminates(self.get_bb()):
                     self._enter('LIGHT_WAIT')
             return True
-        if light.illuminates(player.get_bb()) and (
-                self.state in ('RETREAT', 'LIGHT_WAIT') or self.can_see(player)):
+        if light.illuminates(player.get_bb()) and self.state in ('RETREAT', 'LIGHT_WAIT'):
             self.retreat_light = light
             self._enter('LIGHT_WAIT')
             self.attack_event = None
             return True
+        if self.state == 'LIGHT_WAIT' and light is self.retreat_light:
+            direction = 1 if player.x > self.x else -1
+            if self.can_see(player) and self._light_blocks_move(self.x + direction * 80 * delta_time):
+                self.attack_event = None
+                return True
         if self.state in ('RETREAT', 'LIGHT_WAIT'):
             self._enter('CHASE')
         return False
 
+    def _light_blocks_move(self, next_x):
+        light = self.active_light
+        if light is None or not light.active or self.state == 'RETREAT':
+            return False
+        box = (next_x - BODY_WIDTH / 2, self.feet_y,
+               next_x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
+        return light.illuminates(box)
+
     def _move(self, delta_time, direction, speed, stage):
         old_x = self.x
         next_x = self.x + direction * speed * delta_time
+        if direction and self._light_blocks_move(next_x):
+            self.retreat_light = self.active_light
+            self.attack_event = None
+            self._enter('LIGHT_WAIT')
+            return False
         if direction and not self._can_move_to(next_x, direction):
             direction = 0
         self.motion.step(delta_time, direction, self.solids, stage.width,
@@ -202,6 +221,7 @@ class Shade:
 
     def update(self, delta_time, player, stage, light=None):
         self.solids = stage.solids
+        self.active_light = light
         self.attack_event = None
         self.state_time += delta_time
         self.hurt_time = max(0.0, self.hurt_time - delta_time)
