@@ -56,51 +56,31 @@ class PortableLight:
     def draw(self, camera_x=0):
         if not self.active:
             return
-        from ctypes import byref, c_int
-        from math import ceil, floor, cos, sin, tau
+        from math import sin
         import pico2d
-        from pico2d import pico2d as canvas
-        import sdl2
-
+        from effects import blended, glow
         screen_width, screen_height = pico2d.get_canvas_width(), pico2d.get_canvas_height()
         left, right = max(0, self.region.left - camera_x), min(screen_width, self.region.right - camera_x)
         bottom, top = max(0, self.region.bottom), min(screen_height, self.region.top)
         if right <= left or top <= bottom:
             return
-        clip = sdl2.SDL_Rect(floor(left), screen_height - ceil(top),
-                            ceil(right) - floor(left), ceil(top) - floor(bottom))
-        previous_clip = sdl2.SDL_Rect()
-        had_clip = sdl2.SDL_RenderIsClipEnabled(canvas.renderer)
-        sdl2.SDL_RenderGetClipRect(canvas.renderer, byref(previous_clip))
-        previous_blend = c_int()
-        sdl2.SDL_GetRenderDrawBlendMode(canvas.renderer, byref(previous_blend))
-        try:
-            sdl2.SDL_RenderSetClipRect(canvas.renderer, byref(clip))
-            sdl2.SDL_SetRenderDrawBlendMode(canvas.renderer, sdl2.SDL_BLENDMODE_BLEND)
+        age = LIGHT_DURATION - self.remaining
+        strength = min(1.0, age / 0.16) * min(1.0, self.remaining / 0.65)
+        shimmer = 1 + sin(age * 5.2) * 0.025
+        with blended((left, bottom, right, top)):
             x = self.x - camera_x
-            # 면으로 채워 비정수 배율의 창에서도 한 픽셀짜리 줄 사이가 벌어지지 않게 한다.
-            segments = 64
-            vertices = (sdl2.SDL_Vertex * (segments * 3))()
-            center_y = screen_height - 1 - self.y
-            for index in range(segments):
-                vertices[index * 3] = sdl2.SDL_Vertex((x, center_y), (255, 192, 82, 140))
-                for offset in (0, 1):
-                    angle = (index + offset) * tau / segments
-                    point = (x + cos(angle) * self.radius,
-                             center_y + sin(angle) * self.radius)
-                    vertices[index * 3 + offset + 1] = sdl2.SDL_Vertex(point, (255, 192, 82, 26))
-            result = sdl2.SDL_RenderGeometry(canvas.renderer, None, vertices, len(vertices), None, 0)
-            if result != 0:
-                # 구형 렌더러에서도 조명의 표시와 판정은 유지한다.
-                pico2d.draw_circle(x, self.y, int(self.radius),
-                                   r=255, g=192, b=82, a=45, filled=True)
-            # 밝은 테두리가 실제 반경을 나타내며 영역 경계 밖으로는 그리지 않는다.
-            pico2d.draw_circle(x, self.y, int(self.radius), r=255, g=207, b=111, a=200)
+            glow(x, self.y, self.radius, alpha=150 * strength * shimmer)
+            glow(x, self.y, 22, (255, 213, 133), alpha=160 * strength)
             base_y = self.y - 24
-            pico2d.draw_rectangle(x - 5, base_y, x + 5, base_y + 5,
-                                  92, 76, 54, filled=True)
-            pico2d.draw_rectangle(x - 3, base_y + 5, x + 3, base_y + 14,
-                                  255, 224, 136, filled=True)
-        finally:
-            sdl2.SDL_RenderSetClipRect(canvas.renderer, byref(previous_clip) if had_clip else None)
-            sdl2.SDL_SetRenderDrawBlendMode(canvas.renderer, previous_blend.value)
+            glow(x, base_y + 2, 44, alpha=90 * strength, squash=0.14)
+            # 펼친 세 발과 금속 케이스로 설치 장치를 표시한다.
+            pico2d.draw_line(x, base_y + 10, x - 11, base_y + 1, 119, 126, 137)
+            pico2d.draw_line(x, base_y + 10, x + 11, base_y + 1, 119, 126, 137)
+            pico2d.draw_rectangle(x - 6, base_y + 9, x + 6, base_y + 29,
+                                  44, 51, 63, filled=True)
+            pico2d.draw_rectangle(x - 6, base_y + 9, x + 6, base_y + 29, 151, 136, 104)
+            lens = (255, int(164 + 58 * strength), int(72 + 82 * strength))
+            pico2d.draw_rectangle(x - 3, base_y + 15, x + 3, base_y + 25,
+                                  *lens, filled=True)
+            pico2d.draw_rectangle(x - 8, base_y + 29, x + 8, base_y + 32,
+                                  91, 101, 112, filled=True)
