@@ -138,6 +138,52 @@ class LightResponseTests(unittest.TestCase):
         self.assertLess(self.enemy.x, position)
         self.assertIsNone(self.enemy.consume_attack())
 
+    def test_boundary_contact_has_short_backstep_before_guarding(self):
+        self.enemy.motion.x = 550
+        for _ in range(100):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            if self.enemy.state == 'LIGHT_RECOIL':
+                break
+        else:
+            self.fail('빛 경계에서 후퇴 반응이 시작되지 않음')
+        contact_x = self.enemy.x
+        for _ in range(30):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+            self.assertIsNone(self.enemy.consume_attack())
+        self.assertAlmostEqual(self.enemy.x - contact_x, 20, places=4)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.face_dir, -1)
+        self.assertGreater(self.enemy.state_time, 0)
+        guard_x, elapsed = self.enemy.x, self.enemy.state_time
+        self.enemy.update(0.1, self.player, self.stage, self.light)
+        self.assertEqual(self.enemy.x, guard_x)
+        self.assertGreater(self.enemy.state_time, elapsed)
+
+    def test_reinstalled_light_does_not_freeze_enemy_at_old_boundary(self):
+        self.enemy.motion.x = 550
+        for _ in range(120):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+        old_x = self.enemy.x
+        self.player.x = 650
+        replacement = PortableLight(650, 120, self.stage.light_regions[0])
+        self.enemy.update(0.01, self.player, self.stage, replacement)
+        self.assertGreater(self.enemy.x, old_x)
+        self.assertEqual(self.enemy.state, 'CHASE')
+
+    def test_backstep_cannot_pass_wall(self):
+        self.enemy.motion.x = 550
+        for _ in range(100):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            if self.enemy.state == 'LIGHT_RECOIL':
+                break
+        wall_left = self.enemy.x + 24 + 3
+        self.stage.solids.append(Solid(wall_left, 96, wall_left + 16, 300))
+        for _ in range(60):
+            self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            self.assertLessEqual(self.enemy.get_bb()[2], wall_left)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+
 
 if __name__ == '__main__':
     unittest.main()

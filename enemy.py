@@ -18,6 +18,8 @@ WINDUP_TIME = 0.7
 STRIKE_TIME = 0.18
 RECOVER_TIME = 1.0 - STRIKE_TIME
 DEATH_TIME = 0.8
+LIGHT_RECOIL_TIME = 0.25
+LIGHT_STATES = ('RETREAT', 'LIGHT_RECOIL', 'LIGHT_WAIT')
 
 
 class Shade:
@@ -42,6 +44,7 @@ class Shade:
         self.retreat_light = None
         self.retreat_direction = 0
         self.active_light = None
+        self.recoil_remaining = 0.0
 
     @property
     def x(self):
@@ -63,6 +66,8 @@ class Shade:
             return self.motion_data['windup']
         if self.state == 'STRIKE':
             return self.motion_data['strike']
+        if self.state == 'LIGHT_WAIT':
+            return self.motion_data['walk'][3]
         if self.is_moving:
             phase = int(self.walk_distance / self.motion_data['cycle_distance'] * 4) % 4
             return self.motion_data['walk'][phase]
@@ -124,6 +129,7 @@ class Shade:
         self.retreat_light = None
         self.retreat_direction = 0
         self.active_light = None
+        self.recoil_remaining = 0.0
         self._enter('PATROL')
 
     def dissolve(self):
@@ -165,9 +171,23 @@ class Shade:
     def _update_light_response(self, delta_time, player, stage, light):
         if light is None or not light.active:
             self.retreat_light = None
-            if self.state in ('RETREAT', 'LIGHT_WAIT'):
+            self.recoil_remaining = 0.0
+            if self.state in LIGHT_STATES:
                 self._enter('CHASE')
             return False
+        # 새 조명을 설치하면 이전 조명에서 기다리던 상태를 그대로 옮기지 않는다.
+        if light is not self.retreat_light and self.state in LIGHT_STATES:
+            self._enter('CHASE')
+            self.recoil_remaining = 0.0
+        if self.state == 'LIGHT_RECOIL':
+            self.attack_event = None
+            self.face_dir = -self.retreat_direction
+            dt = min(delta_time, self.recoil_remaining)
+            moved = self._move(dt, self.retreat_direction, 80, stage)
+            self.recoil_remaining = max(0.0, self.recoil_remaining - dt)
+            if not moved or self.recoil_remaining <= EPSILON:
+                self._enter('LIGHT_WAIT')
+            return True
         if light.illuminates(self.get_bb()):
             if light is not self.retreat_light or self.state not in ('RETREAT', 'LIGHT_WAIT'):
                 self.retreat_light = light
@@ -175,14 +195,18 @@ class Shade:
                 self._enter('RETREAT')
             self.attack_event = None
             if self.state == 'RETREAT':
-                self.face_dir = self.retreat_direction
+                self.face_dir = -self.retreat_direction
                 moved = self._move(delta_time, self.retreat_direction, 80, stage)
-                if not moved or not light.illuminates(self.get_bb()):
+                if not moved:
                     self._enter('LIGHT_WAIT')
+                elif not light.illuminates(self.get_bb()):
+                    self._begin_light_recoil(light)
             return True
         if light.illuminates(player.get_bb()) and self.state in ('RETREAT', 'LIGHT_WAIT'):
             self.retreat_light = light
-            self._enter('LIGHT_WAIT')
+            if self.state != 'LIGHT_WAIT':
+                self._enter('LIGHT_WAIT')
+            self.is_moving = False
             self.attack_event = None
             return True
         if self.state == 'LIGHT_WAIT' and light is self.retreat_light:
@@ -194,9 +218,16 @@ class Shade:
             self._enter('CHASE')
         return False
 
+    def _begin_light_recoil(self, light):
+        self.retreat_light = light
+        self.retreat_direction = 1 if self.x >= light.x else -1
+        self.recoil_remaining = LIGHT_RECOIL_TIME
+        self.attack_event = None
+        self._enter('LIGHT_RECOIL')
+
     def _light_blocks_move(self, next_x):
         light = self.active_light
-        if light is None or not light.active or self.state == 'RETREAT':
+        if light is None or not light.active or self.state in ('RETREAT', 'LIGHT_RECOIL'):
             return False
         box = (next_x - BODY_WIDTH / 2, self.feet_y,
                next_x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
@@ -206,9 +237,7 @@ class Shade:
         old_x = self.x
         next_x = self.x + direction * speed * delta_time
         if direction and self._light_blocks_move(next_x):
-            self.retreat_light = self.active_light
-            self.attack_event = None
-            self._enter('LIGHT_WAIT')
+            self._begin_light_recoil(self.active_light)
             return False
         if direction and not self._can_move_to(next_x, direction):
             direction = 0
@@ -275,7 +304,9 @@ class Shade:
         frame = self.motion_data['frames'][self.animation_frame]
         left, bottom, width, height = frame['rect']
         feet_x, feet_y = frame['feet']
-        scale = DRAW_HEIGHT / self.motion_data['reference_height']
+        from math import sin
+        breathing = sin(self.state_time * 2.8) * 0.9 if self.state == 'LIGHT_WAIT' else 0
+        scale = (DRAW_HEIGHT + breathing) / self.motion_data['reference_height']
         # 원본 동작은 왼쪽을 본다. 반전해도 각 프레임의 발 기준은 유지한다.
         self.image.opacify(opacity)
         self.image.clip_composite_draw(
