@@ -23,6 +23,7 @@ class Stage:
         self.fuse_state = 'ABSENT'
         self.bridge_elapsed = 0.0
         self.completed = False
+        self.reward_claimed = False
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
@@ -50,6 +51,9 @@ class Stage:
 
     def collect_pickups(self, player):
         """각 스테이지의 접촉 획득을 처리한다."""
+
+    def apply_rewards(self, player):
+        """완료 조건과 보상 지급 기록을 함께 반영한다."""
 
     def update(self, delta_time):
         """설비의 시간 기반 상태를 갱신한다."""

@@ -124,3 +124,24 @@ class ResidentialProgressTests(unittest.TestCase):
         game.state = 'PLAY'
         game.update(0.1)
         self.assertGreater(game.stage.bridge_elapsed, elapsed)
+
+    def test_reward_is_given_once_and_death_does_not_duplicate_it(self):
+        self.repair()
+        self.assertEqual(self.player.fragments, 0)
+        for _ in range(130):
+            update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.fragments, 2)
+        self.assertTrue(self.stage.reward_claimed)
+        press_e(self.player)
+        update_world(0.01, self.player, [], self.stage, self.records)
+        self.player.health = 1
+        self.player.feet_y = -200
+        update_world(0.01, self.player, [], self.stage, self.records)
+        for _ in range(5):
+            update_world(0.01, self.player, [], self.stage, self.records)
+        self.assertEqual(self.player.fragments, 2)
+        self.assertTrue(self.records.latest.reward_claimed)
+        self.assertFalse(self.records.entry.reward_claimed)
+        self.records.restore_entry(self.player, self.stage)
+        self.assertEqual(self.player.fragments, 0)
+        self.assertFalse(self.stage.reward_claimed)

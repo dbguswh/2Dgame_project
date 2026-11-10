@@ -74,6 +74,7 @@ class Player:
         self.light_requested = False
         self.light_cast = 0.0
         self.interaction_requested = False
+        self.fragments = 0
 
     @property
     def x(self):

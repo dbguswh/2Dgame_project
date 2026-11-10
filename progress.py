@@ -14,12 +14,15 @@ class ProgressSnapshot:
     fuse_state: str
     bridge_elapsed: float
     completed: bool
+    fragments: int
+    reward_claimed: bool
 
     @classmethod
     def capture(cls, player, stage):
         return cls(player.health, player.battery, player.max_battery,
                    (player.x, player.feet_y), tuple(player.checkpoint_position),
-                   stage.fixture_powered, stage.fuse_state, stage.bridge_elapsed, stage.completed)
+                   stage.fixture_powered, stage.fuse_state, stage.bridge_elapsed, stage.completed,
+                   player.fragments, stage.reward_claimed)
 
 
 class ProgressRecords:
@@ -39,6 +42,8 @@ class ProgressRecords:
         stage.fuse_state = snapshot.fuse_state
         stage.bridge_elapsed = snapshot.bridge_elapsed
         stage.completed = snapshot.completed
+        player.fragments = snapshot.fragments
+        stage.reward_claimed = snapshot.reward_claimed
         stage.update(0)
 
     def restore_after_death(self, player, stage):

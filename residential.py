@@ -76,6 +76,13 @@ class ResidentialStage(Stage):
         self.bridge_elapsed = 0.0
         return True
 
+    def apply_rewards(self, player):
+        if self.bridge_ready and not self.reward_claimed:
+            player.fragments += 2
+            self.reward_claimed = True
+            player.notice = '다리 복구 완료 · 전력 조각 2개 획득'
+            player.notice_time = 2.4
+
     @property
     def bridge_ready(self):
         return self.fixture_powered and self.bridge_elapsed >= self.BRIDGE_TIME

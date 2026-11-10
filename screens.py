@@ -49,6 +49,8 @@ def draw_game(game, font):
     font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
     font.draw(20, SCREEN_HEIGHT - 58, stage.objective, (188, 200, 212))
     if stage.fuse_state != 'ABSENT':
+        font.draw(840, SCREEN_HEIGHT - 58, f'조각 {player.fragments}', (170, 197, 211))
+    if stage.fuse_state != 'ABSENT':
         label = {'WORLD': '미획득', 'CARRIED': '보유', 'INSTALLED': '설치 완료'}[stage.fuse_state]
         font.draw(635, SCREEN_HEIGHT - 28, f'퓨즈 {label}', (255, 223, 137))
     prompt = stage.interaction_prompt(player)
