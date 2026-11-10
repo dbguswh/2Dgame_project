@@ -4,6 +4,7 @@ from math import ceil
 
 import pico2d
 
+from effects import blended
 from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
 
@@ -20,6 +21,7 @@ def draw_game(game, font):
     player, stage = game.player, game.stage
     camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
     stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    stage.draw_labels(font, camera_x)
     if player.light is not None:
         player.light.draw(camera_x)
     for enemy in game.enemies:
@@ -30,6 +32,12 @@ def draw_game(game, font):
         player.draw_debug(camera_x)
         for enemy in game.enemies:
             enemy.draw_debug(camera_x)
+    with blended():
+        for y in range(SCREEN_HEIGHT - 112, SCREEN_HEIGHT, 4):
+            alpha = min(210, (y - SCREEN_HEIGHT + 112) * 3)
+            pico2d.draw_rectangle(0, y, SCREEN_WIDTH - 1, y + 3,
+                                  9, 14, 23, a=alpha, filled=True)
+        pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, 44, 9, 14, 23, a=180, filled=True)
     font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
     battery_color = (255, 215, 126) if player.battery >= 50 else (238, 145, 118)
     font.draw(170, SCREEN_HEIGHT - 28,
