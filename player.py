@@ -29,6 +29,9 @@ BODY_HEIGHT = 92  # 후드가 천장 안으로 깊이 들어가지 않도록 실
 ATTACK_FRAME_ENDS = (0.05, 0.10, 0.15, 0.20, 0.28, 0.36)
 ATTACK_DURATION = ATTACK_FRAME_ENDS[-1]
 ATTACK_RECOVERY = 0.15
+SECOND_ATTACK_FRAME_ENDS = (0.06, 0.12, 0.18, 0.24, 0.34, 0.44)
+COMBO_WINDOW = 0.4
+COMBO_RECOVERY = 0.5
 
 
 class Player:
@@ -66,6 +69,10 @@ class Player:
         self.attack_cooldown = 0.0
         self.attack_id = 0
         self.attack_hits = set()
+        self.attack_stage = 1
+        self.combo_window = 0.0
+        self.combo_queued = False
+        self.combo_direction = self.face_dir
         self.solids = []
         self.respawn_count = 0
         self.max_battery = 100
@@ -125,10 +132,52 @@ class Player:
         if not self.is_attacking:
             return None
         # 짧은 준비, 빠른 타격, 조금 긴 회수로 베기의 힘과 흐름을 구분한다.
-        for index, end in enumerate(ATTACK_FRAME_ENDS):
+        ends = SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
+        for index, end in enumerate(ends):
             if self.attack_elapsed < end:
                 return index
-        return len(ATTACK_FRAME_ENDS) - 1
+        return len(ends) - 1
+
+    def _begin_attack(self, stage, elapsed=0.0):
+        self.attack_stage = stage
+        self.attack_elapsed = elapsed
+        self.attack_id += 1
+        self.attack_hits.clear()
+        self.attack_cooldown = 0.0
+        self.combo_queued = False
+        if stage == 1:
+            self.combo_window = COMBO_WINDOW
+            self.combo_direction = self.face_dir
+        else:
+            self.combo_window = 0.0
+            self.face_dir = self.combo_direction
+
+    def _advance_attack(self, delta_time):
+        self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
+        self.combo_window = max(0.0, self.combo_window - delta_time)
+        if not self.is_attacking:
+            return
+        self.attack_elapsed += delta_time
+        duration = SECOND_ATTACK_FRAME_ENDS[-1] if self.attack_stage == 2 else ATTACK_DURATION
+        if self.attack_elapsed < duration:
+            return
+        if self.attack_stage == 1 and self.combo_queued and self.motion.on_ground:
+            self._begin_attack(2, self.attack_elapsed - duration)
+        else:
+            self.attack_elapsed = None
+            self.combo_queued = False
+            self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
+
+    def _request_attack(self, combo_open):
+        if not self.attack_requested or self.light_cast > 0 or not self.motion.on_ground:
+            return
+        if self.attack_stage == 1 and combo_open:
+            if self.is_attacking:
+                self.combo_queued = True
+            else:
+                self._begin_attack(2)
+        elif not self.is_attacking and self.attack_cooldown <= 0:
+            self._begin_attack(1)
 
     @property
     def animation_state(self):
@@ -157,6 +206,8 @@ class Player:
         self.battery -= LIGHT_COST
         self.light_cast = 0.18
         self.attack_requested = False
+        self.combo_window = 0.0
+        self.combo_queued = False
         self.jump_requested = False
         self.notice, self.notice_time = '휴대 조명 설치', 0.7
         return True
@@ -172,21 +223,13 @@ class Player:
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         self.solids = solids
-        self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
-        if self.is_attacking:
-            self.attack_elapsed += delta_time
-            if self.attack_elapsed >= ATTACK_DURATION:
-                self.attack_elapsed = None
-                self.attack_cooldown = ATTACK_RECOVERY
+        combo_open = self.combo_window > 0
+        self._advance_attack(delta_time)
         if self.light_requested:
             regions = light_regions if light_regions is not None else [LightRegion(0, 96, area_width, 540)]
             self._install_light(regions)
         self.light_requested = False
-        if (self.attack_requested and not self.is_attacking
-                and self.light_cast <= 0 and self.attack_cooldown <= 0 and self.motion.on_ground):
-            self.attack_elapsed = 0.0
-            self.attack_id += 1
-            self.attack_hits.clear()
+        self._request_attack(combo_open)
         self.attack_requested = False
         if self.jump_requested and not self.is_attacking and self.light_cast <= 0:
             self.motion.jump()
@@ -280,7 +323,8 @@ class Player:
 
     def get_attack_box(self):
         """타격 프레임에서만 전방 1타일의 범위를 반환한다. 벽 뒤는 잘라낸다."""
-        if not self.is_attacking or not 0.1 <= self.attack_elapsed < 0.2:
+        start, end = (0.12, 0.24) if self.attack_stage == 2 else (0.1, 0.2)
+        if not self.is_attacking or not start <= self.attack_elapsed < end:
             return None
         return front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + 32,
                          self.feet_y + 12, self.feet_y + 64, self.solids)
@@ -314,6 +358,8 @@ class Player:
         self.health -= 1
         self.attack_elapsed = None
         self.attack_requested = False
+        self.combo_window = 0.0
+        self.combo_queued = False
         self.jump_requested = False
         if self.health <= 0:
             self._respawn()
@@ -344,6 +390,10 @@ class Player:
         self.attack_elapsed = None
         self.attack_cooldown = 0.0
         self.attack_hits.clear()
+        self.attack_stage = 1
+        self.combo_window = 0.0
+        self.combo_queued = False
+        self.combo_direction = self.face_dir
         self.light_cast = 0.0
 
     def draw_debug(self, camera_x=0):
