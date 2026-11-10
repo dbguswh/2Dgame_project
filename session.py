@@ -11,6 +11,7 @@ from progress import ProgressRecords
 
 class GameSession:
     PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
+    CLEAR_ITEMS = ('주택가 다시하기', '타이틀로')
 
     def __init__(self, stage_factory=ResidentialStage):
         self.stage_factory = stage_factory
@@ -76,6 +77,16 @@ class GameSession:
                     self.start_game()
                 else:
                     self.state = 'QUIT'
+
+        elif self.state == 'STAGE_CLEAR' and new_press:
+            if event.key in (pico2d.SDLK_UP, pico2d.SDLK_DOWN):
+                self.selection = 1 - self.selection
+            elif event.key == pico2d.SDLK_ESCAPE or (event.key == pico2d.SDLK_e and self.selection == 1):
+                self.close_world()
+                self.state = 'TITLE'
+                self.selection = 0
+            elif event.key == pico2d.SDLK_e:
+                self.restart_stage()
         elif self.state == 'PLAY':
             if event.type == pico2d.SDL_KEYDOWN and not new_press:
                 return
@@ -114,6 +125,10 @@ class GameSession:
         if self.state == 'PLAY':
             update_world(delta_time, self.player, self.enemies, self.stage, self.records)
             self.play_time += delta_time
+            if self.stage.completed:
+                self.state = 'STAGE_CLEAR'
+                self.selection = 0
+                self.player.clear_input()
 
     def close_world(self):
         self.player = None

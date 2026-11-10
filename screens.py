@@ -54,7 +54,8 @@ def draw_game(game, font):
     prompt = stage.interaction_prompt(player)
     if prompt is not None:
         x, y, label = prompt
-        font.draw(x - camera_x - 55, y + 132, label, (255, 223, 137))
+        prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
+        font.draw(prompt_x, y + 132, label, (255, 223, 137))
     font.draw(20, 24, '방향키 이동  Space 점프  W 베기  R 조명(50)  E 설비  F1 판정  Esc 메뉴',
               (210, 219, 230))
     if player.notice_time > 0:
@@ -67,7 +68,7 @@ def draw_session(game, font, menu_font, title_font):
         title_font.draw(350, 365, 'Blackout', (242, 225, 191))
         draw_choices(menu_font, ('시작', '나가기'), game.selection)
         font.draw(320, 105, '위/아래 선택    E 확인    Esc 종료', (164, 175, 192))
-    elif game.state in ('PLAY', 'PAUSED'):
+    elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR'):
         draw_game(game, font)
         if game.state == 'PAUSED':
             pico2d.draw_rectangle(250, 90, 710, 440, 15, 21, 32, filled=True)
@@ -77,3 +78,12 @@ def draw_session(game, font, menu_font, title_font):
             if game.PAUSE_ITEMS[game.selection] == '스테이지 재시작':
                 font.draw(290, 150, '구간의 진행과 자원을 모두 되돌립니다', (220, 180, 125))
             font.draw(345, 115, 'E 확인    Esc 계속하기', (164, 175, 192))
+        elif game.state == 'STAGE_CLEAR':
+            with blended():
+                pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1,
+                                      6, 11, 20, a=165, filled=True)
+            pico2d.draw_rectangle(220, 140, 740, 420, 15, 21, 32, filled=True)
+            pico2d.draw_rectangle(220, 140, 740, 420, 120, 108, 83)
+            menu_font.draw(350, 377, '주택가 복구 완료', (242, 225, 191))
+            draw_choices(menu_font, game.CLEAR_ITEMS, game.selection, start_y=290)
+            font.draw(330, 180, '위/아래 선택    E 확인', (164, 175, 192))

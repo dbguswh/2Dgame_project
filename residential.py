@@ -97,8 +97,26 @@ class ResidentialStage(Stage):
             self.bridge_elapsed = self.BRIDGE_TIME
         self.sync_bridge()
 
+    def near_exit(self, player):
+        x, y = self.exit_position
+        return (player.motion.on_ground and abs(player.x - x) <= 40
+                and abs(player.feet_y - y) <= 8
+                and not player.is_attacking and player.light_cast <= 0)
+
+    def activate_exit(self, player):
+        if self.completed or not self.near_exit(player):
+            return False
+        if not self.bridge_ready:
+            player.notice = '주택가 전력을 복구하고 다리를 펼쳐야 합니다'
+            player.notice_time = 2
+            return False
+        self.completed = True
+        return True
+
     @property
     def objective(self):
+        if self.completed:
+            return '운하 주택가 · 복구 완료'
         if self.fixture_powered:
             if not self.bridge_ready:
                 return '운하 주택가 · 다리 전개 중'
@@ -108,6 +126,8 @@ class ResidentialStage(Stage):
         return '운하 주택가 · 정비 선반의 퓨즈를 찾으세요'
 
     def interaction_prompt(self, player):
+        if self.near_exit(player):
+            return (*self.exit_position, 'E: 출구 이동' if self.bridge_ready else '다리 복구 필요')
         if self.can_interact(player):
             label = ('복구 완료' if self.fixture_powered else
                      'E: 퓨즈 설치' if self.fuse_state == 'CARRIED' else '퓨즈 필요')
@@ -118,6 +138,13 @@ class ResidentialStage(Stage):
         self.scene.draw(self, camera_x, screen_width, screen_height)
         self.draw_fixture(camera_x)
         self.draw_bridge(camera_x)
+        x, y = self.exit_position
+        x -= camera_x
+        color = (162, 146, 102) if self.bridge_ready else (74, 84, 94)
+        pico2d.draw_rectangle(x - 19, y, x + 19, y + 100, 17, 25, 35, filled=True)
+        for side in (-21, 18):
+            pico2d.draw_rectangle(x + side, y, x + side + 3, y + 102, *color, filled=True)
+        pico2d.draw_rectangle(x - 22, y + 101, x + 22, y + 105, *color, filled=True)
         if self.fuse_state == 'WORLD':
             from effects import blended, glow
             x, y = self.fuse_position

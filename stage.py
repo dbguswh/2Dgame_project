@@ -22,6 +22,7 @@ class Stage:
         self.fixture_powered = False
         self.fuse_state = 'ABSENT'
         self.bridge_elapsed = 0.0
+        self.completed = False
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
@@ -77,6 +78,9 @@ class Stage:
             return False
         self.fixture_powered = True
         return True
+
+    def activate_exit(self, player):
+        return False
 
     def draw(self, camera_x, screen_width, screen_height):
         background = (31, 35, 45) if self.fixture_powered else (19, 25, 38)

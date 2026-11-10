@@ -26,10 +26,13 @@ def update_world(delta_time, player, enemies, stage, records=None):
     stage.collect_pickups(player)
     interaction_requested = player.interaction_requested
     player.interaction_requested = False
-    if interaction_requested and stage.activate_fixture(player):
-        player.checkpoint_position = stage.fixture_checkpoint
-        player.notice = '구역 조명 복구 · 안전 지점 확보'
-        player.notice_time = 2.2
+    if interaction_requested:
+        if stage.activate_exit(player):
+            player.clear_input()
+        elif stage.activate_fixture(player):
+            player.checkpoint_position = stage.fixture_checkpoint
+            player.notice = '구역 조명 복구 · 안전 지점 확보'
+            player.notice_time = 2.2
     if stage.fixture_powered:
         for enemy in enemies:
             enemy.dissolve()
