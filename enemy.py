@@ -45,6 +45,8 @@ class Shade:
         self.retreat_direction = 0
         self.active_light = None
         self.recoil_remaining = 0.0
+        self.knockback_remaining = 0.0
+        self.knockback_direction = 1
 
     @property
     def x(self):
@@ -130,6 +132,8 @@ class Shade:
         self.retreat_direction = 0
         self.active_light = None
         self.recoil_remaining = 0.0
+        self.knockback_remaining = 0.0
+        self.knockback_direction = 1
         self._enter('PATROL')
 
     def dissolve(self):
@@ -138,8 +142,31 @@ class Shade:
         self.death_pose = self.animation_frame
         self.health = 0
         self.attack_event = None
+        self.knockback_remaining = 0.0
         self._enter('DYING')
         return True
+
+    def apply_knockback(self, direction, distance=32):
+        self.knockback_direction = 1 if direction > 0 else -1
+        self.knockback_remaining = distance
+
+    def _update_knockback(self, delta_time):
+        if self.knockback_remaining <= EPSILON:
+            return False
+        distance = min(self.knockback_remaining, 240 * delta_time)
+        moved = 0.0
+        while distance > EPSILON:
+            step = min(2, distance)
+            next_x = self.x + step * self.knockback_direction
+            if not self._can_move_to(next_x, self.knockback_direction):
+                self.knockback_remaining = 0.0
+                break
+            self.motion.x = next_x
+            self.knockback_remaining = max(0.0, self.knockback_remaining - step)
+            moved += step
+            distance -= step
+        self.is_moving = False
+        return moved > 0
 
     def _can_move_to(self, x, direction):
         if not (self.combat_bounds[0] + BODY_WIDTH / 2 <= x
@@ -254,6 +281,7 @@ class Shade:
         self.attack_event = None
         self.state_time += delta_time
         self.hurt_time = max(0.0, self.hurt_time - delta_time)
+        pushed = self._update_knockback(delta_time)
         if not self.alive:
             self.is_moving = False
             if self.state != 'DEAD' and self.state_time >= DEATH_TIME:
@@ -275,6 +303,8 @@ class Shade:
                 self._enter('RECOVER')
             elif self.state == 'RECOVER' and self.state_time >= RECOVER_TIME:
                 self._enter('CHASE')
+            return
+        if pushed:
             return
         if self.can_see(player):
             self.state = 'CHASE'

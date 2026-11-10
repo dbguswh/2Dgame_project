@@ -49,6 +49,8 @@ def update_world(delta_time, player, enemies, stage, records=None):
     for enemy in enemies:
         if enemy.alive and enemy.identity == target:
             enemy.take_damage()
+            if player.attack_stage == 2:
+                enemy.apply_knockback(player.face_dir)
             player.notice = 'Shade 처치' if not enemy.alive else 'Shade 명중'
             player.notice_time = 1.0
     for enemy in enemies:
