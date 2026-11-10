@@ -20,6 +20,7 @@ class Stage:
         self.fixture_position = (640, GROUND_Y)
         self.fixture_checkpoint = (608, GROUND_Y)
         self.fixture_powered = False
+        self.fuse_state = 'ABSENT'
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, 960, GROUND_Y),
@@ -43,6 +44,19 @@ class Stage:
             if abs(motion.feet_y - solid.top) < EPSILON:
                 if solid.left + margin <= motion.x <= solid.right - margin:
                     return motion.x, motion.feet_y
+        return None
+
+    def collect_pickups(self, player):
+        """각 스테이지의 접촉 획득을 처리한다."""
+
+    @property
+    def objective(self):
+        return '구역 조명 복구 완료' if self.fixture_powered else '목표: 조명 제어함을 찾아 복구하세요'
+
+    def interaction_prompt(self, player):
+        if self.can_interact(player):
+            label = '복구 완료' if self.fixture_powered else 'E: 조명 복구'
+            return (*self.fixture_position, label)
         return None
 
     def can_interact(self, player):

@@ -39,12 +39,14 @@ def draw_game(game, font):
         font.draw(440, SCREEN_HEIGHT - 28, f'조명 {seconds:.1f}초', (255, 221, 146))
     minutes, seconds = divmod(int(game.play_time), 60)
     font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
-    objective = '구역 조명 복구 완료' if stage.fixture_powered else '목표: 조명 제어함을 찾아 복구하세요'
-    font.draw(20, SCREEN_HEIGHT - 58, objective, (188, 200, 212))
-    if stage.can_interact(player):
-        prompt = '복구 완료' if stage.fixture_powered else 'E: 조명 복구'
-        x, y = stage.fixture_position
-        font.draw(x - camera_x - 55, y + 132, prompt, (255, 223, 137))
+    font.draw(20, SCREEN_HEIGHT - 58, stage.objective, (188, 200, 212))
+    if stage.fuse_state != 'ABSENT':
+        label = {'WORLD': '미획득', 'CARRIED': '보유', 'INSTALLED': '설치 완료'}[stage.fuse_state]
+        font.draw(635, SCREEN_HEIGHT - 28, f'퓨즈 {label}', (255, 223, 137))
+    prompt = stage.interaction_prompt(player)
+    if prompt is not None:
+        x, y, label = prompt
+        font.draw(x - camera_x - 55, y + 132, label, (255, 223, 137))
     font.draw(20, 24, '방향키 이동  Space 점프  W 베기  R 조명(50)  E 설비  F1 판정  Esc 메뉴',
               (210, 219, 230))
     if player.notice_time > 0:

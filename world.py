@@ -20,6 +20,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
             records.remember(player, stage)
             records.restore_after_death(player, stage)
         restore_enemies(enemies, stage)
+    stage.collect_pickups(player)
     interaction_requested = player.interaction_requested
     player.interaction_requested = False
     if interaction_requested and stage.activate_fixture(player):

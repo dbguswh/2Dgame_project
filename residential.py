@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pico2d
 
 from lighting import LightRegion
+from combat import overlaps
 from physics import Solid
 from stage import GROUND_Y, Stage
 
@@ -22,6 +23,7 @@ class ResidentialStage(Stage):
     BRIDGE_TIME = 1.2
 
     def __init__(self):
+        super().__init__()
         self.width = 2880
         self.start = (160, GROUND_Y)
         self.fixture_position = (2440, GROUND_Y)
@@ -31,6 +33,7 @@ class ResidentialStage(Stage):
         self.exit_position = (2800, GROUND_Y)
         self.fuse_position = (1328, 208)
         self.fuse_checkpoint = (1456, GROUND_Y)
+        self.fuse_state = 'WORLD'
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
@@ -48,6 +51,40 @@ class ResidentialStage(Stage):
                 (1664, (1568, 1888)), (1792, (1568, 1888)),
                 (2080, (2016, 2304)), (2224, (2016, 2304)),
             ]))
+
+    def collect_pickups(self, player):
+        x, y = self.fuse_position
+        if self.fuse_state == 'WORLD' and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12)):
+            self.fuse_state = 'CARRIED'
+            player.checkpoint_position = self.fuse_checkpoint
+            player.notice = '퓨즈 획득 · 오른쪽 제어함에 설치하세요'
+            player.notice_time = 2.5
+
+    def activate_fixture(self, player):
+        if self.fixture_powered or not self.can_interact(player):
+            return False
+        if self.fuse_state != 'CARRIED':
+            player.notice = '퓨즈가 필요합니다 · 정비 선반을 찾아보세요'
+            player.notice_time = 2.0
+            return False
+        self.fuse_state = 'INSTALLED'
+        self.fixture_powered = True
+        return True
+
+    @property
+    def objective(self):
+        if self.fixture_powered:
+            return '운하 주택가 · 다리를 건너 출구로 이동하세요'
+        if self.fuse_state == 'CARRIED':
+            return '운하 주택가 · 오른쪽 제어함에 퓨즈를 설치하세요'
+        return '운하 주택가 · 정비 선반의 퓨즈를 찾으세요'
+
+    def interaction_prompt(self, player):
+        if self.can_interact(player):
+            label = ('복구 완료' if self.fixture_powered else
+                     'E: 퓨즈 설치' if self.fuse_state == 'CARRIED' else '퓨즈 필요')
+            return (*self.fixture_position, label)
+        return None
 
     def draw(self, camera_x, screen_width, screen_height):
         background = (36, 40, 50) if self.fixture_powered else (19, 25, 38)
@@ -78,6 +115,13 @@ class ResidentialStage(Stage):
         for lamp_x in (160, 816, 1488, 2384, 2768):
             self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or self.fixture_powered)
         self.draw_fixture(camera_x)
+        if self.fuse_state == 'WORLD':
+            x, y = self.fuse_position
+            x -= camera_x
+            pico2d.draw_rectangle(x - 10, y - 12, x + 10, y + 12,
+                                  255, 214, 112, filled=True)
+            pico2d.draw_rectangle(x - 5, y - 7, x + 5, y + 7,
+                                  80, 106, 123, filled=True)
 
     @staticmethod
     def draw_lamp(x, powered):

@@ -11,12 +11,13 @@ class ProgressSnapshot:
     position: tuple
     checkpoint: tuple
     fixture_powered: bool
+    fuse_state: str
 
     @classmethod
     def capture(cls, player, stage):
         return cls(player.health, player.battery, player.max_battery,
                    (player.x, player.feet_y), tuple(player.checkpoint_position),
-                   stage.fixture_powered)
+                   stage.fixture_powered, stage.fuse_state)
 
 
 class ProgressRecords:
@@ -33,6 +34,7 @@ class ProgressRecords:
         player.max_battery = snapshot.max_battery
         player.checkpoint_position = snapshot.checkpoint
         stage.fixture_powered = snapshot.fixture_powered
+        stage.fuse_state = snapshot.fuse_state
 
     def restore_after_death(self, player, stage):
         self._apply_progress(self.latest, player, stage)
