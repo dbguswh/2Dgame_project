@@ -109,3 +109,6 @@ class Stage:
             pico2d.draw_rectangle(solid.left - camera_x, solid.bottom,
                                   solid.right - camera_x, solid.top,
                                   r=109, g=153, b=207)
+
+    def draw_labels(self, font, camera_x):
+        """필요한 스테이지에서 공간 표지판을 출력한다."""

@@ -8,6 +8,7 @@ from lighting import LightRegion
 from combat import overlaps
 from physics import Solid
 from stage import GROUND_Y, Stage
+from environment import ResidentialScene
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class ResidentialStage(Stage):
         self.fuse_position = (1328, 208)
         self.fuse_checkpoint = (1456, GROUND_Y)
         self.fuse_state = 'WORLD'
+        self.scene = ResidentialScene()
+        self.visual_time = 0.0
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
@@ -78,6 +81,7 @@ class ResidentialStage(Stage):
         return self.fixture_powered and self.bridge_elapsed >= self.BRIDGE_TIME
 
     def update(self, delta_time):
+        self.visual_time += max(0, delta_time)
         if self.fixture_powered:
             self.bridge_elapsed = min(self.BRIDGE_TIME, self.bridge_elapsed + max(0, delta_time))
         self.sync_bridge()
@@ -111,42 +115,28 @@ class ResidentialStage(Stage):
         return None
 
     def draw(self, camera_x, screen_width, screen_height):
-        background = (36, 40, 50) if self.fixture_powered else (19, 25, 38)
-        pico2d.draw_rectangle(0, 0, screen_width - 1, screen_height - 1,
-                              *background, filled=True)
-        # 배경 건물은 충돌 지형과 구분한다. 세부 원화는 통행 경로 확정 후 적용한다.
-        for index in range(16):
-            x = index * 208 - camera_x * 0.35
-            height = 200 + (index * 53) % 144
-            pico2d.draw_rectangle(x, GROUND_Y, x + 168, height,
-                                  27, 34, 48, filled=True)
-            for floor in range(150, height - 16, 52):
-                color = (170, 132, 74) if self.fixture_powered else (45, 54, 69)
-                pico2d.draw_rectangle(x + 32, floor, x + 44, floor + 24,
-                                      *color, filled=True)
-        left, right = self.canal
-        pico2d.draw_rectangle(left - camera_x, 0, right - camera_x, 44,
-                              30, 62, 83, filled=True)
-        for solid in self.solids:
-            if solid.right < camera_x or solid.left > camera_x + screen_width:
-                continue
-            x = solid.left - camera_x
-            color = (74, 65, 54) if solid.bottom == GROUND_Y else (51, 56, 65)
-            pico2d.draw_rectangle(x, solid.bottom, solid.right - camera_x - 1,
-                                  solid.top - 1, *color, filled=True)
-            pico2d.draw_line(x, solid.top, solid.right - camera_x - 1, solid.top,
-                              142, 148, 151)
-        for lamp_x in (160, 816, 1488, 2384, 2768):
-            self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or self.fixture_powered)
+        self.scene.draw(self, camera_x, screen_width, screen_height)
         self.draw_fixture(camera_x)
         self.draw_bridge(camera_x)
         if self.fuse_state == 'WORLD':
+            from effects import blended, glow
             x, y = self.fuse_position
             x -= camera_x
-            pico2d.draw_rectangle(x - 10, y - 12, x + 10, y + 12,
-                                  255, 214, 112, filled=True)
-            pico2d.draw_rectangle(x - 5, y - 7, x + 5, y + 7,
-                                  80, 106, 123, filled=True)
+            with blended():
+                glow(x, y, 25, alpha=65)
+            pico2d.draw_rectangle(x - 5, y - 12, x + 5, y + 12, 107, 143, 151, filled=True)
+            for cap_y in (y - 12, y + 8):
+                pico2d.draw_rectangle(x - 7, cap_y, x + 7, cap_y + 4,
+                                      199, 173, 115, filled=True)
+            pico2d.draw_line(x, y - 6, x, y + 6, 245, 218, 146)
+
+    def draw_labels(self, font, camera_x):
+        for x, label in ((133, '대피소'), (1305, '정비소'), (2782, '병원')):
+            font.draw(x - camera_x, GROUND_Y + 188, label, (192, 178, 146))
+        x, y = 2854 - camera_x, GROUND_Y + 188
+        pico2d.draw_line(x - 12, y, x, y, 192, 178, 146)
+        pico2d.draw_line(x - 5, y + 5, x, y, 192, 178, 146)
+        pico2d.draw_line(x - 5, y - 5, x, y, 192, 178, 146)
 
     def draw_bridge(self, camera_x):
         from math import cos, sin, pi
@@ -168,10 +158,3 @@ class ResidentialStage(Stage):
                 pico2d.draw_line(post - camera_x, GROUND_Y,
                                   post - camera_x, GROUND_Y + 28, 133, 138, 139)
 
-    @staticmethod
-    def draw_lamp(x, powered):
-        pico2d.draw_rectangle(x - 2, GROUND_Y, x + 2, GROUND_Y + 160,
-                              78, 86, 96, filled=True)
-        color = (255, 216, 124) if powered else (73, 79, 90)
-        pico2d.draw_rectangle(x - 10, GROUND_Y + 148, x + 10, GROUND_Y + 170,
-                              *color, filled=True)
