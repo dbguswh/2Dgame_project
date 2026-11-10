@@ -1,6 +1,5 @@
 """Blackout 실행과 단일 게임 루프."""
 
-from pathlib import Path
 from time import perf_counter
 
 import pico2d
@@ -10,6 +9,7 @@ from session import GameSession
 from window import has_input_focus, open_game_window
 from world import update_world
 from effects import clear_resources
+from ui_text import UIFont
 
 
 def main():
@@ -17,10 +17,9 @@ def main():
     game = GameSession()
     font = menu_font = title_font = None
     try:
-        font_path = str(Path(pico2d.__file__).parent / 'data' / 'ConsolaMalgun.ttf')
-        font = pico2d.load_font(font_path, 18)
-        menu_font = pico2d.load_font(font_path, 26)
-        title_font = pico2d.load_font(font_path, 64)
+        font = UIFont(18)
+        menu_font = UIFont(26)
+        title_font = UIFont(64)
         previous_time = perf_counter()
         while game.running:
             now = perf_counter()
@@ -36,6 +35,9 @@ def main():
             pico2d.delay(0.001)
     finally:
         game.close_world()
+        for loaded_font in (font, menu_font, title_font):
+            if loaded_font is not None:
+                loaded_font.close()
         font = menu_font = title_font = None
         clear_resources()
         pico2d.close_canvas()
