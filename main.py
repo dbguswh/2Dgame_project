@@ -9,6 +9,7 @@ from screens import draw_session
 from session import GameSession
 from window import has_input_focus, open_game_window
 from world import update_world
+from effects import clear_resources
 
 
 def main():
@@ -36,6 +37,7 @@ def main():
     finally:
         game.close_world()
         font = menu_font = title_font = None
+        clear_resources()
         pico2d.close_canvas()
 
 
