@@ -45,19 +45,78 @@ class ResidentialScene:
                           GROUND_Y + draw_height / 2, draw_width, draw_height)
         self.facades.opacify(1)
         self.draw_water(stage, camera_x)
+        self.draw_workshop_interior(stage, camera_x, width)
         for solid in stage.solids:
             if solid == stage.bridge_solid:
                 continue
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue
-            if solid.bottom == GROUND_Y:
+            if solid in stage.upper_walkways:
+                self.draw_walkway(solid, camera_x)
+            elif solid in stage.stair_solids:
+                self.draw_stone(solid, camera_x, width)
+                for grip in range(int(solid.left + 5), int(solid.right - 4), 12):
+                    pico2d.draw_line(grip - camera_x, solid.top - 3,
+                                      grip + 5 - camera_x, solid.top - 3, 192, 172, 126)
+            elif solid.bottom == GROUND_Y:
                 self.draw_crate(solid, camera_x)
             else:
                 self.draw_stone(solid, camera_x, width)
         self.draw_street_details(stage, camera_x, width)
-        for lamp_x in (160, 816, 1488, 2384, 2768):
+        self.draw_stair_railing(stage, camera_x)
+        for lamp_x in (160, 816, 1488, 2304, 2784):
             if -100 < lamp_x - camera_x < width + 100:
                 self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or restored)
+
+    @staticmethod
+    def draw_workshop_interior(stage, camera_x, width):
+        if camera_x > 1824 or camera_x + width < 1184:
+            return
+        with blended():
+            pico2d.draw_rectangle(1184 - camera_x, GROUND_Y, 1792 - camera_x, 268,
+                                  12, 20, 29, a=195, filled=True)
+        for column in range(1200, 1792, 128):
+            x = column - camera_x
+            pico2d.draw_rectangle(x, GROUND_Y, x + 7, 267, 41, 49, 58, filled=True)
+            pico2d.draw_line(x + 8, 250, x + 32, 267, 58, 66, 72)
+            pico2d.draw_line(x - 20, 267, x, 250, 58, 66, 72)
+        pico2d.draw_line(1192 - camera_x, 216, 1784 - camera_x, 216, 52, 59, 63)
+        # 아래 통로의 정비함과 배관은 이동 판정을 가리지 않는 뒷벽 장식이다.
+        for x in (1220, 1632, 1712):
+            pico2d.draw_rectangle(x - camera_x, 113, x + 46 - camera_x, 177,
+                                  34, 45, 54, filled=True)
+            pico2d.draw_rectangle(x - camera_x, 113, x + 46 - camera_x, 177, 70, 79, 82)
+            for y in (154, 160, 166):
+                pico2d.draw_line(x + 8 - camera_x, y, x + 38 - camera_x, y, 68, 81, 88)
+
+    @staticmethod
+    def draw_walkway(solid, camera_x):
+        left, right, top = solid.left - camera_x, solid.right - camera_x, solid.top
+        pico2d.draw_rectangle(left, solid.bottom, right, top, 48, 60, 70, filled=True)
+        pico2d.draw_rectangle(left, top - 7, right, top, 125, 129, 119, filled=True)
+        pico2d.draw_line(left, solid.bottom + 2, right, solid.bottom + 2, 95, 104, 107)
+        for x in range(int(solid.left + 4), int(solid.right), 32):
+            sx = x - camera_x
+            pico2d.draw_line(sx, top - 7, sx, top - 1, 61, 69, 71)
+            pico2d.draw_rectangle(sx + 11, solid.bottom + 7, sx + 13,
+                                  solid.bottom + 9, 181, 160, 111, filled=True)
+        # 뒤쪽 난간은 구간 끝에서 끊어져 하부 통로로 내려가는 틈을 드러낸다.
+        for x in range(int(solid.left + 8), int(solid.right - 3), 48):
+            sx = x - camera_x
+            pico2d.draw_line(sx, top, sx, top + 31, 86, 98, 105)
+        pico2d.draw_line(left, top + 31, right, top + 31, 129, 139, 140)
+        pico2d.draw_line(left, top + 14, right, top + 14, 72, 86, 96)
+        for end, direction in ((left, 1), (right, -1)):
+            for offset in range(0, 18, 6):
+                pico2d.draw_line(end + offset * direction, top - 7,
+                                  end + (offset + 4) * direction, top - 1, 205, 164, 84)
+
+    @staticmethod
+    def draw_stair_railing(stage, camera_x):
+        for step in stage.stair_solids:
+            x = step.left + 8 - camera_x
+            pico2d.draw_line(x, step.top, x, step.top + 30, 88, 101, 109)
+            pico2d.draw_line(x, step.top + 30, x + 64, step.top + 62, 139, 145, 142)
 
     @staticmethod
     def draw_stone(solid, camera_x, width):
@@ -102,7 +161,7 @@ class ResidentialScene:
     @staticmethod
     def draw_street_details(stage, camera_x, width):
         # 배경과 별개인 현장 표식으로 실제 이동 구역을 식별한다.
-        for left, right in ((24, 240), (1008, 1096), (2704, 2872)):
+        for left, right in ((24, 240), (2760, 2872)):
             if right < camera_x or left > camera_x + width:
                 continue
             for x in range(left, right, 24):
@@ -110,11 +169,14 @@ class ResidentialScene:
                                   62, 74, 83)
             pico2d.draw_line(left - camera_x, GROUND_Y + 43,
                               right - camera_x, GROUND_Y + 43, 91, 100, 104)
-        for x in (120, 1292, 2776):
+        for x in (120, 2776):
             sx = x - camera_x
             pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205,
                                   38, 43, 47, filled=True)
             pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205, 117, 105, 78)
+        pico2d.draw_rectangle(1204 - camera_x, 393, 1416 - camera_x, 425,
+                              36, 44, 47, filled=True)
+        pico2d.draw_rectangle(1204 - camera_x, 393, 1416 - camera_x, 425, 126, 114, 83)
         # 정비소의 전선은 제어함으로 이어지는 흐름을 암시한다.
         for left, right in ((1120, 1408), (2024, 2440)):
             for x in range(left, right, 16):
@@ -149,7 +211,7 @@ class ResidentialScene:
         for index in range(14):
             y = 3 + index * 3
             offset = int(sin(stage.visual_time * 0.8 + index) * 9)
-            x = left + (index * 47) % 145 + offset
+            x = left + (index * 47) % (right - left - 32) + offset
             color = (130, 105, 65) if stage.fixture_powered and index % 3 == 0 else (37, 67, 85)
             pico2d.draw_line(max(left, x) - camera_x, y,
                               min(right, x + 25) - camera_x, y, *color)
