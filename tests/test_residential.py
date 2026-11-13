@@ -32,10 +32,12 @@ class ResidentialLayoutTests(unittest.TestCase):
             obstacle = any(bottom < s.top and top > s.bottom
                            and right - 0.01 <= s.left <= right + 8
                            for s in self.stage.solids)
-            if motion.on_ground and obstacle:
+            edge = not any(s.left <= motion.x + 28 <= s.right and abs(s.top - bottom) < 0.01
+                           for s in self.stage.solids)
+            if motion.on_ground and (obstacle or edge):
                 motion.jump()
             motion.step(1 / 60, 1, self.stage.solids, self.stage.width)
-            if 1280 <= motion.x <= 1376 and motion.feet_y >= 192:
+            if abs(motion.x - self.stage.fuse_position[0]) <= 24 and motion.feet_y >= 288:
                 reached_shelf = True
             self.assertGreaterEqual(motion.feet_y, 96)
             if motion.x >= self.stage.fixture_position[0]:

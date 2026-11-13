@@ -164,7 +164,8 @@ class ResidentialProgressTests(unittest.TestCase):
         self.assertGreater(body.x, self.stage.canal[1])
 
     def test_full_battery_leaves_pack_in_world_and_partial_charge_is_clamped(self):
-        self.player.x, self.player.feet_y = 1520, 96
+        self.player.x = self.stage.battery_pack_position[0]
+        self.player.feet_y = self.stage.battery_pack_position[1] - 16
         update_world(0.01, self.player, [], self.stage, self.records)
         self.assertFalse(self.stage.battery_pack_collected)
         self.player.battery = 90
@@ -177,7 +178,8 @@ class ResidentialProgressTests(unittest.TestCase):
 
     def test_battery_pickup_and_spending_survive_death_and_reset_together(self):
         self.collect_fuse()
-        self.player.x, self.player.feet_y = 1520, 96
+        self.player.x = self.stage.battery_pack_position[0]
+        self.player.feet_y = self.stage.battery_pack_position[1] - 16
         self.player.battery = 20
         update_world(0.01, self.player, [], self.stage, self.records)
         self.assertEqual(self.player.battery, 70)
