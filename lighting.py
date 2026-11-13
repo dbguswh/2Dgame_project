@@ -6,10 +6,12 @@ from math import pi, sin, sqrt
 from pathlib import Path
 
 
-LIGHT_RADIUS = 64
-LIGHT_DURATION = 8.0
+LIGHT_RADIUS = 160
+LIGHT_DURATION = 12.0
 LIGHT_COST = 50
 LIGHT_CAST_TIME = 0.18
+LIGHT_PUSH_DISTANCE = 96
+LIGHT_PUSH_SPEED = 320
 DEPLOY_DATA_PATH = Path(__file__).resolve().parent / 'assets/images/characters/player_light_deploy.json'
 DEPLOY_DATA = json.loads(DEPLOY_DATA_PATH.read_text(encoding='utf-8'))
 
@@ -32,6 +34,23 @@ class LightRegion:
 
 def find_region(regions, x, y):
     return next((region for region in regions if region.contains(x, y)), None)
+
+
+def constrain_region(region, x, y, solids):
+    """설치 좌표에서 만나는 벽과 상하 바닥으로 방의 빛을 제한한다."""
+    left, bottom, right, top = region.left, region.bottom, region.right, region.top
+    for solid in solids:
+        if solid.bottom < y < solid.top:
+            if solid.right <= x:
+                left = max(left, solid.right)
+            elif solid.left >= x:
+                right = min(right, solid.left)
+        if solid.left <= x <= solid.right:
+            if solid.top <= y:
+                bottom = max(bottom, solid.top)
+            elif solid.bottom >= y:
+                top = min(top, solid.bottom)
+    return LightRegion(left, bottom, right, top)
 
 
 @dataclass

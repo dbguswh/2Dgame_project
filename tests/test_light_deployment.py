@@ -68,11 +68,11 @@ class LightDeploymentTests(unittest.TestCase):
 
     def test_ignition_warning_and_shutdown_do_not_change_protection_radius(self):
         light = PortableLight(400, 120, LightRegion(0, 96, 960, 540))
-        inside, outside = (464, 120, 480, 150), (465, 120, 481, 150)
+        inside, outside = (560, 120, 576, 150), (561, 120, 577, 150)
         initial = light.visual_strength
         self.assertGreater(initial, 0)
-        for elapsed in (0, 0.1, 0.3, 6.5, 7.9):
-            light.remaining = 8 - elapsed
+        for elapsed in (0, 0.1, 0.3, 10.5, 11.9):
+            light.remaining = 12 - elapsed
             self.assertTrue(light.illuminates(inside))
             self.assertFalse(light.illuminates(outside))
             self.assertGreater(light.visual_strength, 0)

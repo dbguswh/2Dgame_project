@@ -11,7 +11,7 @@ from combat import front_box, overlaps
 from combat_feedback import HitPause
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
-                      PortableLight, find_region, load_deploy_image)
+                      PortableLight, find_region, constrain_region, load_deploy_image)
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
@@ -282,6 +282,7 @@ class Player:
         if region is None:
             self.notice, self.notice_time = '이 위치에는 조명을 설치할 수 없습니다', 1.2
             return False
+        region = constrain_region(region, x, y, self.solids)
         self.light = PortableLight(x, y, region, art=self.light_deploy_image)
         self.battery -= LIGHT_COST
         self.light_cast = LIGHT_CAST_TIME
@@ -289,7 +290,7 @@ class Player:
         self.combo_window = 0.0
         self.combo_queued = False
         self.jump_requested = False
-        self.notice, self.notice_time = '휴대 조명 설치', 0.7
+        self.notice, self.notice_time = '투광기 전개 · 주변 제압 · 12초 점등', 1.1
         return True
 
     def _cast_flash(self):

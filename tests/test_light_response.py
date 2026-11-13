@@ -9,6 +9,11 @@ from player import Player
 from stage import Stage
 
 
+def narrow_light(*args, **kwargs):
+    """좁은 빛 경계·후퇴 회귀 검증용 사용자 지정 반경."""
+    return PortableLight(*args, radius=64, **kwargs)
+
+
 class LightResponseTests(unittest.TestCase):
     def setUp(self):
         image_patch = patch('pico2d.load_image', return_value=Mock())
@@ -17,7 +22,7 @@ class LightResponseTests(unittest.TestCase):
         self.stage = Stage()
         self.player = Player(400, 96)
         self.enemy = Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)
-        self.light = PortableLight(400, 120, self.stage.light_regions[0])
+        self.light = narrow_light(400, 120, self.stage.light_regions[0])
 
     def test_light_cancels_warning_and_chooses_reachable_dark_side(self):
         self.enemy._enter('WINDUP')
@@ -84,7 +89,7 @@ class LightResponseTests(unittest.TestCase):
     def test_blocked_enemy_retries_when_the_wall_is_removed(self):
         wall = Solid(480, 96, 512, 300)
         self.stage.solids.append(wall)
-        light = PortableLight(440, 120, self.stage.light_regions[0])
+        light = narrow_light(440, 120, self.stage.light_regions[0])
         for _ in range(60):
             self.enemy.update(1 / 60, self.player, self.stage, light)
         self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
@@ -98,7 +103,7 @@ class LightResponseTests(unittest.TestCase):
     def test_wall_blocked_retreat_stops_in_light_without_attacking(self):
         stage = SimpleNamespace(width=960, solids=[Solid(0, 0, 160, 96)])
         enemy = Shade(80, 96, combat_bounds=(0, 160))
-        light = PortableLight(80, 120, LightRegion(0, 96, 160, 540))
+        light = narrow_light(80, 120, LightRegion(0, 96, 160, 540))
         self.player.x = 80
         for _ in range(120):
             enemy.update(1 / 60, self.player, stage, light)
@@ -139,7 +144,7 @@ class LightResponseTests(unittest.TestCase):
 
     def test_retreat_blocked_by_wall_never_attacks(self):
         self.stage.solids.append(Solid(480, 96, 512, 300))
-        light = PortableLight(440, 120, self.stage.light_regions[0])
+        light = narrow_light(440, 120, self.stage.light_regions[0])
         for _ in range(120):
             self.enemy.update(1 / 60, self.player, self.stage, light)
         self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
@@ -150,7 +155,7 @@ class LightResponseTests(unittest.TestCase):
     def test_retreat_stops_at_ledge_even_with_room_to_chase_beyond_it(self):
         stage = SimpleNamespace(width=960, solids=[Solid(0, 0, 160, 96)])
         enemy = Shade(80, 96, combat_bounds=(0, 960))
-        light = PortableLight(80, 120, LightRegion(0, 96, 960, 540))
+        light = narrow_light(80, 120, LightRegion(0, 96, 960, 540))
         self.player.x = 80
         for _ in range(120):
             enemy.update(1 / 60, self.player, stage, light)
@@ -162,7 +167,7 @@ class LightResponseTests(unittest.TestCase):
         self.enemy.update(0.01, self.player, self.stage, self.light)
         self.assertEqual(self.enemy.retreat_direction, 1)
         previous_x = self.enemy.x
-        replacement = PortableLight(500, 120, self.stage.light_regions[0])
+        replacement = narrow_light(500, 120, self.stage.light_regions[0])
         self.enemy.update(0.01, self.player, self.stage, replacement)
         self.assertEqual(self.enemy.retreat_direction, -1)
         self.assertLess(self.enemy.x, previous_x)
@@ -223,7 +228,7 @@ class LightResponseTests(unittest.TestCase):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
         old_x = self.enemy.x
         self.player.x = 650
-        replacement = PortableLight(650, 120, self.stage.light_regions[0])
+        replacement = narrow_light(650, 120, self.stage.light_regions[0])
         self.enemy.update(0.01, self.player, self.stage, replacement)
         self.assertNotEqual(self.enemy.x, old_x)
         self.assertEqual(self.enemy.state, 'RETREAT')

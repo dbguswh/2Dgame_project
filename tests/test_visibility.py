@@ -26,7 +26,7 @@ class VisibilityTests(unittest.TestCase):
         self.player.light = PortableLight(700, 120, self.stage.light_regions[0], remaining=7)
         field = build_field(self.stage, self.player, 0)
         self.assertLess(field.sample(700, 120), 12)
-        self.assertEqual(field.sample(780, 120), DARK_ALPHA)
+        self.assertEqual(field.sample(880, 120), DARK_ALPHA)
         self.player.light.update(7)
         self.assertEqual(build_field(self.stage, self.player, 0).sample(700, 120), DARK_ALPHA)
 
