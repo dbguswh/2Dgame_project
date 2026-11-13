@@ -61,6 +61,17 @@ class LightResponseTests(unittest.TestCase):
             self.enemy.update(1 / 120, self.player, self.stage, self.light)
         self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
 
+    def test_first_dark_patrol_frame_keeps_walking_pose_after_retreat(self):
+        for _ in range(240):
+            previous = self.enemy.x
+            self.enemy.update(1 / 120, self.player, self.stage, self.light)
+            if self.enemy.state == 'DARK_PATROL':
+                self.assertNotEqual(self.enemy.x, previous)
+                self.assertTrue(self.enemy.is_moving)
+                break
+        else:
+            self.fail('후퇴 후 어둠 순찰로 전환하지 않음')
+
     def test_light_overrides_hurt_pause_and_moves_out_of_attack_range(self):
         self.enemy._enter('WINDUP')
         self.enemy.state_time = 0.69
