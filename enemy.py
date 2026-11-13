@@ -250,6 +250,8 @@ class Shade:
             self.attack_event = None
             self.face_dir = -self.retreat_direction
             dt = min(delta_time, self.recoil_remaining)
+            if dt <= 0:
+                return True
             moved = self._move(dt, self.retreat_direction, 80, stage)
             self.recoil_remaining = max(0.0, self.recoil_remaining - dt)
             if not moved or self.recoil_remaining <= EPSILON:
@@ -263,6 +265,8 @@ class Shade:
             self.attack_event = None
             if self.state == 'RETREAT':
                 self.face_dir = -self.retreat_direction
+                if delta_time <= 0:
+                    return True
                 moved = self._move(delta_time, self.retreat_direction, 80, stage)
                 if not moved:
                     self._enter('LIGHT_WAIT')

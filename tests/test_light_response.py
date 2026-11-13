@@ -28,6 +28,15 @@ class LightResponseTests(unittest.TestCase):
         self.assertIsNone(self.enemy.consume_attack())
         self.assertEqual(self.enemy.health, 2)
 
+    def test_zero_time_light_update_does_not_mistake_no_movement_for_blockage(self):
+        self.enemy.update(0, self.player, self.stage, self.light)
+        self.assertEqual(self.enemy.state, 'RETREAT')
+        self.enemy.update(0.1, self.player, self.stage, self.light)
+        self.assertGreater(self.enemy.x, 440)
+        for _ in range(120):
+            self.enemy.update(1 / 120, self.player, self.stage, self.light)
+        self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+
     def test_retreated_enemy_waits_without_boundary_oscillation(self):
         for _ in range(120):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
