@@ -197,6 +197,17 @@ class ResidentialScene:
             for x in range(left, right, 16):
                 y = GROUND_Y + 148 - 14 * sin((x - left) / (right - left) * 3.14159)
                 pico2d.draw_line(x - camera_x, y, x + 16 - camera_x, y - 1, 67, 62, 56)
+        # 중앙 제어함에서 원격 교량으로 이어지는 고정 전력선이다.
+        control_x, control_y = stage.fixture_position
+        trunk_y = 252
+        wire = (164, 140, 84) if stage.fixture_powered else (63, 63, 64)
+        segment((control_x - camera_x, control_y + 5), (control_x - camera_x, trunk_y), wire, width=2)
+        segment((control_x - camera_x, trunk_y), (2336 - camera_x, trunk_y), wire, width=2)
+        if stage.fixture_powered:
+            with blended():
+                for offset in range(0, 1152, 96):
+                    wx = control_x + (offset + stage.visual_time * 72) % 1152
+                    glow(wx - camera_x, trunk_y, 5, (255, 212, 122), alpha=110)
 
     @staticmethod
     def draw_lamp(x, powered, y=GROUND_Y):

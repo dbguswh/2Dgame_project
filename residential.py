@@ -253,3 +253,24 @@ class ResidentialStage(Stage):
         from bridge_visuals import draw_bridge
         draw_bridge(self, camera_x)
 
+    def draw_fixture(self, camera_x):
+        from effects import blended, glow
+        x, y = self.fixture_position
+        x -= camera_x
+        status = (255, 217, 129) if self.fixture_powered else (181, 95, 71)
+        pico2d.draw_rectangle(x - 18, y, x + 18, y + 66, 37, 48, 61, filled=True)
+        pico2d.draw_rectangle(x - 18, y, x + 18, y + 66, 135, 148, 153)
+        pico2d.draw_rectangle(x - 13, y + 37, x + 13, y + 57, 14, 26, 32, filled=True)
+        for row in range(3):
+            pico2d.draw_line(x - 8, y + 43 + row * 4, x + 7, y + 43 + row * 4, *status)
+        pico2d.draw_rectangle(x - 7, y + 10, x + 7, y + 29, 15, 24, 31, filled=True)
+        installed = self.fuse_state == 'INSTALLED'
+        for cap in (12, 24):
+            pico2d.draw_line(x - 4, y + cap, x + 4, y + cap,
+                              *(status if installed else (92, 107, 113)))
+        if installed:
+            pico2d.draw_line(x, y + 13, x, y + 24, 250, 222, 151)
+        if self.fixture_powered or self.fuse_state == 'CARRIED':
+            with blended():
+                glow(x, y + 47, 28, (255, 207, 119), alpha=65)
+

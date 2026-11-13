@@ -145,9 +145,11 @@ class RespawnDirector:
                         width * scale, height * scale)
                 finally:
                     enemy.image.opacify(1.0)
-            pico2d.draw_rectangle(x - 18, y + 112, x + 18, y + 115, 52, 31, 66, filled=True)
-            pico2d.draw_rectangle(x - 18, y + 112, x - 18 + 36 * progress, y + 115,
+            label_y = min(y + 124, 416)
+            bar_y = label_y - 16
+            pico2d.draw_rectangle(x - 18, bar_y, x + 18, bar_y + 3, 52, 31, 66, filled=True)
+            pico2d.draw_rectangle(x - 18, bar_y, x - 18 + 36 * progress, bar_y + 3,
                                   193, 113, 232, filled=True)
             seconds = max(0.1, ceil((WARNING_DURATION - point.warning_elapsed) * 10 - 0.000000001) / 10)
-            font.draw(x - 50, y + 124, f'출현 {seconds:.1f}초 전', (210, 155, 235))
+            font.draw(x - 50, label_y, f'출현 {seconds:.1f}초 전', (210, 155, 235))
 
