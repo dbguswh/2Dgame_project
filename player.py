@@ -1,6 +1,7 @@
 """Warden의 이동과 대기·걷기 애니메이션을 관리한다."""
 
 import json
+from math import cos, sin
 from pathlib import Path
 
 import pico2d
@@ -29,13 +30,13 @@ SOURCE_FEET_X = 660 - SOURCE_LEFT
 DRAW_HEIGHT = 96
 BODY_WIDTH = 24
 BODY_HEIGHT = 92  # 후드가 천장 안으로 깊이 들어가지 않도록 실제 키에 맞춘 초기값.
-ATTACK_FRAME_ENDS = (0.05, 0.10, 0.15, 0.20, 0.28, 0.36)
+ATTACK_FRAME_ENDS = (0.07, 0.10, 0.135, 0.20, 0.27, 0.36)
 ATTACK_DURATION = ATTACK_FRAME_ENDS[-1]
 ATTACK_RECOVERY = 0.15
-SECOND_ATTACK_FRAME_ENDS = (0.06, 0.12, 0.18, 0.24, 0.34, 0.44)
+SECOND_ATTACK_FRAME_ENDS = (0.08, 0.12, 0.155, 0.24, 0.34, 0.44)
 COMBO_WINDOW = 0.4
 COMBO_RECOVERY = 0.5
-AIR_ATTACK_FRAME_ENDS = (0.05, 0.10, 0.16, 0.22, 0.28, 0.34)
+AIR_ATTACK_FRAME_ENDS = (0.07, 0.10, 0.135, 0.22, 0.28, 0.34)
 
 
 class Player:
@@ -157,6 +158,19 @@ class Player:
         if self.attack_kind == 'air':
             return AIR_ATTACK_FRAME_ENDS
         return SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
+
+    @property
+    def attack_lean(self):
+        """발 기준으로 준비 때 뒤로, 타격 때 앞으로 힘을 싣는 시각 회전이다."""
+        if not self.is_attacking:
+            return 0.0
+        ends = self._attack_frame_ends()
+        angles = (0.035, 0.07, -0.07, -0.045, -0.015, 0.0)
+        frame = self.attack_frame
+        start = ends[frame - 1] if frame else 0
+        previous = angles[frame - 1] if frame else 0
+        fraction = max(0.0, min(1.0, (self.attack_elapsed - start) / (ends[frame] - start)))
+        return (previous + (angles[frame] - previous) * fraction) * self.face_dir
 
     def _begin_air_attack(self):
         self._begin_attack(1)
@@ -361,11 +375,14 @@ class Player:
             scale = DRAW_HEIGHT / SOURCE_HEIGHT
 
         center_offset = (width / 2 - feet_x) * scale
+        angle = self.attack_lean
+        dx, dy = center_offset * self.face_dir, (height / 2 - feet_y) * scale
+        # 셀 중심이 아니라 발을 회전축으로 삼아 기울어져도 바닥이 흔들리지 않는다.
         image.clip_composite_draw(
             left, bottom, width, height,
-            0, "h" if self.face_dir < 0 else "",
-            self.x - camera_x + center_offset * self.face_dir,
-            self.feet_y + (height / 2 - feet_y) * scale,
+            angle, "h" if self.face_dir < 0 else "",
+            self.x - camera_x + dx * cos(angle) - dy * sin(angle),
+            self.feet_y + dx * sin(angle) + dy * cos(angle),
             width * scale, height * scale,
         )
         if self.light_cast > 0:
