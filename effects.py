@@ -15,6 +15,8 @@ _glow_renderer = None
 
 def clear_resources():
     global _glow_texture, _glow_renderer
+    from visibility import clear_resources as clear_darkness
+    clear_darkness()
     if _glow_texture is not None and _glow_renderer is canvas.renderer:
         sdl2.SDL_DestroyTexture(_glow_texture)
     _glow_texture = None

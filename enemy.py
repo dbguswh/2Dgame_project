@@ -454,7 +454,7 @@ class Shade:
             self.state = 'PATROL'
             self._patrol(delta_time, stage)
 
-    def draw(self, camera_x=0):
+    def draw(self, camera_x=0, signals=True):
         if self.state == 'DEAD':
             return
         opacity = 1.0
@@ -493,9 +493,13 @@ class Shade:
             self.feet_y + (height / 2 - feet_y) * scale, width * scale, height * scale,
         )
         image.opacify(1.0)
+        if signals:
+            self.draw_signals(camera_x)
+
+    def draw_signals(self, camera_x=0, show_health=True):
         if not self.alive:
             return
-        for index in range(2):
+        for index in range(2 if show_health else 0):
             left = self.x - camera_x - 12 + index * 13
             color = (202, 91, 214) if index < self.health else (69, 57, 78)
             pico2d.draw_rectangle(left, self.feet_y + 112, left + 10,
@@ -507,7 +511,7 @@ class Shade:
                                   66, 38, 63, filled=True)
             pico2d.draw_rectangle(left, top - 3, left + 24 * self.state_time / WINDUP_TIME,
                                   top, 255, 108, 160, filled=True)
-        if self.can_shoot:
+        if self.can_shoot and show_health:
             pico2d.draw_circle(self.x - camera_x + 21, self.feet_y + 114, 3,
                                192, 107, 242, filled=True)
         if self.stun_remaining > 0:

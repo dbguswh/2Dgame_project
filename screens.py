@@ -7,6 +7,7 @@ import pico2d
 from effects import blended
 from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
+from visibility import draw_darkness, draw_navigation, enemy_is_visible
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -23,14 +24,17 @@ def draw_game(game, font):
     shake = sum(enemy.impact.shake_x for enemy in game.enemies if enemy.impact is not None)
     camera_x = max(0, min(stage.width - SCREEN_WIDTH, camera_x + max(-3, min(3, shake))))
     stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
-    stage.draw_labels(font, camera_x)
     if player.light is not None:
         player.light.draw(camera_x)
     for enemy in game.enemies:
-        enemy.draw(camera_x)
+        enemy.draw(camera_x, signals=False)
     player.draw(camera_x)
+    draw_darkness(stage, player, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    draw_navigation(stage, player, camera_x, SCREEN_WIDTH)
+    stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     for enemy in game.enemies:
+        enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
     if game.show_debug:
         stage.draw_debug(camera_x)
