@@ -8,6 +8,8 @@
 - `player_actions.json`: 점프·베기 프레임과 발 기준 좌표
 - `player_attack.png`: 몸을 비틀고 팔을 크게 쓰는 개선된 단발 베기 6프레임
 - `player_attack.json`: 개선된 베기 프레임과 발 기준 좌표
+- `player_attack_second.png`·`.json`·`.prompt.txt`: 지상 2타 올려베기 6프레임·기준 좌표·생성 지시문
+- `player_attack_air.png`·`.json`·`.prompt.txt`: 공중 내려베기 6프레임·기준 좌표·생성 지시문
 - `shade_motion.png`: Shade 걷기 4프레임·공격 예고·앞발 타격
 - `shade_motion.json`: Shade 동작과 발 기준 좌표
 
@@ -40,3 +42,9 @@ Shade 동작 시트는 2026-11-06에 내장 imagegen으로 확정한 `shade.png`
 공격 예고는 밝은 눈·팔과 준비 자세, 타격은 낮은 앞발 휘두르기로 구분한다.
 최종 시트는 셀 사이 여백을 보정해 가시 영역이 이웃 셀로 넘어가지 않도록 했다.
 생성 및 보정 프롬프트는 `shade_motion.prompt.txt`에 기록했다.
+
+공중 베기 시트는 2026-11-13에 내장 image_gen으로 `player_attack.png`를 참조해
+제작했다. 공중 준비·팔 들기·전방 아래 타격·후속 동작·회수·하강의 6프레임이다.
+원본 1536×1024 투명 PNG를 그대로 사용하고, 512×512 셀을 위쪽부터 읽는다.
+발 기준점은 실제 발끝 대신 다리를 펴면 닿을 가상 바닥 위치로 고정한다.
+다리를 구부리는 동안 몸통 충돌 크기와 점프 궤적은 변하지 않는다.

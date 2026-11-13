@@ -1,0 +1,11 @@
+Use case: stylized-concept
+Asset type: production sprite sheet for the existing Blackout 2D side-scroller.
+Input image: reference ONLY for character identity, pixel illustration style, outfit colors, scale and 3-column 2-row layout. Create NEW airborne dagger attack poses, not edits to the reference.
+Primary request: six consecutive frames of a powerful short aerial downward dagger slash, facing RIGHT. Same navy hooded masked ninja Warden, amber scarf, gold wrist device, leather belt pouches, grey shin wraps, small glowing amber lantern in left hand and steel dagger in right. Keep the same compact proportions, face and rendering style. Player drawn about 96 pixels tall in game; clear silhouette.
+Composition: exactly 1536x1024, exactly 3 columns and 2 rows of equal 512x512 cells, reading top-left to bottom-right. One complete character per cell, uniform body scale with standing-equivalent height about 440 source pixels. Character pelvis consistently near local x=224,y=280; feet reference near x=224,y=470 (top-origin), even with legs tucked airborne. Leave 20px transparent padding and keep all blades, lanterns, scarf and slash trails entirely inside each cell. No ground or floor shadow.
+Motion sequence: 1 airborne knee tuck, torso twisting, dagger drawing back above shoulder; 2 strong overhead windup with raised dagger; 3 decisive diagonal strike to front and DOWN, bent knees, dagger ending near forward shin with a short bright curved slash trail; 4 extended forward-down follow-through with compact local crescent near legs; 5 dagger recovery toward waist, legs starting to extend; 6 relaxed airborne falling pose with dagger low, knees loosely bent. Feet MUST be off any implied ground. No dive movement, spinning, projectile, or second slash. Upper body and arms swing broadly, lantern stays in left hand.
+Constraints: genuine transparent background and transparent empty space, no labels, borders, numbers, text, watermark, background scenery or extra characters. No detached effects in adjacent cells, no checkerboard baked into image. Maintain same scale and stable body anchor across poses.
+
+제작: 2026-11-13, 내장 image_gen 도구, 투명 배경.
+참조: player_attack.png (외형·화풍 참조, 기존 이미지는 변경하지 않음).
+원본: exec-864a6d42-9cc1-4685-a1fe-6d7bdd420b30.png
