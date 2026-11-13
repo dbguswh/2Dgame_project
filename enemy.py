@@ -21,7 +21,7 @@ STRIKE_TIME = 0.18
 RECOVER_TIME = 1.0 - STRIKE_TIME
 DEATH_TIME = 0.8
 LIGHT_RECOIL_TIME = 0.25
-LIGHT_STATES = ('RETREAT', 'LIGHT_RECOIL', 'LIGHT_WAIT')
+LIGHT_STATES = ('RETREAT', 'LIGHT_RECOIL', 'LIGHT_WAIT', 'DARK_PATROL')
 
 
 class Shade:
@@ -37,7 +37,8 @@ class Shade:
         self.health = 2
         self.spawn_position = (x, feet_y)
         self.combat_bounds = combat_bounds
-        self.patrol_bounds = (x - 28, x + 16)
+        self.patrol_bounds = (combat_bounds[0] + BODY_WIDTH / 2 + 4,
+                              combat_bounds[1] - BODY_WIDTH / 2 - 4)
         self.state = 'PATROL'
         self.is_moving = False
         self.walk_distance = 0.0
@@ -249,17 +250,6 @@ class Shade:
             self._enter('CHASE')
             self.recoil_remaining = 0.0
             self.retreat_retry = 0.0
-        if self.state == 'LIGHT_RECOIL':
-            self.attack_event = None
-            self.face_dir = -self.retreat_direction
-            dt = min(delta_time, self.recoil_remaining)
-            if dt <= 0:
-                return True
-            moved = self._move(dt, self.retreat_direction, 80, stage)
-            self.recoil_remaining = max(0.0, self.recoil_remaining - dt)
-            if not moved or self.recoil_remaining <= EPSILON:
-                self._enter('LIGHT_WAIT')
-            return True
         if light.illuminates(self.get_bb()):
             if light is not self.retreat_light or self.state not in ('RETREAT', 'LIGHT_WAIT'):
                 self.retreat_light = light
@@ -279,21 +269,25 @@ class Shade:
                     self._enter('LIGHT_WAIT')
                     self.retreat_retry = 0.15
                 elif not light.illuminates(self.get_bb()):
-                    self._begin_light_recoil(light)
+                    self._enter('DARK_PATROL')
+                    self.face_dir = self.retreat_direction
             return True
-        if light.illuminates(player.get_bb()) and self.state in ('RETREAT', 'LIGHT_WAIT'):
+        sees_player = self.can_see(player)
+        path_is_lit = light.illuminates((min(self.x, player.x) - BODY_WIDTH / 2,
+                                        self.feet_y,
+                                        max(self.x, player.x) + BODY_WIDTH / 2,
+                                        self.feet_y + BODY_HEIGHT))
+        safe_target = sees_player and not light.illuminates(player.get_bb()) and not path_is_lit
+        dark_patrol = self.state in LIGHT_STATES and light is self.retreat_light
+        if not safe_target and (dark_patrol or (sees_player and path_is_lit)):
+            if self.state != 'DARK_PATROL':
+                self._enter('DARK_PATROL')
+                self.face_dir = 1 if self.x >= light.x else -1
             self.retreat_light = light
-            if self.state != 'LIGHT_WAIT':
-                self._enter('LIGHT_WAIT')
-            self.is_moving = False
             self.attack_event = None
+            self._patrol(delta_time, stage)
             return True
-        if self.state == 'LIGHT_WAIT' and light is self.retreat_light:
-            direction = 1 if player.x > self.x else -1
-            if self.can_see(player) and self._light_blocks_move(self.x + direction * 80 * delta_time):
-                self.attack_event = None
-                return True
-        if self.state in ('RETREAT', 'LIGHT_WAIT'):
+        if self.state in LIGHT_STATES:
             self._enter('CHASE')
         return False
 
@@ -316,7 +310,6 @@ class Shade:
         old_x = self.x
         next_x = self.x + direction * speed * delta_time
         if direction and self._light_blocks_move(next_x):
-            self._begin_light_recoil(self.active_light)
             return False
         if direction and not self._can_move_to(next_x, direction):
             direction = 0
@@ -326,6 +319,19 @@ class Shade:
         self.is_moving = distance > EPSILON
         self.walk_distance += distance
         return self.is_moving
+
+    def _patrol(self, delta_time, stage):
+        if self.x <= self.patrol_bounds[0]:
+            self.face_dir = 1
+        elif self.x >= self.patrol_bounds[1]:
+            self.face_dir = -1
+        if delta_time <= 0:
+            self.is_moving = False
+            return
+        if not self._move(delta_time, self.face_dir, 48, stage):
+            self.face_dir *= -1
+            # 경계에서 한 프레임씩 멈추지 않고 같은 프레임에 반대 방향으로 걸음을 잇는다.
+            self._move(delta_time, self.face_dir, 48, stage)
 
     def update(self, delta_time, player, stage, light=None):
         self.solids = stage.solids
@@ -381,12 +387,7 @@ class Shade:
                 self._move(delta_time, self.face_dir, 80, stage)
         else:
             self.state = 'PATROL'
-            if self.x <= self.patrol_bounds[0]:
-                self.face_dir = 1
-            elif self.x >= self.patrol_bounds[1]:
-                self.face_dir = -1
-            if not self._move(delta_time, self.face_dir, 48, stage):
-                self.face_dir *= -1
+            self._patrol(delta_time, stage)
 
     def draw(self, camera_x=0):
         if self.state == 'DEAD':

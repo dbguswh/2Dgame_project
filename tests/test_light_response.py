@@ -37,16 +37,19 @@ class LightResponseTests(unittest.TestCase):
             self.enemy.update(1 / 120, self.player, self.stage, self.light)
         self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
 
-    def test_retreated_enemy_waits_without_boundary_oscillation(self):
+    def test_retreated_enemy_resumes_wide_patrol_in_darkness(self):
         for _ in range(120):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
-        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.state, 'DARK_PATROL')
         self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
-        position = self.enemy.x
-        for _ in range(120):
+        positions = []
+        for _ in range(600):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
-            self.assertEqual(self.enemy.x, position)
+            positions.append(self.enemy.x)
+            self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
             self.assertIsNone(self.enemy.consume_attack())
+            self.assertTrue(self.enemy.is_moving)
+        self.assertGreater(max(positions) - min(positions), 150)
 
     def test_exposed_waiting_enemy_retries_escape_instead_of_freezing(self):
         self.enemy._enter('LIGHT_WAIT')
@@ -109,15 +112,19 @@ class LightResponseTests(unittest.TestCase):
         self.assertEqual(self.enemy.state, 'WINDUP')
         self.assertIsNone(self.enemy.consume_attack())
 
-    def test_dark_wait_does_not_walk_back_into_light_when_view_is_blocked(self):
+    def test_dark_patrol_moves_without_entering_light_when_view_is_blocked(self):
         self.stage.solids.append(Solid(460, 96, 472, 300))
         self.enemy.motion.x = 500
         self.enemy._enter('LIGHT_WAIT')
         self.enemy.retreat_light = self.light
-        for _ in range(60):
+        positions = []
+        for _ in range(180):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
-            self.assertEqual(self.enemy.x, 500)
-            self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+            positions.append(self.enemy.x)
+            self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+            self.assertEqual(self.enemy.state, 'DARK_PATROL')
+            self.assertIsNone(self.enemy.consume_attack())
+        self.assertGreater(max(positions) - min(positions), 80)
 
     def test_retreat_blocked_by_wall_never_attacks(self):
         self.stage.solids.append(Solid(480, 96, 512, 300))
@@ -149,15 +156,15 @@ class LightResponseTests(unittest.TestCase):
         self.assertEqual(self.enemy.retreat_direction, -1)
         self.assertLess(self.enemy.x, previous_x)
 
-    def test_unexposed_enemy_approaches_then_stops_before_light_boundary(self):
+    def test_unexposed_enemy_patrols_instead_of_waiting_at_light_boundary(self):
         self.enemy.motion.x = 550
         for _ in range(120):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
             self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
             self.assertIsNone(self.enemy.consume_attack())
-        self.assertLess(self.enemy.x, 520)
         self.assertGreaterEqual(self.enemy.x, 488)
-        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.state, 'DARK_PATROL')
+        self.assertTrue(self.enemy.is_moving)
         self.assertEqual(self.enemy.health, 2)
 
     def test_light_between_two_dark_actors_cannot_be_walked_through(self):
@@ -167,40 +174,37 @@ class LightResponseTests(unittest.TestCase):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
             self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
         self.assertGreaterEqual(self.enemy.x, 488)
-        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.state, 'DARK_PATROL')
 
     def test_boundary_guard_releases_when_light_expires(self):
         self.enemy.motion.x = 550
         for _ in range(120):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
-        position = self.enemy.x
         self.light.remaining = 0
-        for _ in range(20):
+        self.enemy.update(0.01, self.player, self.stage, self.light)
+        self.assertNotIn(self.enemy.state, ('DARK_PATROL', 'RETREAT', 'LIGHT_WAIT'))
+        for _ in range(600):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
-        self.assertLess(self.enemy.x, position)
-        self.assertIsNone(self.enemy.consume_attack())
-
-    def test_boundary_contact_has_short_backstep_before_guarding(self):
-        self.enemy.motion.x = 550
-        for _ in range(100):
-            self.enemy.update(1 / 60, self.player, self.stage, self.light)
-            if self.enemy.state == 'LIGHT_RECOIL':
+            if self.enemy.state == 'WINDUP':
+                self.assertEqual(self.enemy.state_time, 0)
+                self.assertIsNone(self.enemy.consume_attack())
                 break
         else:
-            self.fail('빛 경계에서 후퇴 반응이 시작되지 않음')
-        contact_x = self.enemy.x
-        for _ in range(30):
+            self.fail('소등 후 순찰·추적을 거쳐 공격 예고를 시작하지 않음')
+
+    def test_dark_patrol_turns_smoothly_at_light_edge_without_recoil_loop(self):
+        self.enemy.motion.x = 550
+        directions, positions = set(), []
+        for _ in range(900):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
+            directions.add(self.enemy.face_dir)
+            positions.append(self.enemy.x)
             self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
             self.assertIsNone(self.enemy.consume_attack())
-        self.assertAlmostEqual(self.enemy.x - contact_x, 20, places=4)
-        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
-        self.assertEqual(self.enemy.face_dir, -1)
-        self.assertGreater(self.enemy.state_time, 0)
-        guard_x, elapsed = self.enemy.x, self.enemy.state_time
-        self.enemy.update(0.1, self.player, self.stage, self.light)
-        self.assertEqual(self.enemy.x, guard_x)
-        self.assertGreater(self.enemy.state_time, elapsed)
+            self.assertTrue(self.enemy.is_moving)
+            self.assertEqual(self.enemy.state, 'DARK_PATROL')
+        self.assertEqual(directions, {-1, 1})
+        self.assertGreater(max(positions) - min(positions), 150)
 
     def test_reinstalled_light_does_not_freeze_enemy_at_old_boundary(self):
         self.enemy.motion.x = 550
@@ -210,21 +214,27 @@ class LightResponseTests(unittest.TestCase):
         self.player.x = 650
         replacement = PortableLight(650, 120, self.stage.light_regions[0])
         self.enemy.update(0.01, self.player, self.stage, replacement)
-        self.assertGreater(self.enemy.x, old_x)
-        self.assertEqual(self.enemy.state, 'CHASE')
+        self.assertNotEqual(self.enemy.x, old_x)
+        self.assertEqual(self.enemy.state, 'RETREAT')
 
-    def test_backstep_cannot_pass_wall(self):
+    def test_dark_patrol_cannot_pass_wall(self):
         self.enemy.motion.x = 550
-        for _ in range(100):
-            self.enemy.update(1 / 60, self.player, self.stage, self.light)
-            if self.enemy.state == 'LIGHT_RECOIL':
-                break
-        wall_left = self.enemy.x + 24 + 3
+        wall_left = 620
         self.stage.solids.append(Solid(wall_left, 96, wall_left + 16, 300))
         for _ in range(60):
             self.enemy.update(1 / 60, self.player, self.stage, self.light)
             self.assertLessEqual(self.enemy.get_bb()[2], wall_left)
-        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertEqual(self.enemy.state, 'DARK_PATROL')
+
+    def test_unseen_patrol_uses_walkable_section_instead_of_spawn_neighborhood(self):
+        stage = SimpleNamespace(width=960, solids=[Solid(0, 0, 960, 96)])
+        enemy = Shade(480, 96, combat_bounds=(0, 960))
+        self.player.x = 1500
+        positions = []
+        for _ in range(600):
+            enemy.update(1 / 60, self.player, stage)
+            positions.append(enemy.x)
+        self.assertGreater(max(positions) - min(positions), 350)
 
 
 if __name__ == '__main__':
