@@ -103,7 +103,7 @@ class LightBomb:
             glow(x, y, BLAST_RADIUS * (0.7 + progress * .3), (255, 222, 148), alpha=alpha)
             glow(x, y, 18 * (1 - progress), (255, 249, 221), alpha=alpha)
             for offset in (0, 3):
-                pico2d.draw_circle(x, y, min(BLAST_RADIUS, 12 + progress * 36 + offset),
+                pico2d.draw_circle(round(x), round(y), round(min(BLAST_RADIUS, 12 + progress * 36 + offset)),
                                   255, 229, 171, a=alpha)
             for index in range(12):
                 angle = index * 2 * pi / 12

@@ -8,7 +8,8 @@ from effects import blended
 from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
 from visibility import draw_darkness, draw_navigation, enemy_is_visible
-from supplies import draw_medkit_icon
+from item_art import draw_item
+from inventory import ITEM_NAMES, MEDKIT, LIGHT_BOMB
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -38,6 +39,8 @@ def draw_game(game, font):
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)
+    for bomb in player.bombs:
+        bomb.draw(camera_x)
     for enemy in game.enemies:
         enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
@@ -75,14 +78,23 @@ def draw_game(game, font):
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
-    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 베기  Q 섬광  R 투광기',
+    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 베기',
               (210, 219, 230))
-    font.draw(20, 18, 'E 상호작용  1 치료제 선택  F 사용  Esc 메뉴', (177, 191, 207))
-    pico2d.draw_rectangle(760, 10, 940, 58, 22, 31, 39, filled=True)
-    pico2d.draw_rectangle(760, 10, 940, 58, 161, 157, 116)
-    draw_medkit_icon(779, 34, size=24)
-    font.draw(799, 43, f'1 치료제  {player.medkits}/2', (230, 229, 205))
-    font.draw(799, 22, 'F 사용', (190, 219, 168) if player.medkits else (111, 125, 133))
+    font.draw(20, 18, 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴', (177, 191, 207))
+    for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
+        x = 616 + slot * 82
+        selected = player.inventory.selected == slot
+        enabled = slot in (MEDKIT, LIGHT_BOMB)
+        pico2d.draw_rectangle(x, 6, x + 78, 60, 27, 33, 39, filled=True)
+        pico2d.draw_rectangle(x, 6, x + 78, 60, *( (244, 206, 119) if selected else (68, 77, 88)))
+        font.draw(x + 5, 46, f'{slot + 1} {label}', (235, 223, 192) if enabled else (106, 116, 128))
+        if enabled:
+            draw_item(slot, x + 23, 22, 28)
+            font.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
+        else:
+            font.draw(x + 30, 22, '-', (106, 116, 128))
+    selected_name = ITEM_NAMES[player.inventory.selected]
+    font.draw(616, 78, f'선택: {selected_name} · F 사용', (241, 211, 150))
     if player.notice_time > 0:
         font.draw(20, SCREEN_HEIGHT - 84, player.notice, (255, 195, 110))
 

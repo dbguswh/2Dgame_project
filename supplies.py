@@ -1,6 +1,8 @@
-"""한 번만 개봉하고 미수령 치료제를 남기는 보급함."""
+"""한 번만 개봉하고 미수령 소모품을 남기는 보급함."""
 
 from dataclasses import dataclass
+from inventory import MEDKIT, LIGHT_BOMB
+from item_art import draw_item
 
 
 OPEN_TIME = 0.3
@@ -14,6 +16,7 @@ class SupplyBox:
     opened: bool = False
     claimed: bool = False
     opening_elapsed: float = 0.0
+    item: int = MEDKIT
 
     @property
     def pickup_ready(self):
@@ -49,8 +52,12 @@ class SupplyBox:
         for side in (-19, 15):
             pico2d.draw_rectangle(x + side, y + 2, x + side + 4, y + 20, 105, 113, 103, filled=True)
         pico2d.draw_rectangle(x - 6, y + 5, x + 6, y + 17, 204, 204, 178, filled=True)
-        pico2d.draw_rectangle(x - 1, y + 7, x + 1, y + 15, 152, 65, 61, filled=True)
-        pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 12, 152, 65, 61, filled=True)
+        if self.item == MEDKIT:
+            pico2d.draw_rectangle(x - 1, y + 7, x + 1, y + 15, 152, 65, 61, filled=True)
+            pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 12, 152, 65, 61, filled=True)
+        else:
+            pico2d.draw_circle(x, y + 11, 4, 178, 128, 53, filled=True)
+            pico2d.draw_circle(x, y + 11, 2, 255, 234, 173, filled=True)
         progress = min(1, self.opening_elapsed / OPEN_TIME)
         angle = progress * pi * .48
         hinge = (x - 23, y + 22)
@@ -64,18 +71,11 @@ class SupplyBox:
             px, py = self.pickup_position
             with blended():
                 glow(px - camera_x, py, 19, (175, 222, 162), alpha=75)
-            draw_medkit_icon(px - camera_x, py)
+            draw_item(self.item, px - camera_x, py, 22)
 
 
 def draw_medkit_icon(x, y, size=18):
-    import pico2d
-    half = size / 2
-    pico2d.draw_rectangle(x - half, y - half, x + half, y + half, 216, 213, 185, filled=True)
-    pico2d.draw_rectangle(x - half, y - half, x + half, y + half, 94, 111, 100)
-    pico2d.draw_rectangle(x - half * .18, y - half * .66, x + half * .18, y + half * .66,
-                          157, 64, 60, filled=True)
-    pico2d.draw_rectangle(x - half * .66, y - half * .18, x + half * .66, y + half * .18,
-                          157, 64, 60, filled=True)
+    draw_item(MEDKIT, x, y, size)
 
 
 def draw_battery_pack(x, y):

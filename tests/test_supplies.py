@@ -155,3 +155,35 @@ class SupplyTests(unittest.TestCase):
         self.p.attack_elapsed = 0.1
         self.open()
         self.assertFalse(self.box.opened)
+
+    def test_rooftop_box_delivers_bomb_to_its_own_slot_once(self):
+        from inventory import LIGHT_BOMB
+        self.box = self.stage.supply_boxes[2]
+        self.p.x, self.p.feet_y = self.box.x, self.box.feet_y
+        self.assertIn('광탄', self.stage.interaction_prompt(self.p)[2])
+        self.open()
+        self.game.update(.3)
+        self.assertTrue(self.box.claimed)
+        self.assertEqual(self.p.inventory.snapshot(), (0, 0, 1, 0))
+        self.game.records.restore_after_death(self.p, self.stage)
+        self.assertTrue(self.box.claimed)
+        self.assertEqual(self.p.inventory.counts[LIGHT_BOMB], 1)
+        self.game.restart_stage()
+        self.assertFalse(self.box.opened or self.box.claimed)
+        self.assertEqual(self.p.inventory.snapshot(), (0, 0, 0, 0))
+
+    def test_full_bomb_slot_leaves_pickup_until_throw_frees_space(self):
+        from inventory import LIGHT_BOMB
+        self.box = self.stage.supply_boxes[2]
+        self.p.x, self.p.feet_y = self.box.x, self.box.feet_y
+        self.p.inventory.counts[LIGHT_BOMB] = 2
+        self.open()
+        self.game.update(.3)
+        self.assertTrue(self.box.pickup_ready)
+        self.assertFalse(self.box.claimed)
+        tap(self.game, pico2d.SDLK_3)
+        tap(self.game, pico2d.SDLK_f)
+        self.game.update(0)
+        self.assertTrue(self.box.claimed)
+        self.assertEqual(self.p.inventory.counts[LIGHT_BOMB], 2)
+        self.assertEqual(len(self.p.bombs), 1)

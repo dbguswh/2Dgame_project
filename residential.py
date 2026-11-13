@@ -11,6 +11,7 @@ from stage import GROUND_Y, Stage
 from environment import ResidentialScene
 from respawn import RespawnDirector
 from supplies import SupplyBox, draw_battery_pack
+from inventory import ITEM_NAMES, LIGHT_BOMB
 
 
 @dataclass(frozen=True)
@@ -48,7 +49,8 @@ class ResidentialStage(Stage):
         self.return_battery_position = (2088, self.WORKSHOP_Y + 16)
         self.return_battery_collected = False
         self.supply_boxes = (SupplyBox('entrance-medkit', 240, GROUND_Y),
-                             SupplyBox('workshop-medkit', 2120, self.WORKSHOP_Y))
+                             SupplyBox('workshop-medkit', 2120, self.WORKSHOP_Y),
+                             SupplyBox('rooftop-light-bomb', 1696, self.UPPER_FLOOR_Y, item=LIGHT_BOMB))
         self.fuse_checkpoint = (2160, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -98,7 +100,7 @@ class ResidentialStage(Stage):
         for box in self.supply_boxes:
             x, y = box.pickup_position
             if (box.pickup_ready and overlaps(player.get_bb(), (x - 8, y - 9, x + 8, y + 10))
-                    and player.add_medkit()):
+                    and player.add_item(box.item)):
                 box.claimed = True
         if (player.motion.on_ground and abs(player.x - self.fixture_position[0]) <= 96
                 and abs(player.feet_y - self.fixture_position[1]) <= 8):
@@ -131,7 +133,7 @@ class ResidentialStage(Stage):
         if box is None:
             return False
         if box.open():
-            player.notice, player.notice_time = '치료제 보급함 개봉 · 앞의 치료제를 회수하세요', 1.4
+            player.notice, player.notice_time = f'{ITEM_NAMES[box.item]} 보급함 개봉 · 앞의 아이템을 회수하세요', 1.4
             return True
         player.notice, player.notice_time = '이미 개봉한 보급함입니다', 1.0
         return False
@@ -227,7 +229,7 @@ class ResidentialStage(Stage):
             return (*self.fixture_position, label)
         box = self.nearby_supply(player)
         if box is not None and not box.opened:
-            return box.x, box.feet_y, 'E: 치료제 보급함 열기'
+            return box.x, box.feet_y, f'E: {ITEM_NAMES[box.item]} 보급함 열기'
         return None
 
     def draw(self, camera_x, screen_width, screen_height):
