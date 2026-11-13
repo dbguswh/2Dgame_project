@@ -38,7 +38,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
         for enemy in enemies:
             enemy.dissolve()
     if records is not None:
-        # R 소비와 E 복구를 적의 타격보다 먼저 최신 기록에 반영한다.
+        # Q·R 소비와 E 복구를 적의 타격보다 먼저 최신 기록에 반영한다.
         records.remember(player, stage)
     life_before = player.respawn_count
     for enemy in enemies:
