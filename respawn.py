@@ -1,7 +1,7 @@
 """초기 적과 같은 개체를 생성 지점에 연결해 어둠 속에서 보충한다."""
 
 from dataclasses import dataclass
-from math import hypot
+from math import ceil, hypot
 
 
 RESPAWN_DELAY = 9.0
@@ -148,5 +148,6 @@ class RespawnDirector:
             pico2d.draw_rectangle(x - 18, y + 112, x + 18, y + 115, 52, 31, 66, filled=True)
             pico2d.draw_rectangle(x - 18, y + 112, x - 18 + 36 * progress, y + 115,
                                   193, 113, 232, filled=True)
-            font.draw(x - 33, y + 124, '출현 예고', (210, 155, 235))
+            seconds = max(0.1, ceil((WARNING_DURATION - point.warning_elapsed) * 10 - 0.000000001) / 10)
+            font.draw(x - 50, y + 124, f'출현 {seconds:.1f}초 전', (210, 155, 235))
 
