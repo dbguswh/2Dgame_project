@@ -1,0 +1,3 @@
+Use case: stylized-concept. Asset type: single production inventory/pickup sprite for the 2D game Blackout. One compact spherical flash grenade, dark desaturated steel segmented shell, warm brass ribs, bright golden-white light core in a wide central glass band, small brass safety lever at top. Detailed handcrafted pixel art, dark industrial fantasy ninja equipment, crisp deliberately pixel-stepped edges, readable silhouette at 32x32. Straight-on slight three-quarter view, one object centered occupying 75 percent of square canvas. Gold luminous core contained within object; no big surrounding glow, no floor, no text, no frame, no scenery, no duplicate objects. True transparent alpha background.
+
+Generated with built-in image_gen; original transparent PNG preserved.
