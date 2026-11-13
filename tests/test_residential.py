@@ -25,7 +25,7 @@ class ResidentialLayoutTests(unittest.TestCase):
                 self.assertGreaterEqual(abs(enemy.x - checkpoint[0]), 128)
                 self.assertFalse(enemy.bounds[0] <= checkpoint[0] <= enemy.bounds[1])
 
-    def test_basic_jumps_reach_fuse_shelf_and_control_side(self):
+    def test_basic_jumps_reach_fuse_then_return_to_central_control(self):
         motion = Motion(*self.stage.start)
         reached_shelf = False
         for _ in range(1400):
@@ -41,10 +41,23 @@ class ResidentialLayoutTests(unittest.TestCase):
             if abs(motion.x - self.stage.fuse_position[0]) <= 24 and motion.feet_y >= 288:
                 reached_shelf = True
             self.assertGreaterEqual(motion.feet_y, 96)
-            if motion.x >= self.stage.fixture_position[0]:
-                self.assertTrue(reached_shelf)
+            if motion.x >= self.stage.fuse_position[0]:
+                break
+        self.assertTrue(reached_shelf)
+        self.assertEqual(motion.feet_y, self.stage.WORKSHOP_Y)
+        for _ in range(1600):
+            left, bottom, right, top = motion.get_bb()
+            obstacle = any(bottom < s.top and top > s.bottom
+                           and left - 8 <= s.right <= left + 0.01 for s in self.stage.solids)
+            edge = not any(s.left <= motion.x - 28 <= s.right and abs(s.top - bottom) < 0.01
+                           for s in self.stage.solids)
+            if motion.on_ground and (obstacle or edge):
+                motion.jump()
+            motion.step(1 / 60, -1, self.stage.solids, self.stage.width)
+            if motion.x <= self.stage.fixture_position[0]:
+                self.assertEqual(motion.feet_y, self.stage.UPPER_FLOOR_Y)
                 return
-        self.fail(f'제어함 쪽에 도달하지 못함: {motion}')
+        self.fail(f'중앙 제어함으로 복귀하지 못함: {motion}')
 
     def test_unpowered_canal_cannot_be_jumped_even_with_speed_item(self):
         left, right = self.stage.canal

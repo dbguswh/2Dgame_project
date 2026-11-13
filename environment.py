@@ -52,7 +52,7 @@ class ResidentialScene:
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue
             if solid in (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
-                          *stage.bridge_approaches, *stage.return_ledges):
+                          *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges):
                 self.draw_walkway(solid, camera_x)
             elif solid in stage.stair_solids:
                 self.draw_stone(solid, camera_x, width)
@@ -73,7 +73,7 @@ class ResidentialScene:
     @staticmethod
     def draw_workshop_interior(stage, camera_x, width):
         platforms = (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
-                      *stage.bridge_approaches, *stage.return_ledges)
+                      *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges)
         for platform in platforms:
             if platform.left > camera_x + width or platform.right < camera_x:
                 continue
@@ -189,9 +189,9 @@ class ResidentialScene:
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33,
                                   38, 43, 47, filled=True)
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33, 117, 105, 78)
-        pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425,
+        pico2d.draw_rectangle(2072 - camera_x, 393, 2244 - camera_x, 423,
                               36, 44, 47, filled=True)
-        pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425, 126, 114, 83)
+        pico2d.draw_rectangle(2072 - camera_x, 393, 2244 - camera_x, 423, 126, 114, 83)
         # 정비소의 전선은 제어함으로 이어지는 흐름을 암시한다.
         for left, right in ((1120, 1408), (2024, 2440)):
             for x in range(left, right, 16):

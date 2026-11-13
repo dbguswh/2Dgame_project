@@ -52,10 +52,11 @@ class ResidentialRecoveryTests(unittest.TestCase):
         self.jump_to(body, 2856, 192)
         self.jump_to(body, 2856, self.stage.BRIDGE_Y)
 
-    def test_recovery_does_not_create_ground_shortcut_onto_reward_ledge(self):
-        body = Motion(1840, 96)
+    def test_bridge_recovery_cannot_jump_back_into_locked_workshop_route(self):
+        body = Motion(*self.stage.bridge_approach_position)
         body.jump()
+        peak = body.feet_y
         for _ in range(300):
-            body.step(1 / 120, 1, self.stage.solids, self.stage.width)
-        self.assertLessEqual(body.x + body.width / 2, self.stage.lower_walkways[0].left)
-        self.assertEqual(body.feet_y, 96)
+            body.step(1 / 120, -1, self.stage.solids, self.stage.width)
+            peak = max(peak, body.feet_y)
+        self.assertLess(peak, self.stage.WORKSHOP_Y)

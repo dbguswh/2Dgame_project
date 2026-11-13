@@ -17,13 +17,15 @@ class ProgressSnapshot:
     fragments: int
     reward_claimed: bool
     battery_pack_collected: bool
+    fixture_seen: bool = False
 
     @classmethod
     def capture(cls, player, stage):
         return cls(player.health, player.battery, player.max_battery,
                    (player.x, player.feet_y), tuple(player.checkpoint_position),
                    stage.fixture_powered, stage.fuse_state, stage.bridge_elapsed, stage.completed,
-                   player.fragments, stage.reward_claimed, stage.battery_pack_collected)
+                   player.fragments, stage.reward_claimed, stage.battery_pack_collected,
+                   getattr(stage, 'fixture_seen', False))
 
 
 class ProgressRecords:
@@ -46,6 +48,8 @@ class ProgressRecords:
         player.fragments = snapshot.fragments
         stage.reward_claimed = snapshot.reward_claimed
         stage.battery_pack_collected = snapshot.battery_pack_collected
+        if hasattr(stage, 'fixture_seen'):
+            stage.fixture_seen = snapshot.fixture_seen
         stage.update(0)
 
     def restore_after_death(self, player, stage):

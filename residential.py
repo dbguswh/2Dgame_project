@@ -25,23 +25,26 @@ class ResidentialStage(Stage):
     name = '운하 주택가'
     BRIDGE_TIME = 2.4
     UPPER_FLOOR_Y = 288
+    WORKSHOP_Y = 304
     BRIDGE_Y = 224
 
     def __init__(self):
         super().__init__()
         self.width = 2880
         self.start = (160, GROUND_Y)
-        self.fixture_position = (2336, self.BRIDGE_Y)
-        self.fixture_checkpoint = (2304, self.BRIDGE_Y)
+        self.fixture_position = (1184, self.UPPER_FLOOR_Y)
+        self.fixture_checkpoint = self.fixture_position
+        self.fixture_seen = False
+        self.bridge_approach_position = (2304, self.BRIDGE_Y)
         self.fixture_powered = False
         self.canal = (2368, 2752)
         self.bridge_solid = Solid(self.canal[0], self.BRIDGE_Y - 16, self.canal[1], self.BRIDGE_Y)
         self.bridge_gate = Solid(self.canal[0] - 12, self.BRIDGE_Y,
                                  self.canal[0] + 4, self.BRIDGE_Y + 80)
         self.exit_position = (2800, self.BRIDGE_Y)
-        self.fuse_position = (1760, self.UPPER_FLOOR_Y + 16)
-        self.battery_pack_position = (2160, 208)
-        self.fuse_checkpoint = (1760, self.UPPER_FLOOR_Y)
+        self.fuse_position = (2160, self.WORKSHOP_Y + 16)
+        self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
+        self.fuse_checkpoint = (2160, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
         self.visual_time = 0.0
@@ -52,8 +55,10 @@ class ResidentialStage(Stage):
         self.approach_ledges = (Solid(768, 128, 864, 144, one_way=True),
                                 Solid(896, 176, 992, 192, one_way=True),
                                 Solid(1024, 224, 1120, 240, one_way=True))
-        self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),)
-        self.lower_walkways = (Solid(1872, 172, 2208, 192),)
+        self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),
+                               Solid(1872, self.WORKSHOP_Y - 20, 2208, self.WORKSHOP_Y))
+        self.workshop_ledges = (Solid(1824, 240, 1904, 256, one_way=True),)
+        self.lower_walkways = ()
         self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
                                   Solid(2752, 204, 2880, self.BRIDGE_Y, one_way=True))
         self.return_ledges = (Solid(2240, 128, 2288, 144, one_way=True),
@@ -66,6 +71,7 @@ class ResidentialStage(Stage):
             Solid(288, GROUND_Y, 352, 128),
             *self.approach_ledges,
             *self.upper_walkways,
+            *self.workshop_ledges,
             *self.lower_walkways,
             *self.bridge_approaches,
             *self.return_ledges,
@@ -74,20 +80,24 @@ class ResidentialStage(Stage):
             EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged)
             for index, (x, y, bounds, ranged) in enumerate([
                 (480, GROUND_Y, (352, 752), False), (640, GROUND_Y, (352, 752), True),
-                (1248, self.UPPER_FLOOR_Y, (1152, 1632), False),
-                (1392, self.UPPER_FLOOR_Y, (1152, 1632), False),
-                (1520, self.UPPER_FLOOR_Y, (1152, 1632), True),
-                (1952, 192, (1872, 2208), False), (2048, 192, (1872, 2208), False),
-                (2144, 192, (1872, 2208), True),
+                (1328, self.UPPER_FLOOR_Y, (1280, 1712), False),
+                (1472, self.UPPER_FLOOR_Y, (1280, 1712), False),
+                (1600, self.UPPER_FLOOR_Y, (1280, 1712), True),
+                (1904, self.WORKSHOP_Y, (1872, 2064), False),
+                (1968, self.WORKSHOP_Y, (1872, 2064), False),
+                (2032, self.WORKSHOP_Y, (1872, 2064), True),
             ]))
         self.respawns = RespawnDirector(self.enemy_placements)
 
     def collect_pickups(self, player):
+        if (player.motion.on_ground and abs(player.x - self.fixture_position[0]) <= 96
+                and abs(player.feet_y - self.fixture_position[1]) <= 8):
+            self.fixture_seen = True
         x, y = self.fuse_position
         if self.fuse_state == 'WORLD' and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12)):
             self.fuse_state = 'CARRIED'
             player.checkpoint_position = self.fuse_checkpoint
-            player.notice = '퓨즈 획득 · 오른쪽 제어함에 설치하세요'
+            player.notice = '퓨즈 획득 · 왼쪽 중앙 제어함으로 돌아가세요'
             player.notice_time = 2.5
         x, y = self.battery_pack_position
         if (not self.battery_pack_collected and player.battery < player.max_battery
@@ -102,7 +112,8 @@ class ResidentialStage(Stage):
         if self.fixture_powered or not self.can_interact(player):
             return False
         if self.fuse_state != 'CARRIED':
-            player.notice = '퓨즈가 필요합니다 · 위층 적 구간 뒤 정비 선반을 찾아보세요'
+            self.fixture_seen = True
+            player.notice = '퓨즈가 필요합니다 · 오른쪽 정비실에서 회수해 돌아오세요'
             player.notice_time = 2.0
             return False
         self.fuse_state = 'INSTALLED'
@@ -172,8 +183,10 @@ class ResidentialStage(Stage):
                 return '운하 주택가 · 대형 교량 전개 중'
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
-            return '운하 주택가 · 위층 교량 제어함에 퓨즈를 설치하세요'
-        return '운하 주택가 · 발판을 올라 위층 적 구간 뒤의 퓨즈를 찾으세요'
+            return '운하 주택가 · 왼쪽 중앙 제어함으로 돌아가 퓨즈를 설치하세요'
+        if self.fixture_seen:
+            return '운하 주택가 · 오른쪽 정비실에서 퓨즈를 회수하세요'
+        return '운하 주택가 · 발판을 올라 중앙 제어함을 찾으세요'
 
     def interaction_prompt(self, player):
         if self.near_exit(player):
@@ -218,8 +231,8 @@ class ResidentialStage(Stage):
 
     def draw_labels(self, font, camera_x):
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
-                            (1500, 411, '정비 선반 · 퓨즈'),
-                            (1880, 345, '하강 발판 · 배터리'),
+                            (1048, 384, '중앙 제어함'),
+                            (2080, 408, '정비실 · 퓨즈'),
                             (2782, self.BRIDGE_Y + 140, '병원')):
             font.draw(x - camera_x, y, label, (192, 178, 146))
         x, y = 2854 - camera_x, self.BRIDGE_Y + 140
@@ -229,6 +242,12 @@ class ResidentialStage(Stage):
         if not self.battery_pack_collected:
             x, y = self.battery_pack_position
             font.draw(x - camera_x - 40, y + 39, '배터리 +50', (157, 197, 208))
+        if self.fuse_state == 'CARRIED' and not self.fixture_powered:
+            for wx in (1540, 1984):
+                sx, sy = wx - camera_x, 388
+                pico2d.draw_line(sx + 20, sy, sx, sy, 242, 204, 125)
+                pico2d.draw_line(sx + 6, sy + 5, sx, sy, 242, 204, 125)
+                pico2d.draw_line(sx + 6, sy - 5, sx, sy, 242, 204, 125)
 
     def draw_bridge(self, camera_x):
         from bridge_visuals import draw_bridge

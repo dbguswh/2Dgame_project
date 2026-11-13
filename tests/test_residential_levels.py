@@ -60,10 +60,11 @@ class ResidentialLevelsTests(unittest.TestCase):
         self.assertEqual(self.stage.safe_position(body), self.stage.fuse_checkpoint)
         upper_bounds = self.stage.enemy_placements[2].bounds
         self.assertGreater(self.stage.fuse_position[0], upper_bounds[1])
-        self.assertGreater(self.stage.battery_pack_position[0], self.stage.fuse_position[0])
+        self.assertGreater(self.stage.battery_pack_position[0], upper_bounds[1])
+        self.assertLess(self.stage.battery_pack_position[0], self.stage.fuse_position[0])
         for _ in range(60):
             body.step(1 / 120, 0, self.stage.solids, self.stage.width)
-        self.assertEqual(body.feet_y, 288)
+        self.assertEqual(body.feet_y, self.stage.WORKSHOP_Y)
 
     def test_upper_enemies_stay_on_roof_and_lower_light_does_not_reach_them(self):
         with patch('pico2d.load_image', return_value=Mock()):
@@ -82,7 +83,7 @@ class ResidentialLevelsTests(unittest.TestCase):
             player = Player(self.stage.fixture_position[0], 96)
             self.stage.fuse_state = 'CARRIED'
             self.assertFalse(self.stage.activate_fixture(player))
-            player.feet_y = self.stage.BRIDGE_Y
+            player.feet_y = self.stage.fixture_position[1]
             self.assertTrue(self.stage.activate_fixture(player))
             self.stage.update(self.stage.BRIDGE_TIME)
             player.x = self.stage.exit_position[0]

@@ -29,7 +29,7 @@ class ResidentialProgressTests(unittest.TestCase):
 
     def collect_fuse(self):
         self.player.x = self.stage.fuse_position[0]
-        self.player.feet_y = self.stage.UPPER_FLOOR_Y
+        self.player.feet_y = self.stage.WORKSHOP_Y
         self.player.motion.on_ground = True
         update_world(0.01, self.player, [], self.stage, self.records)
 
@@ -91,7 +91,7 @@ class ResidentialProgressTests(unittest.TestCase):
         self.assertIn(self.stage.bridge_solid, self.stage.solids)
         self.stage.update(1)
         self.assertEqual(self.stage.solids.count(self.stage.bridge_solid), 1)
-        motion = Motion(*self.stage.fixture_checkpoint)
+        motion = Motion(*self.stage.bridge_approach_position)
         for _ in range(300):
             motion.step(1 / 60, 1, self.stage.solids, self.stage.width)
             self.assertEqual(motion.feet_y, self.stage.BRIDGE_Y)
@@ -148,7 +148,7 @@ class ResidentialProgressTests(unittest.TestCase):
 
     def test_deploying_bridge_gate_prevents_walking_into_unfinished_span(self):
         self.repair()
-        body = Motion(*self.stage.fixture_checkpoint)
+        body = Motion(*self.stage.bridge_approach_position)
         for _ in range(260):
             self.stage.update(1 / 120)
             body.step(1 / 120, 1, self.stage.solids, self.stage.width)
