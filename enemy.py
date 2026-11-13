@@ -9,6 +9,7 @@ from physics import EPSILON, Motion
 from combat import front_box, overlaps
 from combat_feedback import HitPause, Impact
 from projectiles import ShadowBolt
+from flash import FLASH_STUN, FLASH_KNOCKBACK
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
@@ -70,6 +71,7 @@ class Shade:
         self.bolts = []
         self.ranged_data = None
         self.ranged_image = None
+        self.stun_remaining = 0.0
         if can_shoot:
             self.ranged_data = json.loads(RANGED_DATA_PATH.read_text(encoding='utf-8'))
             self.ranged_image = pico2d.load_image(str(RANGED_DATA_PATH.with_name(self.ranged_data['image'])))
@@ -94,6 +96,8 @@ class Shade:
             return self.motion_data['windup']
         if self.state in ('STRIKE', 'RANGED_RELEASE'):
             return self.motion_data['strike']
+        if self.state == 'STUNNED':
+            return self.motion_data['walk'][3]
         if self.state == 'LIGHT_WAIT':
             return self.motion_data['walk'][3]
         if self.is_moving:
@@ -175,7 +179,21 @@ class Shade:
             self._enter('DYING')
         return True
 
+    def receive_flash(self, direction, point=None):
+        if not self.take_damage(direction=direction, heavy=True, point=point):
+            return False
+        self.attack_event = None
+        self.shot_event = None
+        self.shot_target = None
+        self.hit_pause.reset()
+        self.apply_knockback(direction, FLASH_KNOCKBACK)
+        if self.alive:
+            self.stun_remaining = FLASH_STUN
+            self._enter('STUNNED')
+        return True
+
     def reset(self):
+        self.stun_remaining = 0.0
         self.clear_projectiles()
         self.shot_cooldown = 0.0
         self.shot_target = None
@@ -202,6 +220,7 @@ class Shade:
 
     def dissolve(self):
         self.clear_projectiles()
+        self.stun_remaining = 0.0
         if not self.alive:
             return False
         self.death_pose = self.animation_frame
@@ -356,12 +375,14 @@ class Shade:
         self.active_light = light
         self.attack_event = None
         self.shot_event = None
+        was_stunned = self.stun_remaining > 0
+        self.stun_remaining = max(0.0, self.stun_remaining - delta_time)
         self.retreat_retry = max(0.0, self.retreat_retry - delta_time)
         if self.impact is not None:
             self.impact.update(delta_time)
             if not self.impact.active:
                 self.impact = None
-        if self.alive and light is not None and light.illuminates(self.get_bb()):
+        if self.alive and not was_stunned and light is not None and light.illuminates(self.get_bb()):
             # 조명은 짧은 피격 정지보다 우선한다. 공격을 접고 즉시 빛에서 이탈한다.
             self.hit_pause.reset()
             self.knockback_remaining = 0.0
@@ -377,6 +398,13 @@ class Shade:
             self.is_moving = False
             if self.state != 'DEAD' and self.state_time >= DEATH_TIME:
                 self._enter('DEAD')
+            return
+        if was_stunned:
+            self.attack_event = None
+            self.shot_event = None
+            self.is_moving = False
+            if self.stun_remaining <= 0:
+                self._enter('CHASE')
             return
         if self._update_light_response(delta_time, player, stage, light):
             return
@@ -482,6 +510,21 @@ class Shade:
         if self.can_shoot:
             pico2d.draw_circle(self.x - camera_x + 21, self.feet_y + 114, 3,
                                192, 107, 242, filled=True)
+        if self.stun_remaining > 0:
+            from math import cos, sin
+            from effects import blended, glow
+            with blended():
+                for index in range(3):
+                    angle = self.state_time * 6 + index * 2.094
+                    sx = self.x - camera_x + cos(angle) * 14
+                    sy = self.feet_y + 104 + sin(angle) * 5
+                    glow(sx, sy, 5, (255, 227, 154), alpha=125)
+                    pico2d.draw_circle(sx, sy, 2, 255, 240, 184, filled=True)
+            pico2d.draw_rectangle(self.x - camera_x - 14, self.feet_y + 123,
+                                  self.x - camera_x + 14, self.feet_y + 126, 67, 60, 49, filled=True)
+            pico2d.draw_rectangle(self.x - camera_x - 14, self.feet_y + 123,
+                                  self.x - camera_x - 14 + 28 * self.stun_remaining / FLASH_STUN,
+                                  self.feet_y + 126, 255, 220, 133, filled=True)
         if self.state == 'RANGED_WINDUP' and self.shot_target is not None:
             from effects import blended, glow, segment
             origin = (self.x - camera_x + self.face_dir * 30, self.feet_y + 44)

@@ -43,6 +43,14 @@ def update_world(delta_time, player, enemies, stage, records=None):
     life_before = player.respawn_count
     for enemy in enemies:
         enemy.update(delta_time, player, stage, player.light)
+    flash_target = player.consume_flash_target(
+        [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive])
+    for enemy in enemies:
+        if enemy.alive and enemy.identity == flash_target:
+            point = (enemy.x, max(enemy.feet_y + 20, min(player.feet_y + 44, enemy.feet_y + 72)))
+            enemy.receive_flash(player.face_dir, point)
+            player.notice = '섬광 · Shade 처치' if not enemy.alive else '섬광 명중 · Shade 제압'
+            player.notice_time = 1.0
     target = player.get_attack_target(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive]
     )
