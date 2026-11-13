@@ -5,6 +5,7 @@ from math import sqrt
 
 
 MOVE_SPEED = 128
+RUN_SPEED = 208
 GRAVITY = 1024
 JUMP_HEIGHT = 64
 JUMP_SPEED = sqrt(2 * GRAVITY * JUMP_HEIGHT)

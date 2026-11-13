@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pico2d
 
-from physics import Motion, MOVE_SPEED, Solid
+from physics import Motion, MOVE_SPEED, RUN_SPEED, Solid
 from combat import front_box, overlaps
 from combat_feedback import HitPause
 from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
@@ -119,7 +119,8 @@ class Player:
 
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
-                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e):
+                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
+                              pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT):
             return
         if event.type == pico2d.SDL_KEYDOWN:
             if event.key == pico2d.SDLK_SPACE and event.key not in self.pressed_keys:
@@ -144,6 +145,14 @@ class Player:
     @property
     def is_attacking(self):
         return self.attack_elapsed is not None
+
+    @property
+    def run_held(self):
+        return bool(self.pressed_keys.intersection((pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT)))
+
+    @property
+    def is_running(self):
+        return self.is_moving and self.run_held and not self.is_attacking and self.light_cast <= 0
 
     @property
     def attack_frame(self):
@@ -239,7 +248,7 @@ class Player:
             return 'jump_rise' if self.motion.velocity_y > 0 else 'jump_fall'
         if self.light_cast > 0:
             return 'light_cast'
-        return 'walk' if self.is_moving else 'idle'
+        return 'run' if self.is_running else 'walk' if self.is_moving else 'idle'
 
     def _install_light(self, regions):
         if self.is_attacking or self.light_cast > 0:
@@ -312,7 +321,8 @@ class Player:
             self.air_attack_data["visible_half_width"] * DRAW_HEIGHT
             / self.air_attack_data["reference_height"],
         )
-        self.motion.step(delta_time, direction, solids, area_width, margin)
+        speed = RUN_SPEED if self.run_held else MOVE_SPEED
+        self.motion.step(delta_time, direction, solids, area_width, margin, speed=speed)
         if self.motion.on_ground:
             self.air_attack_used = False
             if self.attack_kind == 'air':
