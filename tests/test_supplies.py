@@ -74,6 +74,22 @@ class SupplyTests(unittest.TestCase):
         self.assertFalse(self.box.claimed)
         self.assertEqual(self.p.medkits, 2)
 
+    def test_death_during_opening_preserves_partial_open_and_delivers_only_once(self):
+        self.open()
+        self.game.update(0.1)
+        self.p.health, self.p.feet_y = 1, -200
+        self.game.update(0.01)
+        self.assertTrue(self.box.opened)
+        self.assertFalse(self.box.claimed)
+        self.assertAlmostEqual(self.box.opening_elapsed, 0.11)
+        self.game.update(0.2)
+        self.assertTrue(self.box.pickup_ready)
+        self.p.x, self.p.feet_y = self.box.x, self.box.feet_y
+        self.game.update(0)
+        self.assertEqual(self.p.medkits, 1)
+        self.game.update(1)
+        self.assertEqual(self.p.medkits, 1)
+
     def test_pickup_and_opening_are_recorded_before_same_update_death(self):
         self.open()
         self.p.health = 1
