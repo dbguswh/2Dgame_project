@@ -9,6 +9,9 @@ def restore_enemies(enemies, stage):
             enemy.dissolve()
         else:
             enemy.reset()
+    director = getattr(stage, 'respawns', None)
+    if director is not None:
+        director.reset(powered=stage.fixture_powered)
 
 
 def update_world(delta_time, player, enemies, stage, records=None):
@@ -88,3 +91,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
         player.last_safe_position = safe_position
     if records is not None:
         records.remember(player, stage)
+    # 전투·사망 복원·E 복구를 모두 반영한 뒤 생성한다. 새 적은 다음 갱신부터 행동한다.
+    director = getattr(stage, 'respawns', None)
+    if director is not None:
+        director.update(delta_time, player, enemies, powered=stage.fixture_powered)

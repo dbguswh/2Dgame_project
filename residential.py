@@ -9,6 +9,7 @@ from combat import overlaps
 from physics import Solid
 from stage import GROUND_Y, Stage
 from environment import ResidentialScene
+from respawn import RespawnDirector
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,7 @@ class ResidentialStage(Stage):
                 (1952, 192, (1872, 2208), False), (2048, 192, (1872, 2208), False),
                 (2144, 192, (1872, 2208), True),
             ]))
+        self.respawns = RespawnDirector(self.enemy_placements)
 
     def collect_pickups(self, player):
         x, y = self.fuse_position
