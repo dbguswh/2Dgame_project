@@ -38,3 +38,50 @@ class SupplyBox:
 
     def restore(self, state):
         _, self.opened, self.claimed, self.opening_elapsed = state
+
+    def draw(self, camera_x=0):
+        import pico2d
+        from math import cos, sin, pi
+        from effects import polygon, segment, blended, glow
+        x, y = self.x - camera_x, self.feet_y
+        pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 42, 57, 60, filled=True)
+        pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 134, 145, 132)
+        for side in (-19, 15):
+            pico2d.draw_rectangle(x + side, y + 2, x + side + 4, y + 20, 105, 113, 103, filled=True)
+        pico2d.draw_rectangle(x - 6, y + 5, x + 6, y + 17, 204, 204, 178, filled=True)
+        pico2d.draw_rectangle(x - 1, y + 7, x + 1, y + 15, 152, 65, 61, filled=True)
+        pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 12, 152, 65, 61, filled=True)
+        progress = min(1, self.opening_elapsed / OPEN_TIME)
+        angle = progress * pi * .48
+        hinge = (x - 23, y + 22)
+        end = (hinge[0] + cos(angle) * 46, hinge[1] + sin(angle) * 46)
+        polygon((hinge, end, (end[0], end[1] + 4), (hinge[0], hinge[1] + 4)), (90, 106, 100))
+        segment(hinge, end, (180, 178, 145), width=2)
+        if not self.opened:
+            with blended():
+                glow(x, y + 16, 21, (173, 198, 135), alpha=48)
+        if self.pickup_ready:
+            px, py = self.pickup_position
+            with blended():
+                glow(px - camera_x, py, 19, (175, 222, 162), alpha=75)
+            draw_medkit_icon(px - camera_x, py)
+
+
+def draw_medkit_icon(x, y, size=18):
+    import pico2d
+    half = size / 2
+    pico2d.draw_rectangle(x - half, y - half, x + half, y + half, 216, 213, 185, filled=True)
+    pico2d.draw_rectangle(x - half, y - half, x + half, y + half, 94, 111, 100)
+    pico2d.draw_rectangle(x - half * .18, y - half * .66, x + half * .18, y + half * .66,
+                          157, 64, 60, filled=True)
+    pico2d.draw_rectangle(x - half * .66, y - half * .18, x + half * .66, y + half * .18,
+                          157, 64, 60, filled=True)
+
+
+def draw_battery_pack(x, y):
+    import pico2d
+    pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 63, 82, 97, filled=True)
+    pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 134, 159, 170)
+    pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 13, 164, 170, 165, filled=True)
+    for bar_y in (y - 6, y - 1, y + 4):
+        pico2d.draw_rectangle(x - 5, bar_y, x + 5, bar_y + 2, 137, 195, 203, filled=True)

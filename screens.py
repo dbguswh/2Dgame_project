@@ -8,6 +8,7 @@ from effects import blended
 from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
 from visibility import draw_darkness, draw_navigation, enemy_is_visible
+from supplies import draw_medkit_icon
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -36,6 +37,7 @@ def draw_game(game, font):
     draw_navigation(stage, player, camera_x, SCREEN_WIDTH)
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
+    player.draw_recovery(camera_x)
     for enemy in game.enemies:
         enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
@@ -51,8 +53,9 @@ def draw_game(game, font):
             alpha = min(210, (y - SCREEN_HEIGHT + 112) * 3)
             pico2d.draw_rectangle(0, y, SCREEN_WIDTH - 1, y + 3,
                                   9, 14, 23, a=alpha, filled=True)
-        pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, 44, 9, 14, 23, a=180, filled=True)
-    font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', (235, 240, 245))
+        pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, 64, 9, 14, 23, a=190, filled=True)
+    hp_color = (160, 239, 183) if player.heal_effect > 0 else (235, 240, 245)
+    font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', hp_color)
     battery_color = (255, 215, 126) if player.battery >= 50 else (238, 145, 118)
     font.draw(170, SCREEN_HEIGHT - 28,
               f'배터리 {player.battery} / {player.max_battery}', battery_color)
@@ -71,9 +74,15 @@ def draw_game(game, font):
     if prompt is not None:
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
-        font.draw(prompt_x, y + 132, label, (255, 223, 137))
-    font.draw(20, 24, '방향키 이동  Shift 달리기  Space 점프  W 베기  Q 섬광(20)  R 조명(50)  E 설비  Esc 메뉴',
+        font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
+    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 베기  Q 섬광  R 투광기',
               (210, 219, 230))
+    font.draw(20, 18, 'E 상호작용  1 치료제 선택  F 사용  Esc 메뉴', (177, 191, 207))
+    pico2d.draw_rectangle(760, 10, 940, 58, 22, 31, 39, filled=True)
+    pico2d.draw_rectangle(760, 10, 940, 58, 161, 157, 116)
+    draw_medkit_icon(779, 34, size=24)
+    font.draw(799, 43, f'1 치료제  {player.medkits}/2', (230, 229, 205))
+    font.draw(799, 22, 'F 사용', (190, 219, 168) if player.medkits else (111, 125, 133))
     if player.notice_time > 0:
         font.draw(20, SCREEN_HEIGHT - 84, player.notice, (255, 195, 110))
 

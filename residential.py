@@ -10,7 +10,7 @@ from physics import Solid
 from stage import GROUND_Y, Stage
 from environment import ResidentialScene
 from respawn import RespawnDirector
-from supplies import SupplyBox
+from supplies import SupplyBox, draw_battery_pack
 
 
 @dataclass(frozen=True)
@@ -232,6 +232,8 @@ class ResidentialStage(Stage):
 
     def draw(self, camera_x, screen_width, screen_height):
         self.scene.draw(self, camera_x, screen_width, screen_height)
+        for box in self.supply_boxes:
+            box.draw(camera_x)
         self.draw_fixture(camera_x)
         self.draw_bridge(camera_x)
         x, y = self.exit_position
@@ -252,15 +254,10 @@ class ResidentialStage(Stage):
                 pico2d.draw_rectangle(x - 7, cap_y, x + 7, cap_y + 4,
                                       199, 173, 115, filled=True)
             pico2d.draw_line(x, y - 6, x, y + 6, 245, 218, 146)
-        if not self.battery_pack_collected:
-            x, y = self.battery_pack_position
-            x -= camera_x
-            pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 63, 82, 97, filled=True)
-            pico2d.draw_rectangle(x - 9, y - 10, x + 9, y + 10, 134, 159, 170)
-            pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 13, 164, 170, 165, filled=True)
-            for bar_y in (y - 6, y - 1, y + 4):
-                pico2d.draw_rectangle(x - 5, bar_y, x + 5, bar_y + 2,
-                                      137, 195, 203, filled=True)
+        for position, collected in ((self.battery_pack_position, self.battery_pack_collected),
+                                     (self.return_battery_position, self.return_battery_collected)):
+            if not collected:
+                draw_battery_pack(position[0] - camera_x, position[1])
 
     def draw_labels(self, font, camera_x):
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
@@ -275,6 +272,9 @@ class ResidentialStage(Stage):
         if not self.battery_pack_collected:
             x, y = self.battery_pack_position
             font.draw(x - camera_x - 40, y + 39, '배터리 +50', (157, 197, 208))
+        if not self.return_battery_collected:
+            x, y = self.return_battery_position
+            font.draw(x - camera_x - 40, y + 39, '복귀 보급 +50', (157, 197, 208))
         if self.fuse_state == 'CARRIED' and not self.fixture_powered:
             for wx in (1540, 1984):
                 sx, sy = wx - camera_x, 388

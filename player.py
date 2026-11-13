@@ -615,6 +615,23 @@ class Player:
         if self.flash_effect is not None:
             self.flash_effect.draw(camera_x)
 
+    def draw_recovery(self, camera_x=0):
+        if self.heal_effect <= 0:
+            return
+        from effects import blended, glow
+        strength = self.heal_effect / 0.55
+        age = 1 - strength
+        x = self.x - camera_x
+        with blended():
+            glow(x, self.feet_y + 44, 32, (133, 220, 161), alpha=85 * strength)
+            for index, dx in enumerate((-15, 0, 15)):
+                y = self.feet_y + 53 + age * 30 + index * 6
+                alpha = int(220 * strength)
+                pico2d.draw_rectangle(x + dx - 1, y - 5, x + dx + 1, y + 5,
+                                      158, 238, 179, a=alpha, filled=True)
+                pico2d.draw_rectangle(x + dx - 5, y - 1, x + dx + 5, y + 1,
+                                      158, 238, 179, a=alpha, filled=True)
+
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()
         pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
