@@ -9,6 +9,7 @@ import pico2d
 from physics import Motion, MOVE_SPEED, RUN_SPEED, Solid
 from combat import front_box, overlaps
 from combat_feedback import HitPause
+from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, load_deploy_image)
 
@@ -103,6 +104,10 @@ class Player:
         self.light_cast = 0.0
         self.interaction_requested = False
         self.fragments = 0
+        self.flash_requested = False
+        self.flash_pending = False
+        self.flash_cooldown = 0.0
+        self.flash_effect = None
 
     @property
     def x(self):
@@ -122,7 +127,7 @@ class Player:
 
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
-                              pico2d.SDLK_SPACE, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
+                              pico2d.SDLK_SPACE, pico2d.SDLK_q, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
                               pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT):
             return
         if event.type == pico2d.SDL_KEYDOWN:
@@ -130,6 +135,8 @@ class Player:
                 self.jump_requested = True
             elif event.key == pico2d.SDLK_w and event.key not in self.pressed_keys:
                 self.attack_requested = True
+            elif event.key == pico2d.SDLK_q and event.key not in self.pressed_keys:
+                self.flash_requested = True
             elif event.key == pico2d.SDLK_r and event.key not in self.pressed_keys:
                 self.light_requested = True
             elif event.key == pico2d.SDLK_e and event.key not in self.pressed_keys:
@@ -142,6 +149,7 @@ class Player:
         self.pressed_keys.clear()
         self.jump_requested = False
         self.attack_requested = False
+        self.flash_requested = False
         self.light_requested = False
         self.interaction_requested = False
 
@@ -169,6 +177,8 @@ class Player:
         return len(ends) - 1
 
     def _attack_frame_ends(self):
+        if self.attack_kind == 'flash':
+            return FLASH_FRAME_ENDS
         if self.attack_kind == 'air':
             return AIR_ATTACK_FRAME_ENDS
         return SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
@@ -176,7 +186,7 @@ class Player:
     @property
     def attack_lean(self):
         """발 기준으로 준비 때 뒤로, 타격 때 앞으로 힘을 싣는 시각 회전이다."""
-        if not self.is_attacking:
+        if not self.is_attacking or self.attack_kind == 'flash':
             return 0.0
         ends = self._attack_frame_ends()
         angles = (0.035, 0.07, -0.07, -0.045, -0.015, 0.0)
@@ -221,7 +231,7 @@ class Player:
         else:
             self.attack_elapsed = None
             self.combo_queued = False
-            if self.attack_kind == 'air':
+            if self.attack_kind in ('air', 'flash'):
                 self.attack_cooldown = 0.0
             else:
                 self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
@@ -244,6 +254,8 @@ class Player:
     @property
     def animation_state(self):
         if self.is_attacking:
+            if self.attack_kind == 'flash':
+                return 'flash'
             return 'air_attack' if self.attack_kind == 'air' else 'attack'
         if not self.motion.on_ground:
             if abs(self.motion.velocity_y) < 50:
@@ -277,10 +289,44 @@ class Player:
         self.notice, self.notice_time = '휴대 조명 설치', 0.7
         return True
 
+    def _cast_flash(self):
+        if self.is_attacking or self.light_cast > 0 or self.flash_cooldown > 0:
+            return False
+        if self.battery < FLASH_COST:
+            self.notice, self.notice_time = '배터리 부족: 섬광 공격에는 20이 필요합니다', 1.0
+            return False
+        self.battery -= FLASH_COST
+        self._begin_attack(1)
+        self.attack_kind = 'flash'
+        self.combo_window = 0.0
+        self.flash_cooldown = FLASH_COOLDOWN
+        self.flash_pending = True
+        box = front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + FLASH_RANGE,
+                        self.feet_y + 10, self.feet_y + 72, self.solids)
+        self.flash_effect = FlashPulse(self.x, self.feet_y, self.face_dir, box)
+        self.jump_requested = False
+        self.notice, self.notice_time = '섬광 공격 · 배터리 -20', 0.7
+        return True
+
+    def consume_flash_target(self, targets):
+        if not self.flash_pending:
+            return None
+        self.flash_pending = False
+        box = self.flash_effect.box if self.flash_effect is not None else None
+        candidates = [(identity, body) for identity, body in targets if overlaps(box, body)]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda target: abs((target[1][0] + target[1][2]) / 2 - self.x))[0]
+
     def update(self, delta_time, area_width, solids=None, light_regions=None):
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
         self.notice_time = max(0.0, self.notice_time - delta_time)
         self.light_cast = max(0.0, self.light_cast - delta_time)
+        self.flash_cooldown = max(0.0, self.flash_cooldown - delta_time)
+        if self.flash_effect is not None:
+            self.flash_effect.update(delta_time)
+            if not self.flash_effect.active:
+                self.flash_effect = None
         if self.light is not None:
             self.light.update(delta_time)
             if not self.light.active:
@@ -297,7 +343,13 @@ class Player:
         if self.light_requested:
             regions = light_regions if light_regions is not None else [LightRegion(0, 96, area_width, 540)]
             self._install_light(regions)
+            self.flash_requested = False
+            self.attack_requested = False
+        elif self.flash_requested:
+            self._cast_flash()
+            self.attack_requested = False
         self.light_requested = False
+        self.flash_requested = False
         self._request_attack(combo_open)
         self.attack_requested = False
         if self.jump_requested and not self.is_attacking and self.light_cast <= 0:
@@ -306,7 +358,8 @@ class Player:
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
-        if (self.is_attacking and self.attack_kind == 'ground') or self.light_cast > 0:
+        if (self.is_attacking and (self.attack_kind == 'ground'
+                                  or (self.attack_kind == 'flash' and self.motion.on_ground))) or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
         if direction and not self.is_attacking:
@@ -361,7 +414,7 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state in ('attack', 'air_attack'):
+        if state in ('attack', 'air_attack', 'flash'):
             if state == 'air_attack':
                 data, image = self.air_attack_data, self.air_attack_image
             elif self.attack_stage == 2:
@@ -420,6 +473,8 @@ class Player:
 
     def get_attack_box(self):
         """타격 프레임의 전방 1타일. 공중은 아래쪽이며 벽·발판 뒤는 제외한다."""
+        if self.attack_kind == 'flash':
+            return None
         if self.attack_kind == 'air':
             if not self.is_attacking or not 0.10 <= self.attack_elapsed < 0.22:
                 return None
@@ -470,6 +525,8 @@ class Player:
         self.hit_pause.reset()
         self.attack_elapsed = None
         self.attack_requested = False
+        self.flash_pending = False
+        self.flash_requested = False
         self.combo_window = 0.0
         self.combo_queued = False
         self.jump_requested = False
@@ -510,6 +567,13 @@ class Player:
         self.combo_queued = False
         self.combo_direction = self.face_dir
         self.light_cast = 0.0
+        self.flash_pending = False
+        self.flash_cooldown = 0.0
+        self.flash_effect = None
+
+    def draw_flash(self, camera_x=0):
+        if self.flash_effect is not None:
+            self.flash_effect.draw(camera_x)
 
     def draw_debug(self, camera_x=0):
         left, bottom, right, top = self.get_bb()
