@@ -7,6 +7,7 @@ import pico2d
 
 from physics import Motion, MOVE_SPEED, Solid
 from combat import front_box, overlaps
+from combat_feedback import HitPause
 from lighting import LIGHT_COST, LightRegion, PortableLight, find_region
 
 
@@ -83,6 +84,7 @@ class Player:
         self.attack_stage = 1
         self.attack_kind = 'ground'
         self.air_attack_used = False
+        self.hit_pause = HitPause()
         self.combo_window = 0.0
         self.combo_queued = False
         self.combo_direction = self.face_dir
@@ -252,6 +254,10 @@ class Player:
             self.light.update(delta_time)
             if not self.light.active:
                 self.light = None
+        was_frozen = self.hit_pause.remaining > 0
+        delta_time = self.hit_pause.consume(delta_time)
+        if was_frozen and delta_time <= 0:
+            return
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         self.solids = solids
@@ -419,6 +425,7 @@ class Player:
         if self.invulnerability > 0 or self.health <= 0:
             return False
         self.health -= 1
+        self.hit_pause.reset()
         self.attack_elapsed = None
         self.attack_requested = False
         self.combo_window = 0.0
@@ -443,6 +450,7 @@ class Player:
         self.reset_actions_after_return()
 
     def reset_actions_after_return(self, invulnerability=1.0):
+        self.hit_pause.reset()
         self.motion.velocity_y = 0
         self.motion.on_ground = True
         self.invulnerability = invulnerability

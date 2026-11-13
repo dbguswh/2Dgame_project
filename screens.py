@@ -27,6 +27,8 @@ def draw_game(game, font):
     for enemy in game.enemies:
         enemy.draw(camera_x)
     player.draw(camera_x)
+    for enemy in game.enemies:
+        enemy.draw_effects(camera_x)
     if game.show_debug:
         stage.draw_debug(camera_x)
         player.draw_debug(camera_x)

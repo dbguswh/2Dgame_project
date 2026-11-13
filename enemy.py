@@ -7,6 +7,7 @@ import pico2d
 
 from physics import EPSILON, Motion
 from combat import front_box, overlaps
+from combat_feedback import HitPause, Impact
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
@@ -47,6 +48,8 @@ class Shade:
         self.recoil_remaining = 0.0
         self.knockback_remaining = 0.0
         self.knockback_direction = 1
+        self.hit_pause = HitPause()
+        self.impact = None
 
     @property
     def x(self):
@@ -106,12 +109,16 @@ class Shade:
         self.attack_event = None
         return attack
 
-    def take_damage(self):
+    def take_damage(self, direction=None, heavy=False, point=None):
         if not self.alive:
             return False
         pose = self.animation_frame
         self.health -= 1
         self.hurt_time = 0.18
+        if direction is not None:
+            self.impact = Impact(*(point or (self.x, self.feet_y + 44)),
+                                 direction, heavy=heavy, lethal=not self.alive)
+            self.hit_pause.trigger(self.impact.hitstop)
         if not self.alive:
             self.death_pose = pose
             self.attack_event = None
@@ -119,6 +126,8 @@ class Shade:
         return True
 
     def reset(self):
+        self.hit_pause.reset()
+        self.impact = None
         self.motion.x, self.motion.feet_y = self.spawn_position
         self.motion.velocity_y = 0
         self.motion.on_ground = True
@@ -140,6 +149,8 @@ class Shade:
         if not self.alive:
             return False
         self.death_pose = self.animation_frame
+        self.hit_pause.reset()
+        self.impact = None
         self.health = 0
         self.attack_event = None
         self.knockback_remaining = 0.0
@@ -279,6 +290,14 @@ class Shade:
         self.solids = stage.solids
         self.active_light = light
         self.attack_event = None
+        if self.impact is not None:
+            self.impact.update(delta_time)
+            if not self.impact.active:
+                self.impact = None
+        was_frozen = self.hit_pause.remaining > 0
+        delta_time = self.hit_pause.consume(delta_time)
+        if was_frozen and delta_time <= 0:
+            return
         self.state_time += delta_time
         self.hurt_time = max(0.0, self.hurt_time - delta_time)
         pushed = self._update_knockback(delta_time)
@@ -371,3 +390,7 @@ class Shade:
             left, bottom, right, top = attack
             pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
                                   r=255, g=100, b=140)
+
+    def draw_effects(self, camera_x=0):
+        if self.impact is not None:
+            self.impact.draw(camera_x)

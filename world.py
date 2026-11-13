@@ -48,8 +48,13 @@ def update_world(delta_time, player, enemies, stage, records=None):
     )
     for enemy in enemies:
         if enemy.alive and enemy.identity == target:
-            enemy.take_damage()
-            if player.attack_kind == 'ground' and player.attack_stage == 2:
+            heavy = player.attack_kind == 'ground' and player.attack_stage == 2
+            attack, body = player.get_attack_box(), enemy.get_bb()
+            point = ((max(attack[0], body[0]) + min(attack[2], body[2])) / 2,
+                     (max(attack[1], body[1]) + min(attack[3], body[3])) / 2)
+            enemy.take_damage(direction=player.face_dir, heavy=heavy, point=point)
+            player.hit_pause.trigger(enemy.impact.hitstop)
+            if heavy:
                 enemy.apply_knockback(player.face_dir)
             player.notice = 'Shade 처치' if not enemy.alive else 'Shade 명중'
             player.notice_time = 1.0
