@@ -1,0 +1,16 @@
+Use case: stylized-concept.
+Asset type: Blackout production sprite sheet, exactly1536x1024,3columns x2rows, six512x512cells, true transparent background.
+Reference player_attack.png is ONLY an identity, color, proportion, pixel illustration and sprite layout reference. Same right-facing navy-hooded masked ninja Warden, amber scarf, gold mechanical wrist gauntlets, belt pouches, grey shin wraps, amber lantern LEFT hand.
+Primary request: NEW six-frame RIGHT-facing wrist FLASH attack, visibly different from dagger slashing. Dagger safely sheathed throughout, RIGHT palm open and golden wrist emitter aimed forward at chest height. An instant tactical light pulse, not a thrown projectile. Reading top-left across then bottom-left across:
+1 braced stance, RIGHT forearm already snapping forward and palm opening;
+2 strong forward thrust of open right hand, torso leans into cast;
+3 peak fully extended wrist emitter, tiny concentrated warm-white spark on gauntlet, left lantern held low;
+4 recoil from flash, elbow starts bending, shoulders settling;
+5 hand withdraws near waist, weight returns to center;
+6 recovered balanced ready stance with lowered open right hand.
+Standing-equivalent height448sourcepixels, stable virtual feet center localx224,y474fromtop in every cell, same body scale, keep boots anchored and bend knees rather than shrinking. Both arms and all scarf and lantern details inside512x512cell with20px padding.
+Crisp detailed pixel illustration, readable at96px in game, large readable arm/torso movement, no full-width beam baked in (game draws flash separately). Tiny wrist glow only; no sword arc or weapon swing, no giant aura, no double character, no scenery, floor/shadow, text, labels, numbers, borders, watermark or baked checkerboard.
+
+제작: 2026-11-13, 내장 image_gen, 투명 PNG.
+참조: player_attack.png (외형·화풍 참조, 기존 이미지는 유지).
+원본: exec-7294304f-a080-4777-947b-81dbf527c5d1.png

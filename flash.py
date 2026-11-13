@@ -33,7 +33,7 @@ class FlashPulse:
     def draw(self, camera_x=0):
         if not self.active:
             return
-        x, y = self.x - camera_x + self.direction * 18, self.feet_y + 44
+        x, y = self.x - camera_x + self.direction * 38, self.feet_y + 54
         strength = max(0.0, 1 - self.age / 0.18)
         if self.box is not None:
             left, bottom, right, top = self.box

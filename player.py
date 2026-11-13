@@ -21,6 +21,7 @@ ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
 SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_second.json")
 AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_air.json")
+FLASH_DATA_PATH = IMAGE_PATH.with_name("player_flash.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -70,6 +71,8 @@ class Player:
             str(AIR_ATTACK_DATA_PATH.with_name(self.air_attack_data['image']))
         )
         self.light_deploy_image = load_deploy_image()
+        self.flash_data = json.loads(FLASH_DATA_PATH.read_text(encoding='utf-8'))
+        self.flash_image = pico2d.load_image(str(FLASH_DATA_PATH.with_name(self.flash_data['image'])))
         self.pressed_keys = set()
         self.face_dir = 1
         self.is_moving = False
@@ -415,7 +418,9 @@ class Player:
             return
         state = self.animation_state
         if state in ('attack', 'air_attack', 'flash'):
-            if state == 'air_attack':
+            if state == 'flash':
+                data, image = self.flash_data, self.flash_image
+            elif state == 'air_attack':
                 data, image = self.air_attack_data, self.air_attack_image
             elif self.attack_stage == 2:
                 data, image = self.second_attack_data, self.second_attack_image
