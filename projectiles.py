@@ -1,7 +1,7 @@
 """예고한 방향으로만 날아가는 Shade의 그림자 탄."""
 
 from dataclasses import dataclass
-from math import ceil, hypot
+from math import ceil, cos, sin, hypot, pi
 
 import pico2d
 
@@ -23,6 +23,7 @@ class ShadowBolt:
     active: bool = True
     hit_event: bool = False
     fade: float = 0.14
+    absorbed: bool = False
 
     @classmethod
     def aimed(cls, origin, target):
@@ -50,6 +51,8 @@ class ShadowBolt:
                 break
             if light is not None and light.illuminates(box):
                 self.active = False
+                self.absorbed = True
+                self.fade = 0.32
                 break
             if overlaps(box, player.get_bb()):
                 self.active = False
@@ -69,6 +72,16 @@ class ShadowBolt:
         x, y = self.x - camera_x, self.y
         with blended():
             if not self.active:
+                if self.absorbed:
+                    progress = 1 - self.fade / 0.32
+                    glow(x, y, 24 * (1 - progress), (255, 222, 158), alpha=210 * (1 - progress))
+                    for index in range(7):
+                        angle = index * 2 * pi / 7
+                        radius = 5 + progress * (19 + index % 3 * 4)
+                        fx, fy = x + cos(angle) * radius, y + sin(angle) * radius
+                        pico2d.draw_line(fx, fy, fx + cos(angle) * 4, fy + sin(angle) * 4,
+                                          194, 107, 234, a=int(230 * (1 - progress)))
+                    return
                 glow(x, y, 14, (194, 100, 239), alpha=90 * self.fade / 0.14)
                 return
             glow(x, y, 17, (182, 70, 233), alpha=140)

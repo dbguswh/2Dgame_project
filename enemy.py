@@ -10,6 +10,7 @@ from combat import front_box, overlaps
 from combat_feedback import HitPause, Impact
 from projectiles import ShadowBolt
 from flash import FLASH_STUN, FLASH_KNOCKBACK
+from lighting import LIGHT_PUSH_DISTANCE, LIGHT_PUSH_SPEED
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
@@ -72,6 +73,8 @@ class Shade:
         self.ranged_data = None
         self.ranged_image = None
         self.stun_remaining = 0.0
+        self.repelled_light = None
+        self.light_push_remaining = 0.0
         if can_shoot:
             self.ranged_data = json.loads(RANGED_DATA_PATH.read_text(encoding='utf-8'))
             self.ranged_image = pico2d.load_image(str(RANGED_DATA_PATH.with_name(self.ranged_data['image'])))
@@ -194,6 +197,8 @@ class Shade:
 
     def reset(self):
         self.stun_remaining = 0.0
+        self.repelled_light = None
+        self.light_push_remaining = 0.0
         self.clear_projectiles()
         self.shot_cooldown = 0.0
         self.shot_target = None
@@ -221,6 +226,8 @@ class Shade:
     def dissolve(self):
         self.clear_projectiles()
         self.stun_remaining = 0.0
+        self.repelled_light = None
+        self.light_push_remaining = 0.0
         if not self.alive:
             return False
         self.death_pose = self.animation_frame
@@ -286,6 +293,7 @@ class Shade:
     def _update_light_response(self, delta_time, player, stage, light):
         if light is None or not light.active:
             self.retreat_light = None
+            self.light_push_remaining = 0.0
             if self.state in LIGHT_STATES:
                 self._enter('CHASE')
             return False
@@ -298,6 +306,12 @@ class Shade:
                 self.retreat_light = light
                 self.retreat_direction = self._choose_retreat_direction(light)
                 self._enter('RETREAT')
+                if light.age < 0.35 and self.repelled_light is not light:
+                    self.repelled_light = light
+                    self.light_push_remaining = LIGHT_PUSH_DISTANCE
+                    self.hurt_duration = self.hurt_time = 0.30
+                    self.hit_direction = self.retreat_direction
+                    self.reaction_heavy = True
             elif self.state == 'LIGHT_WAIT' and self.retreat_retry <= 0:
                 # 밝은 곳의 대기는 탈출 성공이 아니다. 밀림·지형 변화 후에도 다시 후퇴한다.
                 self.retreat_direction = self._choose_retreat_direction(light)
@@ -307,15 +321,32 @@ class Shade:
                 self.face_dir = -self.retreat_direction
                 if delta_time <= 0:
                     return True
-                moved = self._move(delta_time, self.retreat_direction, 80, stage)
+                if self.light_push_remaining > 0:
+                    budget = min(self.light_push_remaining, LIGHT_PUSH_SPEED * delta_time)
+                    moved = False
+                    while budget > EPSILON:
+                        step = min(2, budget)
+                        next_x = self.x + self.retreat_direction * step
+                        if not self._can_move_to(next_x, self.retreat_direction):
+                            self.light_push_remaining = 0.0
+                            break
+                        self.motion.x = next_x
+                        self.light_push_remaining = max(0, self.light_push_remaining - step)
+                        budget -= step
+                        moved = True
+                    self.is_moving = False
+                else:
+                    moved = self._move(delta_time, self.retreat_direction, 100, stage)
                 if not moved:
                     self._enter('LIGHT_WAIT')
-                    self.retreat_retry = 0.15
+                    self.retreat_retry = 0.35
                 elif not light.illuminates(self.get_bb()):
+                    self.light_push_remaining = 0.0
                     self._enter('DARK_PATROL')
                     self.face_dir = self.retreat_direction
                     self.is_moving = True
             return True
+        self.light_push_remaining = 0.0
         sees_player = self.can_see(player)
         path_is_lit = light.illuminates((min(self.x, player.x) - BODY_WIDTH / 2,
                                         self.feet_y,
