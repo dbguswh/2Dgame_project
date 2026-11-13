@@ -51,7 +51,7 @@ class ResidentialScene:
                 continue
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue
-            if solid in stage.upper_walkways:
+            if solid in (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways):
                 self.draw_walkway(solid, camera_x)
             elif solid in stage.stair_solids:
                 self.draw_stone(solid, camera_x, width)
@@ -64,30 +64,41 @@ class ResidentialScene:
                 self.draw_stone(solid, camera_x, width)
         self.draw_street_details(stage, camera_x, width)
         self.draw_stair_railing(stage, camera_x)
-        for lamp_x in (160, 816, 1488, 2304, 2784):
+        for lamp_x in (160, 704, 1488, 2304, 2784):
             if -100 < lamp_x - camera_x < width + 100:
                 self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or restored)
 
     @staticmethod
     def draw_workshop_interior(stage, camera_x, width):
-        if camera_x > 1824 or camera_x + width < 1184:
-            return
-        with blended():
-            pico2d.draw_rectangle(1184 - camera_x, GROUND_Y, 1792 - camera_x, 268,
-                                  12, 20, 29, a=195, filled=True)
-        for column in range(1200, 1792, 128):
-            x = column - camera_x
-            pico2d.draw_rectangle(x, GROUND_Y, x + 7, 267, 41, 49, 58, filled=True)
-            pico2d.draw_line(x + 8, 250, x + 32, 267, 58, 66, 72)
-            pico2d.draw_line(x - 20, 267, x, 250, 58, 66, 72)
-        pico2d.draw_line(1192 - camera_x, 216, 1784 - camera_x, 216, 52, 59, 63)
-        # 아래 통로의 정비함과 배관은 이동 판정을 가리지 않는 뒷벽 장식이다.
-        for x in (1220, 1632, 1712):
-            pico2d.draw_rectangle(x - camera_x, 113, x + 46 - camera_x, 177,
-                                  34, 45, 54, filled=True)
-            pico2d.draw_rectangle(x - camera_x, 113, x + 46 - camera_x, 177, 70, 79, 82)
-            for y in (154, 160, 166):
-                pico2d.draw_line(x + 8 - camera_x, y, x + 38 - camera_x, y, 68, 81, 88)
+        platforms = (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways)
+        for platform in platforms:
+            if platform.left > camera_x + width or platform.right < camera_x:
+                continue
+            # 계단 덩어리 대신 서로 떨어진 발판과 그 뒤의 철골 기둥을 보여준다.
+            for column in (platform.left + 12, platform.right - 16):
+                x = column - camera_x
+                pico2d.draw_rectangle(x, GROUND_Y, x + 6, platform.bottom,
+                                      41, 49, 58, filled=True)
+                segment((x + 3, platform.bottom - 26), (x + 27, platform.bottom),
+                        (57, 68, 75), width=3)
+            for column in range(int(platform.left), int(platform.right), 64):
+                x = column - camera_x
+                segment((x + 2, platform.bottom), (x + 28, platform.bottom - 18),
+                        (62, 76, 86), width=3)
+                segment((x + 28, platform.bottom - 18),
+                        (min(platform.right, column + 60) - camera_x, platform.bottom),
+                        (62, 76, 86), width=3)
+        ledges = (*stage.approach_ledges, stage.upper_walkways[0])
+        for first, second in zip(ledges, ledges[1:]):
+            start = (first.right - 8 - camera_x, first.top + 43)
+            end = (second.left + 8 - camera_x, second.top + 43)
+            previous = start
+            for index in range(1, 9):
+                ratio = index / 8
+                point = (start[0] + (end[0] - start[0]) * ratio,
+                         start[1] + (end[1] - start[1]) * ratio - 9 * sin(ratio * 3.14159))
+                segment(previous, point, (122, 104, 76), width=1.5)
+                previous = point
 
     @staticmethod
     def draw_walkway(solid, camera_x):
@@ -100,7 +111,7 @@ class ResidentialScene:
             pico2d.draw_line(sx, top - 7, sx, top - 1, 61, 69, 71)
             pico2d.draw_rectangle(sx + 11, solid.bottom + 7, sx + 13,
                                   solid.bottom + 9, 181, 160, 111, filled=True)
-        # 뒤쪽 난간은 구간 끝에서 끊어져 하부 통로로 내려가는 틈을 드러낸다.
+        # 난간은 뒤쪽 구조물이며 발판 사이의 빈 공간을 가리지 않는다.
         for x in range(int(solid.left + 8), int(solid.right - 3), 48):
             sx = x - camera_x
             segment((sx, top), (sx, top + 31), (86, 98, 105), width=2)
@@ -174,9 +185,9 @@ class ResidentialScene:
             pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205,
                                   38, 43, 47, filled=True)
             pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205, 117, 105, 78)
-        pico2d.draw_rectangle(1204 - camera_x, 393, 1416 - camera_x, 425,
+        pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425,
                               36, 44, 47, filled=True)
-        pico2d.draw_rectangle(1204 - camera_x, 393, 1416 - camera_x, 425, 126, 114, 83)
+        pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425, 126, 114, 83)
         # 정비소의 전선은 제어함으로 이어지는 흐름을 암시한다.
         for left, right in ((1120, 1408), (2024, 2440)):
             for x in range(left, right, 16):
