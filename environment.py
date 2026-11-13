@@ -51,7 +51,8 @@ class ResidentialScene:
                 continue
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue
-            if solid in (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways):
+            if solid in (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
+                          *stage.bridge_approaches):
                 self.draw_walkway(solid, camera_x)
             elif solid in stage.stair_solids:
                 self.draw_stone(solid, camera_x, width)
@@ -66,11 +67,13 @@ class ResidentialScene:
         self.draw_stair_railing(stage, camera_x)
         for lamp_x in (160, 704, 1488, 2304, 2784):
             if -100 < lamp_x - camera_x < width + 100:
-                self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or restored)
+                self.draw_lamp(lamp_x - camera_x, lamp_x == 160 or restored,
+                               stage.BRIDGE_Y if lamp_x >= 2304 else GROUND_Y)
 
     @staticmethod
     def draw_workshop_interior(stage, camera_x, width):
-        platforms = (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways)
+        platforms = (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
+                      *stage.bridge_approaches)
         for platform in platforms:
             if platform.left > camera_x + width or platform.right < camera_x:
                 continue
@@ -182,9 +185,10 @@ class ResidentialScene:
                               right - camera_x, GROUND_Y + 43, 91, 100, 104)
         for x in (120, 2776):
             sx = x - camera_x
-            pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205,
+            sign_y = GROUND_Y + 172 if x == 120 else stage.BRIDGE_Y + 122
+            pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33,
                                   38, 43, 47, filled=True)
-            pico2d.draw_rectangle(sx, GROUND_Y + 172, sx + 96, GROUND_Y + 205, 117, 105, 78)
+            pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33, 117, 105, 78)
         pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425,
                               36, 44, 47, filled=True)
         pico2d.draw_rectangle(1494 - camera_x, 393, 1706 - camera_x, 425, 126, 114, 83)
@@ -195,8 +199,7 @@ class ResidentialScene:
                 pico2d.draw_line(x - camera_x, y, x + 16 - camera_x, y - 1, 67, 62, 56)
 
     @staticmethod
-    def draw_lamp(x, powered):
-        y = GROUND_Y
+    def draw_lamp(x, powered, y=GROUND_Y):
         if powered:
             with blended():
                 glow(x, y + 88, 100, alpha=26, squash=1.05)

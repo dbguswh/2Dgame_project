@@ -76,3 +76,17 @@ class ResidentialLevelsTests(unittest.TestCase):
                     self.assertEqual(enemy.feet_y, 288)
                     self.assertFalse(light.illuminates(enemy.get_bb()))
                     self.assertIsNone(enemy.consume_attack())
+
+    def test_bridge_controls_and_exit_require_elevated_floor(self):
+        with patch('pico2d.load_image', return_value=Mock()):
+            player = Player(self.stage.fixture_position[0], 96)
+            self.stage.fuse_state = 'CARRIED'
+            self.assertFalse(self.stage.activate_fixture(player))
+            player.feet_y = self.stage.BRIDGE_Y
+            self.assertTrue(self.stage.activate_fixture(player))
+            self.stage.update(self.stage.BRIDGE_TIME)
+            player.x = self.stage.exit_position[0]
+            player.feet_y = 96
+            self.assertFalse(self.stage.activate_exit(player))
+            player.feet_y = self.stage.BRIDGE_Y
+            self.assertTrue(self.stage.activate_exit(player))

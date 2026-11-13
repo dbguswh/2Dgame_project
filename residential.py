@@ -17,25 +17,27 @@ class EnemyPlacement:
     x: float
     feet_y: float
     bounds: tuple
+    ranged: bool = False
 
 
 class ResidentialStage(Stage):
     name = '운하 주택가'
     BRIDGE_TIME = 2.4
     UPPER_FLOOR_Y = 288
+    BRIDGE_Y = 224
 
     def __init__(self):
         super().__init__()
         self.width = 2880
         self.start = (160, GROUND_Y)
-        self.fixture_position = (2336, GROUND_Y)
-        self.fixture_checkpoint = (2304, GROUND_Y)
+        self.fixture_position = (2336, self.BRIDGE_Y)
+        self.fixture_checkpoint = (2304, self.BRIDGE_Y)
         self.fixture_powered = False
         self.canal = (2368, 2752)
-        self.bridge_solid = Solid(self.canal[0], GROUND_Y - 16, self.canal[1], GROUND_Y)
-        self.bridge_gate = Solid(self.canal[0] - 12, GROUND_Y,
-                                 self.canal[0] + 4, GROUND_Y + 80)
-        self.exit_position = (2800, GROUND_Y)
+        self.bridge_solid = Solid(self.canal[0], self.BRIDGE_Y - 16, self.canal[1], self.BRIDGE_Y)
+        self.bridge_gate = Solid(self.canal[0] - 12, self.BRIDGE_Y,
+                                 self.canal[0] + 4, self.BRIDGE_Y + 80)
+        self.exit_position = (2800, self.BRIDGE_Y)
         self.fuse_position = (1760, self.UPPER_FLOOR_Y + 16)
         self.battery_pack_position = (2160, 208)
         self.fuse_checkpoint = (1760, self.UPPER_FLOOR_Y)
@@ -49,6 +51,8 @@ class ResidentialStage(Stage):
                                 Solid(1024, 224, 1120, 240))
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),)
         self.lower_walkways = (Solid(1872, 172, 2208, 192),)
+        self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y),
+                                  Solid(2752, 204, 2880, self.BRIDGE_Y))
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
             Solid(self.canal[1], 0, self.width, GROUND_Y),
@@ -56,14 +60,17 @@ class ResidentialStage(Stage):
             *self.approach_ledges,
             *self.upper_walkways,
             *self.lower_walkways,
+            *self.bridge_approaches,
         ]
         self.enemy_placements = tuple(
-            EnemyPlacement(f'residential-shade-{index}', x, y, bounds)
-            for index, (x, y, bounds) in enumerate([
-                (480, GROUND_Y, (352, 752)), (640, GROUND_Y, (352, 752)),
-                (1280, self.UPPER_FLOOR_Y, (1152, 1632)),
-                (1464, self.UPPER_FLOOR_Y, (1152, 1632)),
-                (1952, 192, (1872, 2208)), (2096, 192, (1872, 2208)),
+            EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged)
+            for index, (x, y, bounds, ranged) in enumerate([
+                (480, GROUND_Y, (352, 752), False), (640, GROUND_Y, (352, 752), True),
+                (1248, self.UPPER_FLOOR_Y, (1152, 1632), False),
+                (1392, self.UPPER_FLOOR_Y, (1152, 1632), False),
+                (1520, self.UPPER_FLOOR_Y, (1152, 1632), True),
+                (1952, 192, (1872, 2208), False), (2048, 192, (1872, 2208), False),
+                (2144, 192, (1872, 2208), True),
             ]))
 
     def collect_pickups(self, player):
@@ -156,7 +163,7 @@ class ResidentialStage(Stage):
                 return '운하 주택가 · 대형 교량 전개 중'
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
-            return '운하 주택가 · 오른쪽 제어함에 퓨즈를 설치하세요'
+            return '운하 주택가 · 위층 교량 제어함에 퓨즈를 설치하세요'
         return '운하 주택가 · 발판을 올라 위층 적 구간 뒤의 퓨즈를 찾으세요'
 
     def interaction_prompt(self, player):
@@ -204,9 +211,9 @@ class ResidentialStage(Stage):
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
                             (1500, 411, '정비 선반 · 퓨즈'),
                             (1880, 345, '하강 발판 · 배터리'),
-                            (2782, GROUND_Y + 188, '병원')):
+                            (2782, self.BRIDGE_Y + 140, '병원')):
             font.draw(x - camera_x, y, label, (192, 178, 146))
-        x, y = 2854 - camera_x, GROUND_Y + 188
+        x, y = 2854 - camera_x, self.BRIDGE_Y + 140
         pico2d.draw_line(x - 12, y, x, y, 192, 178, 146)
         pico2d.draw_line(x - 5, y + 5, x, y, 192, 178, 146)
         pico2d.draw_line(x - 5, y - 5, x, y, 192, 178, 146)

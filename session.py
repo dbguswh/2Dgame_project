@@ -34,7 +34,8 @@ class GameSession:
         self.stage = self.stage_factory()
         self.player = Player(*self.stage.start)
         if self.stage.enemy_placements:
-            self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds)
+            self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds,
+                                  can_shoot=e.ranged)
                             for e in self.stage.enemy_placements]
         else:
             self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]

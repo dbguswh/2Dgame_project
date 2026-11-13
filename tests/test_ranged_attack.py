@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
+import pico2d
+
 from enemy import Shade
 from lighting import PortableLight
 from physics import Solid
@@ -43,7 +45,7 @@ class RangedAttackTests(unittest.TestCase):
                 bolt = ShadowBolt.aimed((600, 140), (400, 136))
                 hit = False
                 for frame in range(132):
-                    if jump and frame == 72:
+                    if jump and frame == 66:
                         player.motion.jump()
                     player.update(1 / 120, 960)
                     bolt.update(1 / 120, [Solid(0, 0, 960, 96)], player)
@@ -108,3 +110,18 @@ class RangedAttackTests(unittest.TestCase):
         game.state = 'PLAY'
         game.update(1, focused=False)
         self.assertEqual(snapshot, (bolt.x, bolt.y, bolt.remaining))
+
+    def test_running_behind_shooter_during_locked_aim_avoids_hit_without_invulnerability(self):
+        stage = Stage()
+        stage.solids = [Solid(0, 0, 960, 96)]
+        player = Player(400, 96)
+        enemy = Shade(520, 96, combat_bounds=(0, 960), can_shoot=True)
+        for code in (pico2d.SDLK_RIGHT, pico2d.SDLK_LSHIFT):
+            event = pico2d.Event(pico2d.SDL_KEYDOWN)
+            event.key = code
+            player.handle_event(event)
+        for _ in range(144):
+            update_world(1 / 120, player, [enemy], stage)
+        self.assertGreater(player.x, enemy.x)
+        self.assertEqual(player.health, 3)
+        self.assertEqual(player.invulnerability, 0)

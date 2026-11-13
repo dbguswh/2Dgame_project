@@ -94,7 +94,7 @@ class ResidentialProgressTests(unittest.TestCase):
         motion = Motion(*self.stage.fixture_checkpoint)
         for _ in range(300):
             motion.step(1 / 60, 1, self.stage.solids, self.stage.width)
-            self.assertEqual(motion.feet_y, 96)
+            self.assertEqual(motion.feet_y, self.stage.BRIDGE_Y)
         self.assertGreater(motion.x, self.stage.exit_position[0])
 
     def test_death_finishes_repaired_bridge_and_restart_removes_it(self):
@@ -152,7 +152,7 @@ class ResidentialProgressTests(unittest.TestCase):
         for _ in range(260):
             self.stage.update(1 / 120)
             body.step(1 / 120, 1, self.stage.solids, self.stage.width)
-            self.assertEqual(body.feet_y, 96)
+            self.assertEqual(body.feet_y, self.stage.BRIDGE_Y)
             self.assertLess(body.x, self.stage.canal[0])
         self.assertIn(self.stage.bridge_gate, self.stage.solids)
         self.stage.update(0.3)
@@ -160,7 +160,7 @@ class ResidentialProgressTests(unittest.TestCase):
         self.assertNotIn(self.stage.bridge_gate, self.stage.solids)
         for _ in range(450):
             body.step(1 / 120, 1, self.stage.solids, self.stage.width)
-            self.assertEqual(body.feet_y, 96)
+            self.assertEqual(body.feet_y, self.stage.BRIDGE_Y)
         self.assertGreater(body.x, self.stage.canal[1])
 
     def test_full_battery_leaves_pack_in_world_and_partial_charge_is_clamped(self):

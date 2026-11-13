@@ -5,7 +5,6 @@ from math import cos, sin, pi
 import pico2d
 
 from effects import blended, glow, polygon, segment
-from stage import GROUND_Y
 
 
 def bridge_angle(elapsed, duration):
@@ -15,6 +14,7 @@ def bridge_angle(elapsed, duration):
 
 
 def draw_bridge(stage, camera_x):
+    base_y = stage.BRIDGE_Y
     left, right = stage.canal
     half = (right - left) / 2
     elapsed = stage.bridge_elapsed if stage.fixture_powered else 0
@@ -26,15 +26,15 @@ def draw_bridge(stage, camera_x):
         # 물가의 돌 교각과 고정 기계실이 다리의 무게를 받친다.
         outer = shore_x - direction * 46
         pier_left, pier_right = sorted((outer, shore_x + direction * 8))
-        pico2d.draw_rectangle(pier_left, 8, pier_right, GROUND_Y - 1, 49, 57, 66, filled=True)
-        for y in range(10, GROUND_Y - 8, 22):
+        pico2d.draw_rectangle(pier_left, 8, pier_right, base_y - 1, 49, 57, 66, filled=True)
+        for y in range(10, base_y - 8, 22):
             pico2d.draw_line(pier_left, y, pier_right, y, 25, 34, 43)
-        pico2d.draw_rectangle(pier_left - 3, GROUND_Y - 8, pier_right + 3,
-                              GROUND_Y - 1, 125, 126, 116, filled=True)
+        pico2d.draw_rectangle(pier_left - 3, base_y - 8, pier_right + 3,
+                              base_y - 1, 125, 126, 116, filled=True)
 
         def point(distance, height):
             return (shore_x + direction * (distance * c - height * s),
-                    GROUND_Y + distance * s + height * c)
+                    base_y + distance * s + height * c)
 
         def line(a, b, color, thickness=1):
             ax, ay = point(*a)
@@ -64,39 +64,39 @@ def draw_bridge(stage, camera_x):
             line((distance, -1), (distance + 5, -4), (233, 179, 72), 2)
         # 외부 와이어와 힌지 모터를 연결해 전개 방향을 읽을 수 있게 한다.
         mast_x = shore_x - direction * 30
-        pico2d.draw_rectangle(mast_x - 3, GROUND_Y, mast_x + 3,
-                              GROUND_Y + 76, 72, 87, 98, filled=True)
+        pico2d.draw_rectangle(mast_x - 3, base_y, mast_x + 3,
+                              base_y + 76, 72, 87, 98, filled=True)
         tip_x, tip_y = point(half * 0.72, 3)
-        previous = (mast_x, GROUND_Y + 76)
+        previous = (mast_x, base_y + 76)
         for index in range(1, 13):
             t = index / 12
             next_point = (mast_x + (tip_x - mast_x) * t,
-                          GROUND_Y + 76 + (tip_y - GROUND_Y - 76) * t - sin(pi * t) * 8)
+                          base_y + 76 + (tip_y - base_y - 76) * t - sin(pi * t) * 8)
             pico2d.draw_line(*previous, *next_point, 124, 133, 128)
             previous = next_point
-        pico2d.draw_circle(shore_x, GROUND_Y + 2, 12, 33, 46, 59, filled=True)
-        pico2d.draw_circle(shore_x, GROUND_Y + 2, 9, 140, 124, 83)
+        pico2d.draw_circle(shore_x, base_y + 2, 12, 33, 46, 59, filled=True)
+        pico2d.draw_circle(shore_x, base_y + 2, 9, 140, 124, 83)
         rotation = angle * direction + elapsed * 0.5
         for index in range(6):
             theta = rotation + index * pi / 3
-            bx, by = shore_x + cos(theta) * 7, GROUND_Y + 2 + sin(theta) * 7
+            bx, by = shore_x + cos(theta) * 7, base_y + 2 + sin(theta) * 7
             pico2d.draw_circle(bx, by, 2, 196, 171, 117, filled=True)
         color = (171, 226, 181) if ready else (255, 191, 90) if powered else (58, 70, 81)
-        pico2d.draw_rectangle(mast_x - 5, GROUND_Y + 74, mast_x + 5,
-                              GROUND_Y + 86, *color, filled=True)
+        pico2d.draw_rectangle(mast_x - 5, base_y + 74, mast_x + 5,
+                              base_y + 86, *color, filled=True)
         if powered:
             with blended():
-                glow(mast_x, GROUND_Y + 80, 18, color, alpha=60)
+                glow(mast_x, base_y + 80, 18, color, alpha=60)
                 if elapsed < 0.25:
-                    glow(shore_x, GROUND_Y + 4, 18, alpha=100 * (1 - elapsed / 0.25))
+                    glow(shore_x, base_y + 4, 18, alpha=100 * (1 - elapsed / 0.25))
     if powered and elapsed > stage.BRIDGE_TIME - 0.35:
         center = (left + right) / 2 - camera_x
         strength = max(0.0, 1 - abs(elapsed - (stage.BRIDGE_TIME - 0.15)) / 0.2)
         with blended():
-            glow(center, GROUND_Y, 24, (255, 225, 151), alpha=100 * strength)
+            glow(center, base_y, 24, (255, 225, 151), alpha=100 * strength)
     if powered and not ready:
         x = left - 5 - camera_x
-        pico2d.draw_rectangle(x - 6, GROUND_Y, x + 6, GROUND_Y + 80,
+        pico2d.draw_rectangle(x - 6, base_y, x + 6, base_y + 80,
                               73, 82, 88, filled=True)
-        for y in range(GROUND_Y + 3, GROUND_Y + 78, 10):
+        for y in range(base_y + 3, base_y + 78, 10):
             pico2d.draw_line(x - 5, y, x + 5, y + 5, 236, 176, 66)

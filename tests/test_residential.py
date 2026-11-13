@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from physics import Motion, MOVE_SPEED, camera_offset
+from physics import Motion, MOVE_SPEED, RUN_SPEED, camera_offset
 from residential import ResidentialStage
 from session import GameSession
 
@@ -14,9 +14,10 @@ class ResidentialLayoutTests(unittest.TestCase):
         self.assertEqual(self.stage.width, 960 * 3)
         self.assertEqual(camera_offset(2800, self.stage.width, 960), 1920)
         placements = self.stage.enemy_placements
-        self.assertEqual(len({e.identity for e in placements}), 6)
-        for bounds in {e.bounds for e in placements}:
-            self.assertEqual(sum(e.bounds == bounds for e in placements), 2)
+        self.assertEqual(len({e.identity for e in placements}), 8)
+        self.assertEqual(sum(e.ranged for e in placements), 3)
+        self.assertEqual(sorted(sum(e.bounds == bounds for e in placements)
+                                for bounds in {e.bounds for e in placements}), [2, 3, 3])
         for checkpoint in (self.stage.start, self.stage.fuse_checkpoint,
                            self.stage.fixture_checkpoint):
             self.assertIsNotNone(self.stage.safe_position(Motion(*checkpoint)))
@@ -48,13 +49,13 @@ class ResidentialLayoutTests(unittest.TestCase):
     def test_unpowered_canal_cannot_be_jumped_even_with_speed_item(self):
         left, right = self.stage.canal
         self.assertEqual(right - left, 12 * 32)
-        for speed in (MOVE_SPEED, MOVE_SPEED * 1.3):
+        for speed in (MOVE_SPEED, RUN_SPEED, RUN_SPEED * 1.3):
             for start_x in (left - 32, left - 1, left + 11):
-                motion = Motion(start_x, 96)
+                motion = Motion(start_x, self.stage.BRIDGE_Y)
                 motion.jump()
                 while motion.feet_y > -100:
                     motion.step(1 / 120, 1, self.stage.solids, self.stage.width, speed=speed)
-                    if motion.feet_y >= 96:
+                    if motion.feet_y >= self.stage.BRIDGE_Y:
                         self.assertLess(motion.x + motion.width / 2, right)
                     self.assertFalse(motion.on_ground and motion.x >= right)
 
@@ -63,8 +64,8 @@ class ResidentialLayoutTests(unittest.TestCase):
         game = GameSession()
         game.start_game()
         self.assertIsInstance(game.stage, ResidentialStage)
-        self.assertEqual(len(game.enemies), 6)
-        self.assertEqual(len({e.identity for e in game.enemies}), 6)
+        self.assertEqual(len(game.enemies), 8)
+        self.assertEqual(len({e.identity for e in game.enemies}), 8)
         # 한 번의 W는 여러 적이 겹쳐도 가장 가까운 한 마리만 친다.
         game.player.x = 450
         game.player.attack_elapsed = 0.11
