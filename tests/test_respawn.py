@@ -124,3 +124,26 @@ class RespawnTests(unittest.TestCase):
             self.tick(0)
         self.assertEqual(self.point.warning_elapsed, 0.4)
         self.assertFalse(self.enemy.alive)
+
+    def test_respawn_timing_is_consistent_at_different_frame_rates(self):
+        for fps in (30, 60, 144):
+            with self.subTest(fps=fps):
+                self.setUp()
+                self.kill()
+                for _ in range(9 * fps):
+                    self.tick(1 / fps)
+                self.assertEqual(self.point.state, 'WARNING')
+                for _ in range(fps - 1):
+                    self.tick(1 / fps)
+                self.assertFalse(self.enemy.alive)
+                self.tick(1 / fps)
+                self.assertTrue(self.enemy.alive)
+
+    def test_repeated_replacement_never_grows_actor_list_or_slot_count(self):
+        for _ in range(10):
+            self.kill()
+            self.tick(9)
+            self.tick(1)
+        self.assertEqual(len(self.director.points), 1)
+        self.assertEqual(self.point.generation, 10)
+        self.assertEqual(self.enemy.resets, 10)

@@ -17,6 +17,8 @@ def restore_enemies(enemies, stage):
 def update_world(delta_time, player, enemies, stage, records=None):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
     stage.update(delta_time)
+    previous_light = player.light
+    previous_light_remaining = previous_light.remaining if previous_light is not None else 0.0
     life_before = player.respawn_count
     player.update(delta_time, stage.width, stage.solids, stage.light_regions)
     if player.respawn_count != life_before:
@@ -94,4 +96,5 @@ def update_world(delta_time, player, enemies, stage, records=None):
     # 전투·사망 복원·E 복구를 모두 반영한 뒤 생성한다. 새 적은 다음 갱신부터 행동한다.
     director = getattr(stage, 'respawns', None)
     if director is not None:
-        director.update(delta_time, player, enemies, powered=stage.fixture_powered)
+        director.update(delta_time, player, enemies, powered=stage.fixture_powered,
+                        previous_light=previous_light, previous_light_remaining=previous_light_remaining)

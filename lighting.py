@@ -88,8 +88,10 @@ class PortableLight:
             self.remaining = 0.0
 
     def illuminates(self, box):
-        if not self.active:
-            return False
+        return self.active and self.covers(box)
+
+    def covers(self, box):
+        """수명과 별개인 기하 범위. 만료 갱신의 시간 분할에도 사용한다."""
         left = max(box[0], self.region.left)
         bottom = max(box[1], self.region.bottom)
         right = min(box[2], self.region.right)

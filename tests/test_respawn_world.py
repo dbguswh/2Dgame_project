@@ -93,3 +93,11 @@ class RespawnWorldTests(unittest.TestCase):
         self.game.update(2)
         self.assertEqual(self.point.remaining, 9)
         self.assertFalse(self.enemy.alive)
+
+    def test_expiring_light_only_counts_dark_part_of_update(self):
+        self.kill()
+        self.player.light = PortableLight(self.point.x, self.point.feet_y + 24,
+                                           self.stage.light_regions[0], remaining=0.03)
+        self.game.update(0.1)
+        self.assertIsNone(self.player.light)
+        self.assertAlmostEqual(self.point.remaining, 8.93)

@@ -24,6 +24,9 @@ def draw_game(game, font):
     shake = sum(enemy.impact.shake_x for enemy in game.enemies if enemy.impact is not None)
     camera_x = max(0, min(stage.width - SCREEN_WIDTH, camera_x + max(-3, min(3, shake))))
     stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    director = getattr(stage, 'respawns', None)
+    if director is not None:
+        director.draw_floor(camera_x, SCREEN_WIDTH)
     if player.light is not None:
         player.light.draw(camera_x)
     for enemy in game.enemies:
@@ -36,6 +39,8 @@ def draw_game(game, font):
     for enemy in game.enemies:
         enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
+    if director is not None:
+        director.draw_signals(camera_x, font, SCREEN_WIDTH)
     if game.show_debug:
         stage.draw_debug(camera_x)
         player.draw_debug(camera_x)
