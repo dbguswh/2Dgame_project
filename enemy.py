@@ -8,11 +8,13 @@ import pico2d
 from physics import EPSILON, Motion
 from combat import front_box, overlaps
 from combat_feedback import HitPause, Impact
+from projectiles import ShadowBolt
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
 MOTION_DATA_PATH = IMAGE_PATH.with_name('shade_motion.json')
 REACTION_DATA_PATH = IMAGE_PATH.with_name('shade_reactions.json')
+RANGED_DATA_PATH = IMAGE_PATH.with_name('shade_ranged.json')
 DRAW_HEIGHT = 104
 BODY_WIDTH = 48
 BODY_HEIGHT = 88
@@ -21,10 +23,13 @@ STRIKE_TIME = 0.18
 RECOVER_TIME = 1.0 - STRIKE_TIME
 DEATH_TIME = 0.8
 LIGHT_STATES = ('RETREAT', 'LIGHT_WAIT', 'DARK_PATROL')
+RANGED_WINDUP = 0.65
+RANGED_RELEASE = 0.24
+RANGED_COOLDOWN = 1.8
 
 
 class Shade:
-    def __init__(self, x, feet_y, identity=0, combat_bounds=(288, 544)):
+    def __init__(self, x, feet_y, identity=0, combat_bounds=(288, 544), can_shoot=False):
         self.identity = identity
         self.motion = Motion(x, feet_y, BODY_WIDTH, BODY_HEIGHT)
         self.motion_data = json.loads(MOTION_DATA_PATH.read_text(encoding='utf-8'))
@@ -58,6 +63,16 @@ class Shade:
         self.reaction_heavy = False
         self.death_by_hit = False
         self.retreat_retry = 0.0
+        self.can_shoot = can_shoot
+        self.shot_cooldown = 0.0
+        self.shot_target = None
+        self.shot_event = None
+        self.bolts = []
+        self.ranged_data = None
+        self.ranged_image = None
+        if can_shoot:
+            self.ranged_data = json.loads(RANGED_DATA_PATH.read_text(encoding='utf-8'))
+            self.ranged_image = pico2d.load_image(str(RANGED_DATA_PATH.with_name(self.ranged_data['image'])))
 
     @property
     def x(self):
@@ -75,9 +90,9 @@ class Shade:
     def animation_frame(self):
         if self.state in ('DYING', 'DEAD'):
             return self.death_pose
-        if self.state == 'WINDUP':
+        if self.state in ('WINDUP', 'RANGED_WINDUP'):
             return self.motion_data['windup']
-        if self.state == 'STRIKE':
+        if self.state in ('STRIKE', 'RANGED_RELEASE'):
             return self.motion_data['strike']
         if self.state == 'LIGHT_WAIT':
             return self.motion_data['walk'][3]
@@ -95,7 +110,7 @@ class Shade:
             phase = 0 if self.state_time < 0.10 else 1 if self.state_time < 0.28 else 2
             return self.reaction_data['defeat'][phase]
         # 실제 타격이 시작되면 피격 자세보다 적의 공격 자세를 우선해 위험을 보여준다.
-        if self.alive and self.hurt_time > 0 and self.state != 'STRIKE':
+        if self.alive and self.hurt_time > 0 and self.state not in ('STRIKE', 'RANGED_RELEASE'):
             elapsed = self.hurt_duration - self.hurt_time
             phase = (1 if elapsed < 0.13 else 2) if self.reaction_heavy else (
                 0 if elapsed < 0.06 else 1 if elapsed < 0.13 else 2)
@@ -105,7 +120,7 @@ class Shade:
     def can_see(self, player):
         if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
             return False
-        if abs(player.x - self.x) > 192 or abs(player.feet_y - self.feet_y) > 48:
+        if abs(player.x - self.x) > (384 if self.can_shoot else 192) or abs(player.feet_y - self.feet_y) > 48:
             return False
         line_y = min(self.feet_y + BODY_HEIGHT / 2, player.feet_y + 46)
         left, right = sorted((self.x, player.x))
@@ -130,6 +145,15 @@ class Shade:
         self.attack_event = None
         return attack
 
+    def clear_projectiles(self):
+        self.bolts.clear()
+        self.shot_event = None
+
+    def launch_pending_shot(self):
+        if self.alive and self.shot_event is not None:
+            self.bolts.append(ShadowBolt.aimed(*self.shot_event))
+        self.shot_event = None
+
     def take_damage(self, direction=None, heavy=False, point=None):
         if not self.alive:
             return False
@@ -147,10 +171,14 @@ class Shade:
         if not self.alive:
             self.death_pose = pose
             self.attack_event = None
+            self.shot_event = None
             self._enter('DYING')
         return True
 
     def reset(self):
+        self.clear_projectiles()
+        self.shot_cooldown = 0.0
+        self.shot_target = None
         self.hit_pause.reset()
         self.impact = None
         self.motion.x, self.motion.feet_y = self.spawn_position
@@ -173,6 +201,7 @@ class Shade:
         self._enter('PATROL')
 
     def dissolve(self):
+        self.clear_projectiles()
         if not self.alive:
             return False
         self.death_pose = self.animation_frame
@@ -326,6 +355,7 @@ class Shade:
         self.solids = stage.solids
         self.active_light = light
         self.attack_event = None
+        self.shot_event = None
         self.retreat_retry = max(0.0, self.retreat_retry - delta_time)
         if self.impact is not None:
             self.impact.update(delta_time)
@@ -340,6 +370,7 @@ class Shade:
         if was_frozen and delta_time <= 0:
             return
         self.state_time += delta_time
+        self.shot_cooldown = max(0.0, self.shot_cooldown - delta_time)
         self.hurt_time = max(0.0, self.hurt_time - delta_time)
         pushed = self._update_knockback(delta_time)
         if not self.alive:
@@ -348,6 +379,18 @@ class Shade:
                 self._enter('DEAD')
             return
         if self._update_light_response(delta_time, player, stage, light):
+            return
+        if self.state in ('RANGED_WINDUP', 'RANGED_RELEASE'):
+            self.is_moving = False
+            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+                self._enter('PATROL')
+            elif self.state == 'RANGED_WINDUP' and self.state_time >= RANGED_WINDUP:
+                origin = (self.x + self.face_dir * 30, self.feet_y + 44)
+                self.shot_event = (origin, self.shot_target)
+                self.shot_cooldown = RANGED_COOLDOWN
+                self._enter('RANGED_RELEASE')
+            elif self.state == 'RANGED_RELEASE' and self.state_time >= RANGED_RELEASE:
+                self._enter('RECOVER')
             return
         if self.state in ('WINDUP', 'STRIKE', 'RECOVER'):
             self.is_moving = False
@@ -370,7 +413,12 @@ class Shade:
             self.state = 'CHASE'
             if abs(player.x - self.x) > 1:
                 self.face_dir = 1 if player.x > self.x else -1
-            if overlaps(self._reach_box(), player.get_bb()):
+            distance = abs(player.x - self.x)
+            if (self.can_shoot and 112 <= distance <= 352 and self.shot_cooldown <= 0
+                    and not any(bolt.active for bolt in self.bolts)):
+                self.shot_target = (player.x, player.feet_y + 40)
+                self._enter('RANGED_WINDUP')
+            elif overlaps(self._reach_box(), player.get_bb()):
                 self._enter('WINDUP')
             else:
                 self._move(delta_time, self.face_dir, 80, stage)
@@ -387,6 +435,14 @@ class Shade:
             opacity = max(0.0, min(1.0, (DEATH_TIME - self.state_time) / (DEATH_TIME - fade_start)))
         reaction = self.reaction_frame
         data, image = self.motion_data, self.image
+        ranged_frame = None
+        if self.ranged_data is not None:
+            if self.state == 'RANGED_WINDUP':
+                ranged_frame = min(2, int(self.state_time / (RANGED_WINDUP / 3)))
+            elif self.state == 'RANGED_RELEASE':
+                ranged_frame = 3 + min(2, int(self.state_time / (RANGED_RELEASE / 3)))
+        if ranged_frame is not None:
+            data, image = self.ranged_data, self.ranged_image
         facing, recoil_x = self.face_dir, 0
         if reaction is not None:
             data, image = self.reaction_data, self.reaction_image
@@ -394,7 +450,8 @@ class Shade:
             if self.alive:
                 recoil_x = self.hit_direction * (6 if self.reaction_heavy else 3) * (
                     self.hurt_time / self.hurt_duration) ** 2
-        frame = data['frames'][reaction if reaction is not None else self.animation_frame]
+        frame_index = reaction if reaction is not None else ranged_frame if ranged_frame is not None else self.animation_frame
+        frame = data['frames'][frame_index]
         left, bottom, width, height = frame['rect']
         feet_x, feet_y = frame['feet']
         from math import sin
@@ -422,6 +479,27 @@ class Shade:
                                   66, 38, 63, filled=True)
             pico2d.draw_rectangle(left, top - 3, left + 24 * self.state_time / WINDUP_TIME,
                                   top, 255, 108, 160, filled=True)
+        if self.can_shoot:
+            pico2d.draw_circle(self.x - camera_x + 21, self.feet_y + 114, 3,
+                               192, 107, 242, filled=True)
+        if self.state == 'RANGED_WINDUP' and self.shot_target is not None:
+            from effects import blended, glow, segment
+            origin = (self.x - camera_x + self.face_dir * 30, self.feet_y + 44)
+            target = (self.shot_target[0] - camera_x, self.shot_target[1])
+            progress = min(1, self.state_time / RANGED_WINDUP)
+            with blended():
+                for index in range(0, 16, 2):
+                    a, b = index / 16, (index + 1) / 16
+                    pico2d.draw_line(origin[0] + (target[0] - origin[0]) * a,
+                                      origin[1] + (target[1] - origin[1]) * a,
+                                      origin[0] + (target[0] - origin[0]) * b,
+                                      origin[1] + (target[1] - origin[1]) * b,
+                                      221, 103, 231, a=int(60 + progress * 90))
+                glow(origin[0] - self.face_dir * 48, self.feet_y + 58,
+                     9 + progress * 7, (201, 88, 244), alpha=150)
+                for direction in (-1, 1):
+                    segment((target[0] + direction * 7, target[1] - 6),
+                            (target[0] + direction * 7, target[1] + 6), (231, 126, 242), 2)
 
     def draw_debug(self, camera_x=0):
         if not self.alive:
@@ -436,5 +514,7 @@ class Shade:
                                   r=255, g=100, b=140)
 
     def draw_effects(self, camera_x=0):
+        for bolt in self.bolts:
+            bolt.draw(camera_x)
         if self.impact is not None:
             self.impact.draw(camera_x)

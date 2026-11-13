@@ -15,6 +15,7 @@ from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
+RUN_DATA_PATH = IMAGE_PATH.with_name("player_run.json")
 ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
 SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_second.json")
@@ -49,6 +50,8 @@ class Player:
         self.walk_image = pico2d.load_image(
             str(WALK_DATA_PATH.with_name(self.walk_data["image"]))
         )
+        self.run_data = json.loads(RUN_DATA_PATH.read_text(encoding='utf-8'))
+        self.run_image = pico2d.load_image(str(RUN_DATA_PATH.with_name(self.run_data['image'])))
         self.action_data = json.loads(ACTION_DATA_PATH.read_text(encoding="utf-8"))
         self.action_image = pico2d.load_image(
             str(ACTION_DATA_PATH.with_name(self.action_data["image"]))
@@ -343,10 +346,11 @@ class Player:
             if self.face_dir != previous_direction:
                 self.walk_distance = 0.0
             # 실제 이동 거리를 기준으로 재생해 화면 갱신 횟수에 영향을 받지 않는다.
-            cycle = self.walk_data["cycle_distance"]
+            data = self.run_data if self.is_running else self.walk_data
+            cycle = data["cycle_distance"]
             self.walk_distance = (self.walk_distance + distance) % cycle
             self.walk_frame = int(
-                self.walk_distance / cycle * len(self.walk_data["frames"])
+                self.walk_distance / cycle * len(data["frames"])
             )
         else:
             # 키를 놓거나 양쪽 키·화면 끝 때문에 멈추면 원래 대기 자세로 돌아간다.
@@ -385,11 +389,12 @@ class Player:
             feet_x, feet_y = frame['feet']
             scale = DRAW_HEIGHT / DEPLOY_DATA['player_reference_height']
         elif self.is_moving:
-            frame = self.walk_data["frames"][self.walk_frame]
-            image = self.walk_image
+            data = self.run_data if self.is_running else self.walk_data
+            frame = data["frames"][self.walk_frame]
+            image = self.run_image if self.is_running else self.walk_image
             left, bottom, width, height = frame["rect"]
             feet_x, feet_y = frame["feet"]
-            scale = DRAW_HEIGHT / self.walk_data["reference_height"]
+            scale = DRAW_HEIGHT / data["reference_height"]
         else:
             image = self.image
             left, bottom = SOURCE_LEFT, SOURCE_BOTTOM

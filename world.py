@@ -59,9 +59,15 @@ def update_world(delta_time, player, enemies, stage, records=None):
             player.notice = 'Shade 처치' if not enemy.alive else 'Shade 명중'
             player.notice_time = 1.0
     for enemy in enemies:
+        enemy.launch_pending_shot()
         attack = enemy.consume_attack()
         if enemy.alive and overlaps(attack, player.get_bb()):
             player.take_damage()
+        for bolt in enemy.bolts:
+            bolt.update(delta_time, stage.solids, player, player.light)
+            if bolt.consume_hit():
+                player.take_damage()
+        enemy.bolts[:] = [bolt for bolt in enemy.bolts if bolt.active or bolt.fade > 0]
         if player.respawn_count != life_before:
             if records is not None:
                 records.restore_after_death(player, stage)
