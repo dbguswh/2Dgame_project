@@ -4,6 +4,7 @@
 - `shade.png`: 확정한 Shade의 정지 이미지
 - `player_walk.png`: Warden의 오른쪽 방향 걷기 6프레임 시트
 - `player_walk.json`: 각 프레임의 잘라 그릴 영역과 발 기준 좌표
+- `player_run.png`·`.json`·`.prompt.txt`: 달리기 6프레임·발 기준·생성 지시문
 - `player_actions.png`: 윗줄은 상승·정점·하강, 아랫줄은 베기 준비·타격·회수
 - `player_actions.json`: 점프·베기 프레임과 발 기준 좌표
 - `player_attack.png`: 몸을 비틀고 팔을 크게 쓰는 개선된 단발 베기 6프레임
@@ -13,6 +14,7 @@
 - `shade_motion.png`: Shade 걷기 4프레임·공격 예고·앞발 타격
 - `shade_motion.json`: Shade 동작과 발 기준 좌표
 - `shade_reactions.png`·`.json`·`.prompt.txt`: Shade 피격 3자세·쓰러짐 3자세와 좌표·생성 지시문
+- `shade_ranged.png`·`.json`·`.prompt.txt`: 원거리 조준 3자세·발사/회수 3자세·발 기준·생성 지시문
 - `player_light_deploy.png`·`.json`·`.prompt.txt`: 조명 설치 3자세와 장치 전개 3프레임·좌표·생성 지시문
 
 걷기 시트는 1536×1024 투명 PNG이며, 512×512 칸을 가로 3개·세로 2개로 배치했다.
@@ -60,3 +62,8 @@ Shade 피격·쓰러짐 시트는 2026-11-13에 내장 image_gen으로 `shade_mo
 제작했다. 윗줄은 몸 낮추기·장치 조작·일어서기이며, 아랫줄은 금속 장치의 접힘·전개·점등이다.
 캐릭터와 장치는 각자 기준 높이를 사용하고 장치 밑면을 바닥에 맞춘다.
 빛 확산·반사·수명 표시는 게임에서 그리며, PNG의 배경 투명도와 원본 크기를 유지한다.
+
+달리기·원거리 발사 시트는 2026-11-13에 내장 image_gen으로 각각 `player_walk.png`,
+`shade_motion.png`를 참조해 제작했다. 1536×1024 원본 투명 PNG와 512×512 셀을
+그대로 유지한다. 달리기는 가상 발 기준점을 맞추고, 원거리 발사는 조준·회수 시의
+발 기준을 나누어 지정했다. 실제 그림자 탄과 조준선은 게임 코드에서 그린다.
