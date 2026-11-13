@@ -21,6 +21,7 @@ class ProgressSnapshot:
     medkits: int = 0
     return_battery_collected: bool = False
     supply_states: tuple = ()
+    inventory_counts: tuple = (0, 0, 0, 0)
 
     @classmethod
     def capture(cls, player, stage):
@@ -30,7 +31,8 @@ class ProgressSnapshot:
                    player.fragments, stage.reward_claimed, stage.battery_pack_collected,
                    getattr(stage, 'fixture_seen', False), player.medkits,
                    getattr(stage, 'return_battery_collected', False),
-                   tuple(box.snapshot() for box in getattr(stage, 'supply_boxes', ())))
+                   tuple(box.snapshot() for box in getattr(stage, 'supply_boxes', ())),
+                   player.inventory.snapshot())
 
 
 class ProgressRecords:
@@ -55,6 +57,7 @@ class ProgressRecords:
         stage.battery_pack_collected = snapshot.battery_pack_collected
         if hasattr(stage, 'fixture_seen'):
             stage.fixture_seen = snapshot.fixture_seen
+        player.inventory.restore(snapshot.inventory_counts)
         player.medkits = snapshot.medkits
         if hasattr(stage, 'return_battery_collected'):
             stage.return_battery_collected = snapshot.return_battery_collected

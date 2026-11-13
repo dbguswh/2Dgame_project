@@ -9,6 +9,8 @@ import pico2d
 from physics import Motion, MOVE_SPEED, RUN_SPEED, Solid
 from combat import front_box, overlaps
 from combat_feedback import HitPause
+from inventory import Inventory, ITEM_NAMES, MEDKIT, LIGHT_BOMB
+from light_bomb import LightBomb
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, constrain_region, load_deploy_image)
@@ -111,7 +113,9 @@ class Player:
         self.flash_pending = False
         self.flash_cooldown = 0.0
         self.flash_effect = None
-        self.medkits = 0
+        self.inventory = Inventory()
+        self.bombs = []
+        self.requested_item = None
         self.use_medkit_requested = False
         self.heal_effect = 0.0
 
@@ -134,7 +138,7 @@ class Player:
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
                               pico2d.SDLK_SPACE, pico2d.SDLK_q, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
-                              pico2d.SDLK_1, pico2d.SDLK_f,
+                              pico2d.SDLK_1, pico2d.SDLK_2, pico2d.SDLK_3, pico2d.SDLK_4, pico2d.SDLK_f,
                               pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT):
             return
         if event.type == pico2d.SDL_KEYDOWN:
@@ -150,8 +154,10 @@ class Player:
                 self.interaction_requested = True
             elif event.key == pico2d.SDLK_f and event.key not in self.pressed_keys:
                 self.use_medkit_requested = True
-            elif event.key == pico2d.SDLK_1 and event.key not in self.pressed_keys:
-                self.notice, self.notice_time = '치료제 선택 · F로 사용', 1.0
+                self.requested_item = self.inventory.selected
+            elif pico2d.SDLK_1 <= event.key <= pico2d.SDLK_4 and event.key not in self.pressed_keys:
+                self.inventory.select(event.key - pico2d.SDLK_1)
+                self.notice, self.notice_time = f'{ITEM_NAMES[self.inventory.selected]} 선택 · F로 사용', 1.0
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
@@ -164,12 +170,43 @@ class Player:
         self.light_requested = False
         self.interaction_requested = False
         self.use_medkit_requested = False
+        self.requested_item = None
+
+    @property
+    def medkits(self):
+        return self.inventory.counts[MEDKIT]
+
+    @medkits.setter
+    def medkits(self, value):
+        self.inventory.counts[MEDKIT] = value
+
+    def add_item(self, slot):
+        if not self.inventory.add(slot):
+            return False
+        self.notice, self.notice_time = f'{ITEM_NAMES[slot]} +1 · {slot + 1} 선택 후 F 사용', 1.5
+        return True
 
     def add_medkit(self):
-        if self.medkits >= 2:
+        return self.add_item(MEDKIT)
+
+    def use_selected_item(self, slot):
+        if slot == MEDKIT:
+            return self.use_medkit()
+        if slot != LIGHT_BOMB:
+            self.notice, self.notice_time = '아직 사용할 수 없는 장비입니다', 1.0
             return False
-        self.medkits += 1
-        self.notice, self.notice_time = '치료제 +1 · F로 체력 회복', 1.5
+        if self.is_attacking or self.light_cast > 0:
+            self.notice, self.notice_time = '현재 동작을 마친 뒤 투척하세요', 1.0
+            return False
+        if not self.inventory.consume(LIGHT_BOMB):
+            self.notice, self.notice_time = '보유한 광탄이 없습니다', 1.0
+            return False
+        self.bombs.append(LightBomb(self.x, self.feet_y + 44, self.face_dir))
+        self.attack_kind = 'bomb'
+        self.attack_elapsed = 0.0
+        self.combo_queued = False
+        self.combo_window = 0.0
+        self.notice, self.notice_time = '광탄 투척', 1.0
         return True
 
     def use_medkit(self):
@@ -209,7 +246,7 @@ class Player:
         return len(ends) - 1
 
     def _attack_frame_ends(self):
-        if self.attack_kind == 'flash':
+        if self.attack_kind in ('flash', 'bomb'):
             return FLASH_FRAME_ENDS
         if self.attack_kind == 'air':
             return AIR_ATTACK_FRAME_ENDS
@@ -218,7 +255,7 @@ class Player:
     @property
     def attack_lean(self):
         """발 기준으로 준비 때 뒤로, 타격 때 앞으로 힘을 싣는 시각 회전이다."""
-        if not self.is_attacking or self.attack_kind == 'flash':
+        if not self.is_attacking or self.attack_kind in ('flash', 'bomb'):
             return 0.0
         ends = self._attack_frame_ends()
         angles = (0.035, 0.07, -0.07, -0.045, -0.015, 0.0)
@@ -263,13 +300,15 @@ class Player:
         else:
             self.attack_elapsed = None
             self.combo_queued = False
-            if self.attack_kind in ('air', 'flash'):
+            if self.attack_kind in ('air', 'flash', 'bomb'):
                 self.attack_cooldown = 0.0
             else:
                 self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
 
     def _request_attack(self, combo_open):
         if not self.attack_requested or self.light_cast > 0:
+            return
+        if self.is_attacking and self.attack_kind == 'bomb':
             return
         if not self.motion.on_ground:
             if not self.air_attack_used and not self.is_attacking and self.attack_cooldown <= 0:
@@ -286,7 +325,7 @@ class Player:
     @property
     def animation_state(self):
         if self.is_attacking:
-            if self.attack_kind == 'flash':
+            if self.attack_kind in ('flash', 'bomb'):
                 return 'flash'
             return 'air_attack' if self.attack_kind == 'air' else 'attack'
         if not self.motion.on_ground:
@@ -369,9 +408,6 @@ class Player:
         delta_time = self.hit_pause.consume(delta_time)
         if was_frozen and delta_time <= 0:
             return
-        if self.use_medkit_requested:
-            self.use_medkit()
-            self.use_medkit_requested = False
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         self.solids = solids
@@ -387,6 +423,10 @@ class Player:
             self.attack_requested = False
         self.light_requested = False
         self.flash_requested = False
+        if self.use_medkit_requested:
+            self.use_selected_item(self.requested_item if self.requested_item is not None else self.inventory.selected)
+            self.use_medkit_requested = False
+            self.requested_item = None
         self._request_attack(combo_open)
         self.attack_requested = False
         if self.jump_requested and not self.is_attacking and self.light_cast <= 0:
@@ -396,7 +436,7 @@ class Player:
             pico2d.SDLK_LEFT in self.pressed_keys
         )
         if (self.is_attacking and (self.attack_kind == 'ground'
-                                  or (self.attack_kind == 'flash' and self.motion.on_ground))) or self.light_cast > 0:
+                                  or (self.attack_kind in ('flash', 'bomb') and self.motion.on_ground))) or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
         if direction and not self.is_attacking:
@@ -512,7 +552,7 @@ class Player:
 
     def get_attack_box(self):
         """타격 프레임의 전방 1타일. 공중은 아래쪽이며 벽·발판 뒤는 제외한다."""
-        if self.attack_kind == 'flash':
+        if self.attack_kind in ('flash', 'bomb'):
             return None
         if self.attack_kind == 'air':
             if not self.is_attacking or not 0.10 <= self.attack_elapsed < 0.22:
@@ -610,6 +650,7 @@ class Player:
         self.flash_cooldown = 0.0
         self.flash_effect = None
         self.heal_effect = 0.0
+        self.bombs.clear()
 
     def draw_flash(self, camera_x=0):
         if self.flash_effect is not None:

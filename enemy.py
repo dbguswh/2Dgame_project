@@ -196,6 +196,16 @@ class Shade:
             self._enter('STUNNED')
         return True
 
+    def receive_bomb(self, direction, point=None):
+        if not self.take_damage(direction=direction, heavy=True, point=point):
+            return False
+        self.attack_event = None
+        self.shot_event = None
+        self.shot_target = None
+        if self.alive:
+            self._enter('RECOVER')
+        return True
+
     def reset(self):
         self.stun_remaining = 0.0
         self.repelled_light = None

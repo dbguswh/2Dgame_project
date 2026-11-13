@@ -52,6 +52,16 @@ def update_world(delta_time, player, enemies, stage, records=None):
     life_before = player.respawn_count
     for enemy in enemies:
         enemy.update(delta_time, player, stage, player.light)
+    for bomb in player.bombs:
+        bomb.update(delta_time, stage.solids)
+        targets = bomb.consume_targets([(e.identity, e.get_bb()) for e in enemies if e.alive], stage.solids)
+        for enemy in enemies:
+            if enemy.alive and enemy.identity in targets:
+                direction = 1 if enemy.x >= bomb.x else -1
+                enemy.receive_bomb(direction, (enemy.x, max(enemy.feet_y + 8, min(bomb.y, enemy.feet_y + 80))))
+        if targets:
+            player.notice, player.notice_time = f'광탄 명중 · Shade {len(targets)}명', 1.2
+    player.bombs[:] = [bomb for bomb in player.bombs if bomb.active]
     flash_target = player.consume_flash_target(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive])
     for enemy in enemies:
