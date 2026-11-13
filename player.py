@@ -9,7 +9,8 @@ import pico2d
 from physics import Motion, MOVE_SPEED, Solid
 from combat import front_box, overlaps
 from combat_feedback import HitPause
-from lighting import LIGHT_COST, LightRegion, PortableLight, find_region
+from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
+                      PortableLight, find_region, load_deploy_image)
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.png"
@@ -64,6 +65,7 @@ class Player:
         self.air_attack_image = pico2d.load_image(
             str(AIR_ATTACK_DATA_PATH.with_name(self.air_attack_data['image']))
         )
+        self.light_deploy_image = load_deploy_image()
         self.pressed_keys = set()
         self.face_dir = 1
         self.is_moving = False
@@ -242,6 +244,9 @@ class Player:
     def _install_light(self, regions):
         if self.is_attacking or self.light_cast > 0:
             return False
+        if not self.motion.on_ground:
+            self.notice, self.notice_time = '바닥에 착지한 뒤 조명을 설치하세요', 1.0
+            return False
         if self.battery < LIGHT_COST:
             self.notice, self.notice_time = '배터리 부족: 조명 설치에는 50이 필요합니다', 1.2
             return False
@@ -250,9 +255,9 @@ class Player:
         if region is None:
             self.notice, self.notice_time = '이 위치에는 조명을 설치할 수 없습니다', 1.2
             return False
-        self.light = PortableLight(x, y, region)
+        self.light = PortableLight(x, y, region, art=self.light_deploy_image)
         self.battery -= LIGHT_COST
-        self.light_cast = 0.18
+        self.light_cast = LIGHT_CAST_TIME
         self.attack_requested = False
         self.combo_window = 0.0
         self.combo_queued = False
@@ -361,6 +366,14 @@ class Player:
             left, bottom, width, height = frame["rect"]
             feet_x, feet_y = frame["feet"]
             scale = DRAW_HEIGHT / self.action_data["reference_height"]
+        elif state == 'light_cast':
+            elapsed = LIGHT_CAST_TIME - self.light_cast
+            phase = min(2, int(elapsed / (LIGHT_CAST_TIME / 3)))
+            frame = DEPLOY_DATA['frames'][DEPLOY_DATA['cast'][phase]]
+            image = self.light_deploy_image
+            left, bottom, width, height = frame['rect']
+            feet_x, feet_y = frame['feet']
+            scale = DRAW_HEIGHT / DEPLOY_DATA['player_reference_height']
         elif self.is_moving:
             frame = self.walk_data["frames"][self.walk_frame]
             image = self.walk_image
@@ -385,9 +398,6 @@ class Player:
             self.feet_y + dx * sin(angle) + dy * cos(angle),
             width * scale, height * scale,
         )
-        if self.light_cast > 0:
-            pico2d.draw_circle(self.x - camera_x + self.face_dir * 14, self.feet_y + 52,
-                               4, r=255, g=224, b=142, filled=True)
 
     def get_bb(self):
         """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""

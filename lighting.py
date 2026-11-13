@@ -1,11 +1,22 @@
 """휴대 조명의 수명과 방·통로로 제한한 원형 점등 범위를 계산한다."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import json
+from math import pi, sin, sqrt
+from pathlib import Path
 
 
 LIGHT_RADIUS = 64
 LIGHT_DURATION = 8.0
 LIGHT_COST = 50
+LIGHT_CAST_TIME = 0.18
+DEPLOY_DATA_PATH = Path(__file__).resolve().parent / 'assets/images/characters/player_light_deploy.json'
+DEPLOY_DATA = json.loads(DEPLOY_DATA_PATH.read_text(encoding='utf-8'))
+
+
+def load_deploy_image():
+    import pico2d
+    return pico2d.load_image(str(DEPLOY_DATA_PATH.with_name(DEPLOY_DATA['image'])))
 
 
 @dataclass(frozen=True)
@@ -30,6 +41,23 @@ class PortableLight:
     region: LightRegion
     remaining: float = LIGHT_DURATION
     radius: float = LIGHT_RADIUS
+    art: object = field(default=None, repr=False, compare=False)
+
+    @property
+    def age(self):
+        return max(0.0, LIGHT_DURATION - self.remaining)
+
+    @property
+    def device_frame(self):
+        return 0 if self.age < 0.06 else 1 if self.age < 0.16 else 2
+
+    @property
+    def visual_strength(self):
+        progress = min(1.0, self.age / 0.22)
+        ignition = 0.4 + 0.6 * progress * progress * (3 - 2 * progress)
+        shutdown = min(1.0, self.remaining / 0.45)
+        warning = 0.88 + 0.12 * sin(self.age * 6 * pi) if self.remaining < 2 else 1
+        return max(0.0, ignition * shutdown * warning)
 
     @property
     def active(self):
@@ -56,31 +84,54 @@ class PortableLight:
     def draw(self, camera_x=0):
         if not self.active:
             return
-        from math import sin
         import pico2d
-        from effects import blended, glow
+        from effects import blended, glow, light_beam
         screen_width, screen_height = pico2d.get_canvas_width(), pico2d.get_canvas_height()
         left, right = max(0, self.region.left - camera_x), min(screen_width, self.region.right - camera_x)
         bottom, top = max(0, self.region.bottom), min(screen_height, self.region.top)
         if right <= left or top <= bottom:
             return
-        age = LIGHT_DURATION - self.remaining
-        strength = min(1.0, age / 0.16) * min(1.0, self.remaining / 0.65)
-        shimmer = 1 + sin(age * 5.2) * 0.025
+        age, strength = self.age, self.visual_strength
+        shimmer = 1 + sin(age * 5.2) * 0.018
         with blended((left, bottom, right, top)):
             x = self.x - camera_x
-            glow(x, self.y, self.radius, alpha=150 * strength * shimmer)
-            glow(x, self.y, 22, (255, 213, 133), alpha=160 * strength)
             base_y = self.y - 24
-            glow(x, base_y + 2, 44, alpha=90 * strength, squash=0.14)
-            # 펼친 세 발과 금속 케이스로 설치 장치를 표시한다.
-            pico2d.draw_line(x, base_y + 10, x - 11, base_y + 1, 119, 126, 137)
-            pico2d.draw_line(x, base_y + 10, x + 11, base_y + 1, 119, 126, 137)
-            pico2d.draw_rectangle(x - 6, base_y + 9, x + 6, base_y + 29,
-                                  44, 51, 63, filled=True)
-            pico2d.draw_rectangle(x - 6, base_y + 9, x + 6, base_y + 29, 151, 136, 104)
-            lens = (255, int(164 + 58 * strength), int(72 + 82 * strength))
-            pico2d.draw_rectangle(x - 3, base_y + 15, x + 3, base_y + 25,
-                                  *lens, filled=True)
-            pico2d.draw_rectangle(x - 8, base_y + 29, x + 8, base_y + 32,
-                                  91, 101, 112, filled=True)
+            glow(x, self.y, self.radius, (255, 184, 78), alpha=160 * strength * shimmer)
+            glow(x, self.y, self.radius * 0.65, (255, 207, 125), alpha=92 * strength)
+            floor_radius = sqrt(max(0, self.radius ** 2 - 24 ** 2))
+            glow(x, base_y + 1, floor_radius, (255, 195, 101),
+                 alpha=145 * strength, squash=0.13)
+            glow(x, base_y + 1, 21, (255, 229, 175), alpha=90 * strength, squash=0.10)
+            for first, second in (((-38, 44), (-22, 54)), ((-7, 60), (7, 60)),
+                                  ((22, 54), (38, 44))):
+                light_beam((x, base_y + 30), (x + first[0], self.y + first[1]),
+                           (x + second[0], self.y + second[1]), alpha=48 * strength)
+            # 점등 순간의 짧은 섬광도 억제 반경 안에만 표시한다.
+            if age < 0.32:
+                flash = sin(pi * min(1.0, age / 0.32))
+                glow(x, base_y + 19, 18 + 16 * min(1.0, age / 0.22),
+                     (255, 234, 182), alpha=100 * flash)
+            if self.art is None:
+                self.art = load_deploy_image()
+            frame = DEPLOY_DATA['frames'][DEPLOY_DATA['device'][self.device_frame]]
+            sx, sy, width, height = frame['rect']
+            feet_x, feet_y = frame['feet']
+            scale = 38 / DEPLOY_DATA['device_reference_height']
+            self.art.opacify(min(1.0, self.remaining / 0.25))
+            self.art.clip_composite_draw(
+                sx, sy, width, height, 0, '', x + (width / 2 - feet_x) * scale,
+                base_y + (height / 2 - feet_y) * scale, width * scale, height * scale)
+            self.art.opacify(1.0)
+            glow(x, base_y + 18, 10, (255, 232, 168), alpha=175 * strength)
+            for index in range(3):
+                phase = (age * 0.7 + index / 3) % 1
+                mote_x = x + sin(age * 1.4 + index * 2.1) * 9
+                mote_y = base_y + 24 + phase * 23
+                pico2d.draw_circle(mote_x, mote_y, 1, 255, 223, 153,
+                                   a=int(95 * strength * sin(pi * phase)), filled=True)
+            # 장치 밑의 세 칸은 HUD를 읽지 않아도 남은 전력을 알려준다.
+            for index in range(3):
+                color = (255, 206, 111) if self.remaining > index * LIGHT_DURATION / 3 else (73, 65, 51)
+                pico2d.draw_line(x - 9 + index * 7, base_y + 2,
+                                  x - 5 + index * 7, base_y + 2, *color,
+                                  a=int(220 * min(1.0, self.remaining / 0.45)))

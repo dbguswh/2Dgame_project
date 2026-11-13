@@ -89,3 +89,14 @@ def glow(x, y, radius, color=(255, 187, 86), alpha=100, squash=1.0):
     target = sdl2.SDL_FRect(x - radius, pico2d.get_canvas_height() - 1 - y - radius * squash,
                            radius * 2, radius * 2 * squash)
     sdl2.SDL_RenderCopyF(canvas.renderer, texture, None, byref(target))
+
+
+def light_beam(origin, first, second, alpha=48):
+    """광원에서 밝고 끝으로 갈수록 투명해지는 작은 반사광 삼각형이다."""
+    vertices = (sdl2.SDL_Vertex * 3)()
+    for index, (x, y) in enumerate((origin, first, second)):
+        vertices[index].position = sdl2.SDL_FPoint(x, pico2d.get_canvas_height() - 1 - y)
+        vertices[index].color = sdl2.SDL_Color(255, 221, 151,
+                                               max(0, min(255, int(alpha))) if index == 0 else 0)
+        vertices[index].tex_coord = sdl2.SDL_FPoint(0, 0)
+    sdl2.SDL_RenderGeometry(canvas.renderer, None, vertices, 3, None, 0)
