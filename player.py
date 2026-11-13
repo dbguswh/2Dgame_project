@@ -15,6 +15,7 @@ WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
 ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
 SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_second.json")
+AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_air.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
 # 좌표는 pico2d의 왼쪽 아래 기준이며 희미한 여백을 제외한 범위다.
@@ -56,6 +57,10 @@ class Player:
         self.second_attack_data = json.loads(SECOND_ATTACK_DATA_PATH.read_text(encoding='utf-8'))
         self.second_attack_image = pico2d.load_image(
             str(SECOND_ATTACK_DATA_PATH.with_name(self.second_attack_data['image']))
+        )
+        self.air_attack_data = json.loads(AIR_ATTACK_DATA_PATH.read_text(encoding='utf-8'))
+        self.air_attack_image = pico2d.load_image(
+            str(AIR_ATTACK_DATA_PATH.with_name(self.air_attack_data['image']))
         )
         self.pressed_keys = set()
         self.face_dir = 1
@@ -279,6 +284,8 @@ class Player:
             / self.walk_data["reference_height"],
             self.attack_data["visible_half_width"] * DRAW_HEIGHT
             / self.attack_data["reference_height"],
+            self.air_attack_data["visible_half_width"] * DRAW_HEIGHT
+            / self.air_attack_data["reference_height"],
         )
         self.motion.step(delta_time, direction, solids, area_width, margin)
         if self.motion.on_ground:
@@ -316,9 +323,13 @@ class Player:
             return
         state = self.animation_state
         if state in ('attack', 'air_attack'):
-            data = self.second_attack_data if self.attack_stage == 2 else self.attack_data
+            if state == 'air_attack':
+                data, image = self.air_attack_data, self.air_attack_image
+            elif self.attack_stage == 2:
+                data, image = self.second_attack_data, self.second_attack_image
+            else:
+                data, image = self.attack_data, self.attack_image
             frame = data['frames'][self.attack_frame]
-            image = self.second_attack_image if self.attack_stage == 2 else self.attack_image
             left, bottom, width, height = frame['rect']
             feet_x, feet_y = frame['feet']
             scale = DRAW_HEIGHT / data['reference_height']
@@ -360,9 +371,21 @@ class Player:
         return self.motion.get_bb()
 
     def get_attack_box(self):
-        """타격 프레임에서만 전방 1타일의 범위를 반환한다. 벽 뒤는 잘라낸다."""
+        """타격 프레임의 전방 1타일. 공중은 아래쪽이며 벽·발판 뒤는 제외한다."""
         if self.attack_kind == 'air':
-            return None
+            if not self.is_attacking or not 0.10 <= self.attack_elapsed < 0.22:
+                return None
+            attack = front_box(
+                self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + 32,
+                self.feet_y - 16, self.feet_y + 48, self.solids,
+            )
+            if attack is None:
+                return None
+            left, bottom, right, top = attack
+            for solid in self.solids:
+                if left < solid.right and right > solid.left and bottom < solid.top <= self.feet_y:
+                    bottom = solid.top
+            return (left, bottom, right, top) if top > bottom else None
         start, end = (0.12, 0.24) if self.attack_stage == 2 else (0.1, 0.2)
         if not self.is_attacking or not start <= self.attack_elapsed < end:
             return None

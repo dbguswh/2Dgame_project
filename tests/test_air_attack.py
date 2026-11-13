@@ -135,3 +135,82 @@ class AirAttackTests(unittest.TestCase):
         self.player.update(0, 960, solids)
         self.assertTrue(self.player.is_attacking)
         self.assertEqual(self.player.attack_kind, 'air')
+
+    def test_air_hit_is_single_nearest_target_without_upward_or_backward_reach(self):
+        self.start_air_attack()
+        self.tick(0.12)
+        x, y = self.player.x, self.player.feet_y
+        self.assertIsNone(self.player.get_attack_target([
+            ('behind', (x - 45, y - 10, x - 20, y + 40)),
+            ('above', (x + 20, y + 50, x + 40, y + 130)),
+        ]))
+        targets = [('far', (x + 34, y - 10, x + 50, y + 40)),
+                   ('near', (x + 16, y - 10, x + 30, y + 40))]
+        self.assertEqual(self.player.get_attack_target(targets), 'near')
+        self.assertIsNone(self.player.get_attack_target(targets))
+
+    def test_air_strike_is_blocked_by_wall_and_floor(self):
+        self.start_air_attack()
+        self.tick(0.12)
+        x, y = self.player.x, self.player.feet_y
+        self.player.solids = [Solid(x + 24, 96, x + 30, 300)]
+        self.assertIsNone(self.player.get_attack_target([
+            ('wall', (x + 31, y - 5, x + 45, y + 40))]))
+        self.player.solids = [Solid(x - 100, y - 20, x + 100, y - 8)]
+        self.assertIsNone(self.player.get_attack_target([
+            ('under_floor', (x + 16, y - 40, x + 32, y - 9))]))
+        self.assertAlmostEqual(self.player.get_attack_box()[1], y - 8)
+
+    def test_air_six_poses_use_only_two_strike_frames_and_constant_body(self):
+        self.start_air_attack()
+        body = self.player.get_bb()
+        for index, time in enumerate((0.025, 0.075, 0.13, 0.19, 0.25, 0.31)):
+            with self.subTest(pose=index):
+                self.player.attack_elapsed = time
+                self.assertEqual(self.player.attack_frame, index)
+                self.assertEqual(self.player.get_bb(), body)
+                self.assertEqual(self.player.get_attack_box() is not None, index in (2, 3))
+                if index in (2, 3):
+                    box = self.player.get_attack_box()
+                    self.assertEqual(box[2] - box[0], 32)
+
+    def test_left_air_hit_and_sprite_are_mirrored(self):
+        self.player.face_dir = -1
+        self.start_air_attack()
+        self.tick(0.12)
+        x, y = self.player.x, self.player.feet_y
+        self.assertEqual(self.player.get_attack_target([
+            ('left', (x - 40, y - 10, x - 20, y + 40))]), 'left')
+        self.player.draw()
+        args = self.player.air_attack_image.clip_composite_draw.call_args.args
+        self.assertEqual(args[5], 'h')
+
+    def test_air_hit_does_not_cancel_nonfatal_enemy_warning_or_apply_push(self):
+        from enemy import Shade
+        from stage import Stage
+        from world import update_world
+
+        stage = Stage()
+        enemy = Shade(440, 96, combat_bounds=stage.combat_bounds)
+        enemy._enter('WINDUP')
+        self.start_air_attack()
+        for _ in range(25):
+            update_world(1 / 120, self.player, [enemy], stage)
+        self.assertEqual(enemy.health, 1)
+        self.assertEqual(enemy.state, 'WINDUP')
+        self.assertEqual(enemy.knockback_remaining, 0)
+        self.assertEqual(self.player.health, 3)
+        self.assertEqual(self.player.battery, 100)
+
+    def test_landing_attack_starts_new_ground_combo(self):
+        self.start_air_attack()
+        self.tick(0.7)
+        tap(self.player)
+        self.player.update(0, 960)
+        self.tick(0.1)
+        tap(self.player)
+        self.player.update(0, 960)
+        self.tick(0.27)
+        self.assertEqual(self.player.attack_kind, 'ground')
+        self.assertEqual(self.player.attack_stage, 2)
+        self.assertEqual(self.player.attack_id, 3)
