@@ -138,6 +138,16 @@ class BombWorldTests(unittest.TestCase):
         self.p.face_dir = 1
         self.assertEqual(self.p.bombs[0].direction, -1)
 
+    def test_failed_higher_priority_action_does_not_fall_through_to_bomb(self):
+        for code in (pico2d.SDLK_r, pico2d.SDLK_q):
+            self.p.reset_actions_after_return()
+            self.p.battery = 0
+            tap(self.p, pico2d.SDLK_f)
+            tap(self.p, code)
+            self.p.update(0, self.stage.width, self.stage.solids, self.stage.light_regions)
+            self.assertEqual(self.p.inventory.counts[LIGHT_BOMB], 2)
+            self.assertEqual(self.p.bombs, [])
+
     def test_same_frame_explosion_cancels_multiple_melee_and_ranged_attacks(self):
         enemies = self.game.enemies[:2]
         for enemy, x in zip(enemies, (468, 518)):

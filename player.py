@@ -413,6 +413,7 @@ class Player:
         self.solids = solids
         combo_open = self.combo_window > 0
         self._advance_attack(delta_time)
+        higher_priority_action = self.light_requested or self.flash_requested
         if self.light_requested:
             regions = light_regions if light_regions is not None else [LightRegion(0, 96, area_width, 540)]
             self._install_light(regions)
@@ -424,7 +425,9 @@ class Player:
         self.light_requested = False
         self.flash_requested = False
         if self.use_medkit_requested:
-            self.use_selected_item(self.requested_item if self.requested_item is not None else self.inventory.selected)
+            slot = self.requested_item if self.requested_item is not None else self.inventory.selected
+            if slot != LIGHT_BOMB or not higher_priority_action:
+                self.use_selected_item(slot)
             self.use_medkit_requested = False
             self.requested_item = None
         self._request_attack(combo_open)
