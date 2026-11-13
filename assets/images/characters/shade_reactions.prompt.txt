@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: transparent production sprite sheet for Blackout side-scroller.
+Reference image: shade_motion.png is for exact monster identity, left-facing anatomy, pixel-art rendering, scale, and 3x2 cell layout ONLY.
+Primary request: NEW six frames of Shade being hit by a dagger and collapsing. Same black/navy shadow monster, long claws, jagged back spines, magenta eyes and purple luminous body cracks. Face LEFT in every frame. An impact comes from LEFT and drives shoulders toward RIGHT. Do NOT draw the attacker or an incoming weapon.
+Composition: exactly 1536x1024 pixels, 3 columns x 2 rows, each cell512x512, one complete monster in each cell, read top-left across then bottom-left across. Standing-equivalent height340 source pixels, stable scale, virtual foot anchor x256,y426 from cell top (bottom-origin y86). At least24px clear padding on every edge, all claws/spines/smoke INSIDE each cell. Transparent background, no floor/shadow.
+Top row: three nonfatal hit-reaction frames. 1 immediate shoulder/head recoil to right, chest twisted, claws opened, legs braced; 2 strongest backward arch, jaw up, arms flung away from chest but feet planted; 3 recovering toward normal hunched left-facing stance, shoulders still uneven. These must look distinctly struck, not walking and not attacking.
+Bottom row: three defeat frames. 4 violent larger recoil with cracking chest and small attached violet fissures; 5 knees buckle and torso folds low, head left, claws nearing ground; 6 body collapsed low on bent knees with recognizable head/arms, dark smoky torn edges and a few small adjacent wisps, not a flat intact standing pose. Keep virtual feet anchored y426 so collapse reduces HEIGHT instead of scaling entire creature.
+Style: crisp detailed pixel illustration matching reference, readable at104px in game, no giant white flash baked into sprite. Avoid stretchy rubber limbs, duplicate legs, extra monsters, giant circular aura.
+No text, labels, grid lines, watermark, scenery, nontransparent fill, baked checkerboard. Exact scale and outfit/anatomy invariants from reference.
+
+제작: 2026-11-13, 내장 image_gen 도구, 투명 배경.
+참조: shade_motion.png (외형·화풍·배치 참조, 기존 이미지는 변경하지 않음).
+원본: exec-9140ba42-2516-4c83-b651-861265edc8c0.png
