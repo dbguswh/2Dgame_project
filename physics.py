@@ -19,6 +19,7 @@ class Solid:
     bottom: float
     right: float
     top: float
+    one_way: bool = False
 
 
 @dataclass
@@ -57,6 +58,8 @@ class Motion:
         old_left, bottom, old_right, top = self.get_bb()
         self.x += dx
         for solid in solids:
+            if solid.one_way:
+                continue
             if bottom >= solid.top - EPSILON or top <= solid.bottom + EPSILON:
                 continue
             if dx > 0 and old_right <= solid.left + EPSILON:
@@ -80,7 +83,7 @@ class Motion:
                     self.feet_y = solid.top
                     self.velocity_y = 0
                     self.on_ground = True
-            elif dy > 0 and old_top <= solid.bottom + EPSILON:
+            elif not solid.one_way and dy > 0 and old_top <= solid.bottom + EPSILON:
                 if self.feet_y + self.height >= solid.bottom:
                     self.feet_y = solid.bottom - self.height
                     self.velocity_y = 0
