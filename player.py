@@ -111,6 +111,9 @@ class Player:
         self.flash_pending = False
         self.flash_cooldown = 0.0
         self.flash_effect = None
+        self.medkits = 0
+        self.use_medkit_requested = False
+        self.heal_effect = 0.0
 
     @property
     def x(self):
@@ -131,6 +134,7 @@ class Player:
     def handle_event(self, event):
         if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
                               pico2d.SDLK_SPACE, pico2d.SDLK_q, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
+                              pico2d.SDLK_1, pico2d.SDLK_f,
                               pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT):
             return
         if event.type == pico2d.SDL_KEYDOWN:
@@ -144,6 +148,10 @@ class Player:
                 self.light_requested = True
             elif event.key == pico2d.SDLK_e and event.key not in self.pressed_keys:
                 self.interaction_requested = True
+            elif event.key == pico2d.SDLK_f and event.key not in self.pressed_keys:
+                self.use_medkit_requested = True
+            elif event.key == pico2d.SDLK_1 and event.key not in self.pressed_keys:
+                self.notice, self.notice_time = '치료제 선택 · F로 사용', 1.0
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
             self.pressed_keys.discard(event.key)
@@ -155,6 +163,27 @@ class Player:
         self.flash_requested = False
         self.light_requested = False
         self.interaction_requested = False
+        self.use_medkit_requested = False
+
+    def add_medkit(self):
+        if self.medkits >= 2:
+            return False
+        self.medkits += 1
+        self.notice, self.notice_time = '치료제 +1 · F로 체력 회복', 1.5
+        return True
+
+    def use_medkit(self):
+        if self.medkits <= 0:
+            self.notice, self.notice_time = '보유한 치료제가 없습니다', 1.0
+            return False
+        if self.health >= 3 or self.health <= 0:
+            self.notice, self.notice_time = '체력이 가득 차 있습니다', 1.0
+            return False
+        self.medkits -= 1
+        self.health += 1
+        self.heal_effect = 0.55
+        self.notice, self.notice_time = '치료제 사용 · 체력 +1', 1.2
+        return True
 
     @property
     def is_attacking(self):
@@ -323,6 +352,7 @@ class Player:
         return min(candidates, key=lambda target: abs((target[1][0] + target[1][2]) / 2 - self.x))[0]
 
     def update(self, delta_time, area_width, solids=None, light_regions=None):
+        self.heal_effect = max(0.0, self.heal_effect - delta_time)
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
         self.notice_time = max(0.0, self.notice_time - delta_time)
         self.light_cast = max(0.0, self.light_cast - delta_time)
@@ -339,6 +369,9 @@ class Player:
         delta_time = self.hit_pause.consume(delta_time)
         if was_frozen and delta_time <= 0:
             return
+        if self.use_medkit_requested:
+            self.use_medkit()
+            self.use_medkit_requested = False
         if solids is None:
             solids = [Solid(0, 0, area_width, 96)]
         self.solids = solids
@@ -576,6 +609,7 @@ class Player:
         self.flash_pending = False
         self.flash_cooldown = 0.0
         self.flash_effect = None
+        self.heal_effect = 0.0
 
     def draw_flash(self, camera_x=0):
         if self.flash_effect is not None:
