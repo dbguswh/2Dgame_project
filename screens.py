@@ -58,7 +58,7 @@ def draw_game(game, font):
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, y + 132, label, (255, 223, 137))
-    font.draw(20, 24, '방향키 이동  Space 점프  W 2연격  R 조명(50)  E 설비  F1 판정  Esc 메뉴',
+    font.draw(20, 24, '방향키 이동  Space 점프  W 2연격·공중 베기  R 조명(50)  E 설비  F1 판정  Esc 메뉴',
               (210, 219, 230))
     if player.notice_time > 0:
         font.draw(20, SCREEN_HEIGHT - 84, player.notice, (255, 195, 110))
