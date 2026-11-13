@@ -10,6 +10,7 @@ from physics import Solid
 from stage import GROUND_Y, Stage
 from environment import ResidentialScene
 from respawn import RespawnDirector
+from supplies import SupplyBox
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,10 @@ class ResidentialStage(Stage):
         self.exit_position = (2800, self.BRIDGE_Y)
         self.fuse_position = (2160, self.WORKSHOP_Y + 16)
         self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
+        self.return_battery_position = (2088, self.WORKSHOP_Y + 16)
+        self.return_battery_collected = False
+        self.supply_boxes = (SupplyBox('entrance-medkit', 240, GROUND_Y),
+                             SupplyBox('workshop-medkit', 2120, self.WORKSHOP_Y))
         self.fuse_checkpoint = (2160, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -90,6 +95,11 @@ class ResidentialStage(Stage):
         self.respawns = RespawnDirector(self.enemy_placements)
 
     def collect_pickups(self, player):
+        for box in self.supply_boxes:
+            x, y = box.pickup_position
+            if (box.pickup_ready and overlaps(player.get_bb(), (x - 8, y - 9, x + 8, y + 10))
+                    and player.add_medkit()):
+                box.claimed = True
         if (player.motion.on_ground and abs(player.x - self.fixture_position[0]) <= 96
                 and abs(player.feet_y - self.fixture_position[1]) <= 8):
             self.fixture_seen = True
@@ -99,14 +109,32 @@ class ResidentialStage(Stage):
             player.checkpoint_position = self.fuse_checkpoint
             player.notice = '퓨즈 획득 · 왼쪽 중앙 제어함으로 돌아가세요'
             player.notice_time = 2.5
-        x, y = self.battery_pack_position
-        if (not self.battery_pack_collected and player.battery < player.max_battery
-                and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12))):
-            amount = min(50, player.max_battery - player.battery)
-            player.battery += amount
-            self.battery_pack_collected = True
-            player.notice = f'배터리 팩 획득 · 배터리 +{amount}'
-            player.notice_time = 1.8
+        for position, flag in ((self.battery_pack_position, 'battery_pack_collected'),
+                               (self.return_battery_position, 'return_battery_collected')):
+            x, y = position
+            if (not getattr(self, flag) and player.battery < player.max_battery
+                    and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12))):
+                amount = min(50, player.max_battery - player.battery)
+                player.battery += amount
+                setattr(self, flag, True)
+                player.notice = f'배터리 팩 획득 · 배터리 +{amount}'
+                player.notice_time = 1.8
+
+    def nearby_supply(self, player):
+        if not player.motion.on_ground or player.is_attacking or player.light_cast > 0:
+            return None
+        return next((box for box in sorted(self.supply_boxes, key=lambda b: abs(player.x - b.x))
+                     if abs(player.x - box.x) <= 48 and abs(player.feet_y - box.feet_y) <= 8), None)
+
+    def activate_supply(self, player):
+        box = self.nearby_supply(player)
+        if box is None:
+            return False
+        if box.open():
+            player.notice, player.notice_time = '치료제 보급함 개봉 · 앞의 치료제를 회수하세요', 1.4
+            return True
+        player.notice, player.notice_time = '이미 개봉한 보급함입니다', 1.0
+        return False
 
     def activate_fixture(self, player):
         if self.fixture_powered or not self.can_interact(player):
@@ -134,6 +162,8 @@ class ResidentialStage(Stage):
 
     def update(self, delta_time):
         self.visual_time += max(0, delta_time)
+        for box in self.supply_boxes:
+            box.update(delta_time)
         if self.fixture_powered:
             self.bridge_elapsed = min(self.BRIDGE_TIME, self.bridge_elapsed + max(0, delta_time))
         self.sync_bridge()
@@ -195,6 +225,9 @@ class ResidentialStage(Stage):
             label = ('복구 완료' if self.fixture_powered else
                      'E: 퓨즈 설치' if self.fuse_state == 'CARRIED' else '퓨즈 필요')
             return (*self.fixture_position, label)
+        box = self.nearby_supply(player)
+        if box is not None and not box.opened:
+            return box.x, box.feet_y, 'E: 치료제 보급함 열기'
         return None
 
     def draw(self, camera_x, screen_width, screen_height):

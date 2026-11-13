@@ -39,6 +39,10 @@ def update_world(delta_time, player, enemies, stage, records=None):
             player.checkpoint_position = stage.fixture_checkpoint
             player.notice = '구역 조명 복구 · 안전 지점 확보'
             player.notice_time = 2.2
+        else:
+            supply_action = getattr(stage, 'activate_supply', None)
+            if supply_action is not None:
+                supply_action(player)
     if stage.fixture_powered:
         for enemy in enemies:
             enemy.dissolve()

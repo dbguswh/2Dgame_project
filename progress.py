@@ -18,6 +18,9 @@ class ProgressSnapshot:
     reward_claimed: bool
     battery_pack_collected: bool
     fixture_seen: bool = False
+    medkits: int = 0
+    return_battery_collected: bool = False
+    supply_states: tuple = ()
 
     @classmethod
     def capture(cls, player, stage):
@@ -25,7 +28,9 @@ class ProgressSnapshot:
                    (player.x, player.feet_y), tuple(player.checkpoint_position),
                    stage.fixture_powered, stage.fuse_state, stage.bridge_elapsed, stage.completed,
                    player.fragments, stage.reward_claimed, stage.battery_pack_collected,
-                   getattr(stage, 'fixture_seen', False))
+                   getattr(stage, 'fixture_seen', False), player.medkits,
+                   getattr(stage, 'return_battery_collected', False),
+                   tuple(box.snapshot() for box in getattr(stage, 'supply_boxes', ())))
 
 
 class ProgressRecords:
@@ -50,6 +55,13 @@ class ProgressRecords:
         stage.battery_pack_collected = snapshot.battery_pack_collected
         if hasattr(stage, 'fixture_seen'):
             stage.fixture_seen = snapshot.fixture_seen
+        player.medkits = snapshot.medkits
+        if hasattr(stage, 'return_battery_collected'):
+            stage.return_battery_collected = snapshot.return_battery_collected
+        states = {state[0]: state for state in snapshot.supply_states}
+        for box in getattr(stage, 'supply_boxes', ()):
+            if box.identity in states:
+                box.restore(states[box.identity])
         stage.update(0)
 
     def restore_after_death(self, player, stage):
