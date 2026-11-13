@@ -45,7 +45,7 @@ class ResidentialLayoutTests(unittest.TestCase):
 
     def test_unpowered_canal_cannot_be_jumped_even_with_speed_item(self):
         left, right = self.stage.canal
-        self.assertEqual(right - left, 6 * 32)
+        self.assertEqual(right - left, 12 * 32)
         for speed in (MOVE_SPEED, MOVE_SPEED * 1.3):
             for start_x in (left - 32, left - 1, left + 11):
                 motion = Motion(start_x, 96)

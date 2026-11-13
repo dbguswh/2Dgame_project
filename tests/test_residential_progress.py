@@ -29,7 +29,7 @@ class ResidentialProgressTests(unittest.TestCase):
 
     def collect_fuse(self):
         self.player.x = self.stage.fuse_position[0]
-        self.player.feet_y = 192
+        self.player.feet_y = self.stage.UPPER_FLOOR_Y
         self.player.motion.on_ground = True
         update_world(0.01, self.player, [], self.stage, self.records)
 
@@ -92,7 +92,7 @@ class ResidentialProgressTests(unittest.TestCase):
         self.stage.update(1)
         self.assertEqual(self.stage.solids.count(self.stage.bridge_solid), 1)
         motion = Motion(*self.stage.fixture_checkpoint)
-        for _ in range(200):
+        for _ in range(300):
             motion.step(1 / 60, 1, self.stage.solids, self.stage.width)
             self.assertEqual(motion.feet_y, 96)
         self.assertGreater(motion.x, self.stage.exit_position[0])

@@ -22,39 +22,44 @@ class EnemyPlacement:
 class ResidentialStage(Stage):
     name = '운하 주택가'
     BRIDGE_TIME = 1.2
+    UPPER_FLOOR_Y = 288
 
     def __init__(self):
         super().__init__()
         self.width = 2880
         self.start = (160, GROUND_Y)
-        self.fixture_position = (2440, GROUND_Y)
-        self.fixture_checkpoint = (2400, GROUND_Y)
+        self.fixture_position = (2336, GROUND_Y)
+        self.fixture_checkpoint = (2304, GROUND_Y)
         self.fixture_powered = False
-        self.canal = (2496, 2688)
+        self.canal = (2368, 2752)
         self.bridge_solid = Solid(self.canal[0], GROUND_Y - 16, self.canal[1], GROUND_Y)
         self.exit_position = (2800, GROUND_Y)
-        self.fuse_position = (1328, 208)
+        self.fuse_position = (1328, self.UPPER_FLOOR_Y + 16)
         self.battery_pack_position = (1520, 108)
-        self.fuse_checkpoint = (1456, GROUND_Y)
+        self.fuse_checkpoint = (1408, self.UPPER_FLOOR_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
         self.visual_time = 0.0
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
+        self.stair_solids = tuple(
+            Solid(864 + index * 64, GROUND_Y, 928 + index * 64,
+                  GROUND_Y + (index + 1) * 32) for index in range(5))
+        self.upper_walkways = (Solid(1184, 268, 1440, self.UPPER_FLOOR_Y),
+                               Solid(1504, 268, 1792, self.UPPER_FLOOR_Y))
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
             Solid(self.canal[1], 0, self.width, GROUND_Y),
             Solid(288, GROUND_Y, 352, 128),
-            Solid(896, GROUND_Y, 960, 128),
-            Solid(1120, GROUND_Y, 1184, 128),
-            Solid(1184, GROUND_Y, 1248, 160),
-            Solid(1248, GROUND_Y, 1408, 192),
+            *self.stair_solids,
+            *self.upper_walkways,
         ]
         self.enemy_placements = tuple(
-            EnemyPlacement(f'residential-shade-{index}', x, GROUND_Y, bounds)
-            for index, (x, bounds) in enumerate([
-                (480, (352, 832)), (704, (352, 832)),
-                (1664, (1568, 1888)), (1792, (1568, 1888)),
-                (2080, (2016, 2304)), (2224, (2016, 2304)),
+            EnemyPlacement(f'residential-shade-{index}', x, y, bounds)
+            for index, (x, y, bounds) in enumerate([
+                (480, GROUND_Y, (352, 832)), (704, GROUND_Y, (352, 832)),
+                (1568, self.UPPER_FLOOR_Y, (1504, 1792)),
+                (1696, self.UPPER_FLOOR_Y, (1504, 1792)),
+                (2016, GROUND_Y, (1952, 2208)), (2144, GROUND_Y, (1952, 2208)),
             ]))
 
     def collect_pickups(self, player):
@@ -77,7 +82,7 @@ class ResidentialStage(Stage):
         if self.fixture_powered or not self.can_interact(player):
             return False
         if self.fuse_state != 'CARRIED':
-            player.notice = '퓨즈가 필요합니다 · 정비 선반을 찾아보세요'
+            player.notice = '퓨즈가 필요합니다 · 계단 위 2층 정비 선반을 찾아보세요'
             player.notice_time = 2.0
             return False
         self.fuse_state = 'INSTALLED'
@@ -139,7 +144,7 @@ class ResidentialStage(Stage):
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
             return '운하 주택가 · 오른쪽 제어함에 퓨즈를 설치하세요'
-        return '운하 주택가 · 정비 선반의 퓨즈를 찾으세요'
+        return '운하 주택가 · 계단을 올라 2층 정비 선반의 퓨즈를 찾으세요'
 
     def interaction_prompt(self, player):
         if self.near_exit(player):
@@ -183,8 +188,14 @@ class ResidentialStage(Stage):
                                       137, 195, 203, filled=True)
 
     def draw_labels(self, font, camera_x):
-        for x, label in ((133, '대피소'), (1305, '정비소'), (2782, '병원')):
-            font.draw(x - camera_x, GROUND_Y + 188, label, (192, 178, 146))
+        for x, y, label in ((133, GROUND_Y + 188, '대피소'),
+                            (1210, 411, '2층 정비소 · 퓨즈'),
+                            (1220, 235, '1층 정비 통로'), (2782, GROUND_Y + 188, '병원')):
+            font.draw(x - camera_x, y, label, (192, 178, 146))
+        x = 1472 - camera_x
+        pico2d.draw_line(x, 260, x, 242, 189, 161, 108)
+        pico2d.draw_line(x - 5, 247, x, 242, 189, 161, 108)
+        pico2d.draw_line(x + 5, 247, x, 242, 189, 161, 108)
         x, y = 2854 - camera_x, GROUND_Y + 188
         pico2d.draw_line(x - 12, y, x, y, 192, 178, 146)
         pico2d.draw_line(x - 5, y + 5, x, y, 192, 178, 146)
