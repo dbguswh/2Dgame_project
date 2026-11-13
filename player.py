@@ -33,6 +33,7 @@ ATTACK_RECOVERY = 0.15
 SECOND_ATTACK_FRAME_ENDS = (0.06, 0.12, 0.18, 0.24, 0.34, 0.44)
 COMBO_WINDOW = 0.4
 COMBO_RECOVERY = 0.5
+AIR_ATTACK_FRAME_ENDS = (0.05, 0.10, 0.16, 0.22, 0.28, 0.34)
 
 
 class Player:
@@ -75,6 +76,8 @@ class Player:
         self.attack_id = 0
         self.attack_hits = set()
         self.attack_stage = 1
+        self.attack_kind = 'ground'
+        self.air_attack_used = False
         self.combo_window = 0.0
         self.combo_queued = False
         self.combo_direction = self.face_dir
@@ -137,13 +140,25 @@ class Player:
         if not self.is_attacking:
             return None
         # 짧은 준비, 빠른 타격, 조금 긴 회수로 베기의 힘과 흐름을 구분한다.
-        ends = SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
+        ends = self._attack_frame_ends()
         for index, end in enumerate(ends):
             if self.attack_elapsed < end:
                 return index
         return len(ends) - 1
 
+    def _attack_frame_ends(self):
+        if self.attack_kind == 'air':
+            return AIR_ATTACK_FRAME_ENDS
+        return SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
+
+    def _begin_air_attack(self):
+        self._begin_attack(1)
+        self.attack_kind = 'air'
+        self.air_attack_used = True
+        self.combo_window = 0.0
+
     def _begin_attack(self, stage, elapsed=0.0):
+        self.attack_kind = 'ground'
         self.attack_stage = stage
         self.attack_elapsed = elapsed
         self.attack_id += 1
@@ -163,18 +178,25 @@ class Player:
         if not self.is_attacking:
             return
         self.attack_elapsed += delta_time
-        duration = SECOND_ATTACK_FRAME_ENDS[-1] if self.attack_stage == 2 else ATTACK_DURATION
+        duration = self._attack_frame_ends()[-1]
         if self.attack_elapsed < duration:
             return
-        if self.attack_stage == 1 and self.combo_queued and self.motion.on_ground:
+        if self.attack_kind == 'ground' and self.attack_stage == 1 and self.combo_queued and self.motion.on_ground:
             self._begin_attack(2, self.attack_elapsed - duration)
         else:
             self.attack_elapsed = None
             self.combo_queued = False
-            self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
+            if self.attack_kind == 'air':
+                self.attack_cooldown = 0.0
+            else:
+                self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
 
     def _request_attack(self, combo_open):
-        if not self.attack_requested or self.light_cast > 0 or not self.motion.on_ground:
+        if not self.attack_requested or self.light_cast > 0:
+            return
+        if not self.motion.on_ground:
+            if not self.air_attack_used and not self.is_attacking and self.attack_cooldown <= 0:
+                self._begin_air_attack()
             return
         if self.attack_stage == 1 and combo_open:
             if self.is_attacking:
@@ -187,7 +209,7 @@ class Player:
     @property
     def animation_state(self):
         if self.is_attacking:
-            return 'attack'
+            return 'air_attack' if self.attack_kind == 'air' else 'attack'
         if not self.motion.on_ground:
             if abs(self.motion.velocity_y) < 50:
                 return 'jump_apex'
@@ -242,10 +264,10 @@ class Player:
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
-        if self.is_attacking or self.light_cast > 0:
+        if (self.is_attacking and self.attack_kind == 'ground') or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
-        if direction:
+        if direction and not self.is_attacking:
             self.face_dir = direction
         previous_x = self.x
 
@@ -259,6 +281,16 @@ class Player:
             / self.attack_data["reference_height"],
         )
         self.motion.step(delta_time, direction, solids, area_width, margin)
+        if self.motion.on_ground:
+            self.air_attack_used = False
+            if self.attack_kind == 'air':
+                # 착지는 공중 동작을 끝낸다. 입력을 예약하지 않고 새 W로 지상 공격한다.
+                self.attack_elapsed = None
+                self.attack_kind = 'ground'
+                self.attack_stage = 1
+                self.attack_cooldown = 0.0
+                self.combo_window = 0.0
+                self.combo_queued = False
         if self.feet_y + BODY_HEIGHT < -32:
             self._return_after_fall()
             return
@@ -283,7 +315,7 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state == 'attack':
+        if state in ('attack', 'air_attack'):
             data = self.second_attack_data if self.attack_stage == 2 else self.attack_data
             frame = data['frames'][self.attack_frame]
             image = self.second_attack_image if self.attack_stage == 2 else self.attack_image
@@ -329,6 +361,8 @@ class Player:
 
     def get_attack_box(self):
         """타격 프레임에서만 전방 1타일의 범위를 반환한다. 벽 뒤는 잘라낸다."""
+        if self.attack_kind == 'air':
+            return None
         start, end = (0.12, 0.24) if self.attack_stage == 2 else (0.1, 0.2)
         if not self.is_attacking or not start <= self.attack_elapsed < end:
             return None
@@ -397,6 +431,8 @@ class Player:
         self.attack_cooldown = 0.0
         self.attack_hits.clear()
         self.attack_stage = 1
+        self.attack_kind = 'ground'
+        self.air_attack_used = False
         self.combo_window = 0.0
         self.combo_queued = False
         self.combo_direction = self.face_dir

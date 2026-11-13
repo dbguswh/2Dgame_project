@@ -108,12 +108,13 @@ class PlayerControlsTests(unittest.TestCase):
         self.assertEqual(self.player.face_dir, 1)
         self.assertTrue(self.player.motion.on_ground)
 
-    def test_week_one_w_does_not_trigger_air_attack(self):
+    def test_w_after_jump_starts_air_attack(self):
         key(self.player, pico2d.SDLK_SPACE)
         self.player.update(1 / 60, 960)
         key(self.player, pico2d.SDLK_w)
         self.player.update(1 / 60, 960)
-        self.assertFalse(self.player.is_attacking)
+        self.assertTrue(self.player.is_attacking)
+        self.assertEqual(self.player.animation_state, 'air_attack')
 
     def start_active_attack(self, solids=None):
         key(self.player, pico2d.SDLK_w)
