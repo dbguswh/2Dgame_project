@@ -58,6 +58,7 @@ class Shade:
         self.hit_direction = 1
         self.reaction_heavy = False
         self.death_by_hit = False
+        self.retreat_retry = 0.0
 
     @property
     def x(self):
@@ -163,6 +164,7 @@ class Shade:
         self.hurt_time = 0.0
         self.reaction_heavy = False
         self.death_by_hit = False
+        self.retreat_retry = 0.0
         self.death_pose = 0
         self.retreat_light = None
         self.retreat_direction = 0
@@ -246,6 +248,7 @@ class Shade:
         if light is not self.retreat_light and self.state in LIGHT_STATES:
             self._enter('CHASE')
             self.recoil_remaining = 0.0
+            self.retreat_retry = 0.0
         if self.state == 'LIGHT_RECOIL':
             self.attack_event = None
             self.face_dir = -self.retreat_direction
@@ -262,6 +265,10 @@ class Shade:
                 self.retreat_light = light
                 self.retreat_direction = self._choose_retreat_direction(light)
                 self._enter('RETREAT')
+            elif self.state == 'LIGHT_WAIT' and self.retreat_retry <= 0:
+                # 밝은 곳의 대기는 탈출 성공이 아니다. 밀림·지형 변화 후에도 다시 후퇴한다.
+                self.retreat_direction = self._choose_retreat_direction(light)
+                self._enter('RETREAT')
             self.attack_event = None
             if self.state == 'RETREAT':
                 self.face_dir = -self.retreat_direction
@@ -270,6 +277,7 @@ class Shade:
                 moved = self._move(delta_time, self.retreat_direction, 80, stage)
                 if not moved:
                     self._enter('LIGHT_WAIT')
+                    self.retreat_retry = 0.15
                 elif not light.illuminates(self.get_bb()):
                     self._begin_light_recoil(light)
             return True
@@ -323,10 +331,15 @@ class Shade:
         self.solids = stage.solids
         self.active_light = light
         self.attack_event = None
+        self.retreat_retry = max(0.0, self.retreat_retry - delta_time)
         if self.impact is not None:
             self.impact.update(delta_time)
             if not self.impact.active:
                 self.impact = None
+        if self.alive and light is not None and light.illuminates(self.get_bb()):
+            # 조명은 짧은 피격 정지보다 우선한다. 공격을 접고 즉시 빛에서 이탈한다.
+            self.hit_pause.reset()
+            self.knockback_remaining = 0.0
         was_frozen = self.hit_pause.remaining > 0
         delta_time = self.hit_pause.consume(delta_time)
         if was_frozen and delta_time <= 0:

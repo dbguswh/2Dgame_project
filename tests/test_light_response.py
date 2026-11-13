@@ -48,6 +48,39 @@ class LightResponseTests(unittest.TestCase):
             self.assertEqual(self.enemy.x, position)
             self.assertIsNone(self.enemy.consume_attack())
 
+    def test_exposed_waiting_enemy_retries_escape_instead_of_freezing(self):
+        self.enemy._enter('LIGHT_WAIT')
+        self.enemy.retreat_light = self.light
+        self.enemy.retreat_direction = 1
+        self.enemy.update(0.02, self.player, self.stage, self.light)
+        self.assertGreater(self.enemy.x, 440)
+        for _ in range(120):
+            self.enemy.update(1 / 120, self.player, self.stage, self.light)
+        self.assertFalse(self.light.illuminates(self.enemy.get_bb()))
+
+    def test_light_overrides_hurt_pause_and_moves_out_of_attack_range(self):
+        self.enemy._enter('WINDUP')
+        self.enemy.state_time = 0.69
+        self.enemy.take_damage(direction=1)
+        self.enemy.update(0.02, self.player, self.stage, self.light)
+        self.assertGreater(self.enemy.x, 440)
+        self.assertEqual(self.enemy.hit_pause.remaining, 0)
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_blocked_enemy_retries_when_the_wall_is_removed(self):
+        wall = Solid(480, 96, 512, 300)
+        self.stage.solids.append(wall)
+        light = PortableLight(440, 120, self.stage.light_regions[0])
+        for _ in range(60):
+            self.enemy.update(1 / 60, self.player, self.stage, light)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        old_x = self.enemy.x
+        self.stage.solids.remove(wall)
+        for _ in range(120):
+            self.enemy.update(1 / 120, self.player, self.stage, light)
+        self.assertGreater(self.enemy.x, old_x)
+        self.assertFalse(light.illuminates(self.enemy.get_bb()))
+
     def test_wall_blocked_retreat_stops_in_light_without_attacking(self):
         stage = SimpleNamespace(width=960, solids=[Solid(0, 0, 160, 96)])
         enemy = Shade(80, 96, combat_bounds=(0, 160))
