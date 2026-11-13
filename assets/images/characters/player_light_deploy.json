@@ -1,0 +1,15 @@
+{
+  "image": "player_light_deploy.png",
+  "player_reference_height": 448,
+  "device_reference_height": 300,
+  "cast": [0, 1, 2],
+  "device": [3, 4, 5],
+  "frames": [
+    {"rect": [0, 512, 512, 512], "feet": [224, 36]},
+    {"rect": [512, 512, 512, 512], "feet": [224, 36]},
+    {"rect": [1024, 512, 512, 512], "feet": [224, 36]},
+    {"rect": [0, 0, 512, 512], "feet": [256, 62]},
+    {"rect": [512, 0, 512, 512], "feet": [256, 62]},
+    {"rect": [1024, 0, 512, 512], "feet": [256, 62]}
+  ]
+}
