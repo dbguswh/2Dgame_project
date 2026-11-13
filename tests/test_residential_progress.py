@@ -83,7 +83,7 @@ class ResidentialProgressTests(unittest.TestCase):
         self.repair()
         self.assertFalse(self.stage.bridge_ready)
         self.assertNotIn(self.stage.bridge_solid, self.stage.solids)
-        self.stage.update(1.19)
+        self.stage.update(self.stage.BRIDGE_TIME - 0.01)
         self.assertFalse(self.stage.bridge_ready)
         self.assertNotIn(self.stage.bridge_solid, self.stage.solids)
         self.stage.update(0.02)
@@ -128,7 +128,7 @@ class ResidentialProgressTests(unittest.TestCase):
     def test_reward_is_given_once_and_death_does_not_duplicate_it(self):
         self.repair()
         self.assertEqual(self.player.fragments, 0)
-        for _ in range(130):
+        for _ in range(int(self.stage.BRIDGE_TIME * 100) + 10):
             update_world(0.01, self.player, [], self.stage, self.records)
         self.assertEqual(self.player.fragments, 2)
         self.assertTrue(self.stage.reward_claimed)
@@ -145,6 +145,23 @@ class ResidentialProgressTests(unittest.TestCase):
         self.records.restore_entry(self.player, self.stage)
         self.assertEqual(self.player.fragments, 0)
         self.assertFalse(self.stage.reward_claimed)
+
+    def test_deploying_bridge_gate_prevents_walking_into_unfinished_span(self):
+        self.repair()
+        body = Motion(*self.stage.fixture_checkpoint)
+        for _ in range(260):
+            self.stage.update(1 / 120)
+            body.step(1 / 120, 1, self.stage.solids, self.stage.width)
+            self.assertEqual(body.feet_y, 96)
+            self.assertLess(body.x, self.stage.canal[0])
+        self.assertIn(self.stage.bridge_gate, self.stage.solids)
+        self.stage.update(0.3)
+        self.assertTrue(self.stage.bridge_ready)
+        self.assertNotIn(self.stage.bridge_gate, self.stage.solids)
+        for _ in range(450):
+            body.step(1 / 120, 1, self.stage.solids, self.stage.width)
+            self.assertEqual(body.feet_y, 96)
+        self.assertGreater(body.x, self.stage.canal[1])
 
     def test_full_battery_leaves_pack_in_world_and_partial_charge_is_clamped(self):
         self.player.x, self.player.feet_y = 1520, 96

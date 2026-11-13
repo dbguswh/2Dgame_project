@@ -47,7 +47,7 @@ class ResidentialScene:
         self.draw_water(stage, camera_x)
         self.draw_workshop_interior(stage, camera_x, width)
         for solid in stage.solids:
-            if solid == stage.bridge_solid:
+            if solid in (stage.bridge_solid, stage.bridge_gate):
                 continue
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue

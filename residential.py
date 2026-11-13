@@ -21,7 +21,7 @@ class EnemyPlacement:
 
 class ResidentialStage(Stage):
     name = '운하 주택가'
-    BRIDGE_TIME = 1.2
+    BRIDGE_TIME = 2.4
     UPPER_FLOOR_Y = 288
 
     def __init__(self):
@@ -33,6 +33,8 @@ class ResidentialStage(Stage):
         self.fixture_powered = False
         self.canal = (2368, 2752)
         self.bridge_solid = Solid(self.canal[0], GROUND_Y - 16, self.canal[1], GROUND_Y)
+        self.bridge_gate = Solid(self.canal[0] - 12, GROUND_Y,
+                                 self.canal[0] + 4, GROUND_Y + 80)
         self.exit_position = (2800, GROUND_Y)
         self.fuse_position = (1328, self.UPPER_FLOOR_Y + 16)
         self.battery_pack_position = (1520, 108)
@@ -112,6 +114,11 @@ class ResidentialStage(Stage):
             self.solids.append(self.bridge_solid)
         elif not self.bridge_ready and self.bridge_solid in self.solids:
             self.solids.remove(self.bridge_solid)
+        deploying = self.fixture_powered and not self.bridge_ready
+        if deploying and self.bridge_gate not in self.solids:
+            self.solids.append(self.bridge_gate)
+        elif not deploying and self.bridge_gate in self.solids:
+            self.solids.remove(self.bridge_gate)
 
     def restore_after_death(self):
         if self.fixture_powered:
@@ -140,7 +147,11 @@ class ResidentialStage(Stage):
             return '운하 주택가 · 복구 완료'
         if self.fixture_powered:
             if not self.bridge_ready:
-                return '운하 주택가 · 다리 전개 중'
+                if self.bridge_elapsed < 0.25:
+                    return '운하 주택가 · 교량 잠금 해제 중'
+                if self.bridge_elapsed > self.BRIDGE_TIME - 0.35:
+                    return '운하 주택가 · 교량 결합 중'
+                return '운하 주택가 · 대형 교량 전개 중'
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
             return '운하 주택가 · 오른쪽 제어함에 퓨즈를 설치하세요'
@@ -205,22 +216,6 @@ class ResidentialStage(Stage):
             font.draw(x - camera_x - 40, y + 39, '배터리 +50', (157, 197, 208))
 
     def draw_bridge(self, camera_x):
-        from math import cos, sin, pi
-        left, right = self.canal
-        # 펼쳐지는 두 반쪽은 기동 중 장식이다. 바닥 판정은 전개 완료 시 한 번에 추가한다.
-        fraction = self.bridge_elapsed / self.BRIDGE_TIME if self.fixture_powered else 0
-        angle = (1 - fraction) * pi / 2
-        length = (right - left) / 2
-        for hinge, direction in ((left, 1), (right, -1)):
-            x = hinge - camera_x
-            tip_x = x + direction * length * cos(angle)
-            tip_y = GROUND_Y + length * sin(angle)
-            for offset in range(8):
-                pico2d.draw_line(x, GROUND_Y - offset, tip_x, tip_y - offset, 151, 128, 86)
-        if self.bridge_ready:
-            pico2d.draw_line(left - camera_x, GROUND_Y + 28,
-                              right - camera_x, GROUND_Y + 28, 133, 138, 139)
-            for post in range(left, right + 1, 32):
-                pico2d.draw_line(post - camera_x, GROUND_Y,
-                                  post - camera_x, GROUND_Y + 28, 133, 138, 139)
+        from bridge_visuals import draw_bridge
+        draw_bridge(self, camera_x)
 

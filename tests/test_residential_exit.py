@@ -23,7 +23,7 @@ class ResidentialExitTests(unittest.TestCase):
     def open_bridge(self):
         self.game.stage.fuse_state = 'INSTALLED'
         self.game.stage.fixture_powered = True
-        self.game.stage.update(1.2)
+        self.game.stage.update(self.game.stage.BRIDGE_TIME)
 
     def exit(self):
         key(self.game, pico2d.SDLK_e)
