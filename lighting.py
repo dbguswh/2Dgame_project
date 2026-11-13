@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 import json
-from math import pi, sin, sqrt
+from math import cos, pi, sin, sqrt
 from pathlib import Path
 
 
@@ -121,36 +121,47 @@ class PortableLight:
             glow(x, base_y + 1, floor_radius, (255, 195, 101),
                  alpha=145 * strength, squash=0.13)
             glow(x, base_y + 1, 21, (255, 229, 175), alpha=90 * strength, squash=0.10)
-            for first, second in (((-38, 44), (-22, 54)), ((-7, 60), (7, 60)),
-                                  ((22, 54), (38, 44))):
-                light_beam((x, base_y + 30), (x + first[0], self.y + first[1]),
-                           (x + second[0], self.y + second[1]), alpha=48 * strength)
+            for first, second in (((-0.85, 0.40), (-0.62, 0.77)),
+                                  ((-0.16, 0.96), (0.16, 0.96)),
+                                  ((0.62, 0.77), (0.85, 0.40))):
+                light_beam((x, base_y + 38),
+                           (x + first[0] * self.radius, self.y + first[1] * self.radius),
+                           (x + second[0] * self.radius, self.y + second[1] * self.radius),
+                           alpha=68 * strength)
             # 점등 순간의 짧은 섬광도 억제 반경 안에만 표시한다.
             if age < 0.32:
                 flash = sin(pi * min(1.0, age / 0.32))
                 glow(x, base_y + 19, 18 + 16 * min(1.0, age / 0.22),
                      (255, 234, 182), alpha=100 * flash)
+            if age < 0.55:
+                progress = age / 0.55
+                wave_radius = floor_radius * (1 - (1 - progress) ** 3)
+                for index in range(48):
+                    a, b = index * 2 * pi / 48, (index + 1) * 2 * pi / 48
+                    pico2d.draw_line(x + cos(a) * wave_radius, base_y + 4 + sin(a) * wave_radius * 0.15,
+                                      x + cos(b) * wave_radius, base_y + 4 + sin(b) * wave_radius * 0.15,
+                                      255, 223, 151, a=int(230 * (1 - progress)))
             if self.art is None:
                 self.art = load_deploy_image()
             frame = DEPLOY_DATA['frames'][DEPLOY_DATA['device'][self.device_frame]]
             sx, sy, width, height = frame['rect']
             feet_x, feet_y = frame['feet']
-            scale = 38 / DEPLOY_DATA['device_reference_height']
+            scale = 56 / DEPLOY_DATA['device_reference_height']
             self.art.opacify(min(1.0, self.remaining / 0.25))
             self.art.clip_composite_draw(
                 sx, sy, width, height, 0, '', x + (width / 2 - feet_x) * scale,
                 base_y + (height / 2 - feet_y) * scale, width * scale, height * scale)
             self.art.opacify(1.0)
-            glow(x, base_y + 18, 10, (255, 232, 168), alpha=175 * strength)
+            glow(x, base_y + 27, 15, (255, 232, 168), alpha=185 * strength)
             for index in range(3):
                 phase = (age * 0.7 + index / 3) % 1
                 mote_x = x + sin(age * 1.4 + index * 2.1) * 9
-                mote_y = base_y + 24 + phase * 23
+                mote_y = base_y + 32 + phase * 45
                 pico2d.draw_circle(mote_x, mote_y, 1, 255, 223, 153,
                                    a=int(95 * strength * sin(pi * phase)), filled=True)
-            # 장치 밑의 세 칸은 HUD를 읽지 않아도 남은 전력을 알려준다.
-            for index in range(3):
-                color = (255, 206, 111) if self.remaining > index * LIGHT_DURATION / 3 else (73, 65, 51)
-                pico2d.draw_line(x - 9 + index * 7, base_y + 2,
-                                  x - 5 + index * 7, base_y + 2, *color,
+            # 장치 밑의 여섯 칸은 HUD를 읽지 않아도 남은 전력을 알려준다.
+            for index in range(6):
+                color = (255, 206, 111) if self.remaining > index * LIGHT_DURATION / 6 else (73, 65, 51)
+                pico2d.draw_line(x - 20 + index * 8, base_y + 2,
+                                  x - 15 + index * 8, base_y + 2, *color,
                                   a=int(220 * min(1.0, self.remaining / 0.45)))
