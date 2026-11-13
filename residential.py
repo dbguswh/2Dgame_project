@@ -46,13 +46,19 @@ class ResidentialStage(Stage):
         self.visual_time = 0.0
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.stair_solids = ()
-        self.approach_ledges = (Solid(768, 128, 864, 144),
-                                Solid(896, 176, 992, 192),
-                                Solid(1024, 224, 1120, 240))
+        # 얇은 상승 발판은 아래·옆에서 통과하고 내려올 때 윗면에 착지한다.
+        # 발판 사이로 떨어져도 지상에서 왼쪽 첫 발판으로 돌아갈 수 있다.
+        self.approach_ledges = (Solid(768, 128, 864, 144, one_way=True),
+                                Solid(896, 176, 992, 192, one_way=True),
+                                Solid(1024, 224, 1120, 240, one_way=True))
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),)
         self.lower_walkways = (Solid(1872, 172, 2208, 192),)
-        self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y),
-                                  Solid(2752, 204, 2880, self.BRIDGE_Y))
+        self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
+                                  Solid(2752, 204, 2880, self.BRIDGE_Y, one_way=True))
+        self.return_ledges = (Solid(2240, 128, 2288, 144, one_way=True),
+                              Solid(2304, 176, 2352, 192, one_way=True),
+                              Solid(2768, 128, 2816, 144, one_way=True),
+                              Solid(2832, 176, 2880, 192, one_way=True))
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
             Solid(self.canal[1], 0, self.width, GROUND_Y),
@@ -61,6 +67,7 @@ class ResidentialStage(Stage):
             *self.upper_walkways,
             *self.lower_walkways,
             *self.bridge_approaches,
+            *self.return_ledges,
         ]
         self.enemy_placements = tuple(
             EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged)
