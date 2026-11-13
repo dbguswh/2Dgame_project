@@ -12,6 +12,7 @@ from combat_feedback import HitPause, Impact
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
 MOTION_DATA_PATH = IMAGE_PATH.with_name('shade_motion.json')
+REACTION_DATA_PATH = IMAGE_PATH.with_name('shade_reactions.json')
 DRAW_HEIGHT = 104
 BODY_WIDTH = 48
 BODY_HEIGHT = 88
@@ -29,6 +30,9 @@ class Shade:
         self.motion = Motion(x, feet_y, BODY_WIDTH, BODY_HEIGHT)
         self.motion_data = json.loads(MOTION_DATA_PATH.read_text(encoding='utf-8'))
         self.image = pico2d.load_image(str(MOTION_DATA_PATH.with_name(self.motion_data['image'])))
+        self.reaction_data = json.loads(REACTION_DATA_PATH.read_text(encoding='utf-8'))
+        self.reaction_image = pico2d.load_image(
+            str(REACTION_DATA_PATH.with_name(self.reaction_data['image'])))
         self.face_dir = -1
         self.health = 2
         self.spawn_position = (x, feet_y)
@@ -50,6 +54,10 @@ class Shade:
         self.knockback_direction = 1
         self.hit_pause = HitPause()
         self.impact = None
+        self.hurt_duration = 0.22
+        self.hit_direction = 1
+        self.reaction_heavy = False
+        self.death_by_hit = False
 
     @property
     def x(self):
@@ -80,6 +88,19 @@ class Shade:
 
     def get_bb(self):
         return self.motion.get_bb()
+
+    @property
+    def reaction_frame(self):
+        if self.state == 'DYING' and self.death_by_hit:
+            phase = 0 if self.state_time < 0.10 else 1 if self.state_time < 0.28 else 2
+            return self.reaction_data['defeat'][phase]
+        # 실제 타격이 시작되면 피격 자세보다 적의 공격 자세를 우선해 위험을 보여준다.
+        if self.alive and self.hurt_time > 0 and self.state != 'STRIKE':
+            elapsed = self.hurt_duration - self.hurt_time
+            phase = (1 if elapsed < 0.13 else 2) if self.reaction_heavy else (
+                0 if elapsed < 0.06 else 1 if elapsed < 0.13 else 2)
+            return self.reaction_data['hurt'][phase]
+        return None
 
     def can_see(self, player):
         if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
@@ -114,7 +135,11 @@ class Shade:
             return False
         pose = self.animation_frame
         self.health -= 1
-        self.hurt_time = 0.18
+        self.hurt_duration = 0.26 if heavy else 0.22
+        self.hurt_time = self.hurt_duration
+        self.hit_direction = direction if direction is not None else -self.face_dir
+        self.reaction_heavy = heavy
+        self.death_by_hit = not self.alive
         if direction is not None:
             self.impact = Impact(*(point or (self.x, self.feet_y + 44)),
                                  direction, heavy=heavy, lethal=not self.alive)
@@ -136,6 +161,8 @@ class Shade:
         self.walk_distance = 0.0
         self.attack_event = None
         self.hurt_time = 0.0
+        self.reaction_heavy = False
+        self.death_by_hit = False
         self.death_pose = 0
         self.retreat_light = None
         self.retreat_direction = 0
@@ -151,6 +178,8 @@ class Shade:
         self.death_pose = self.animation_frame
         self.hit_pause.reset()
         self.impact = None
+        self.death_by_hit = False
+        self.hurt_time = 0.0
         self.health = 0
         self.attack_event = None
         self.knockback_remaining = 0.0
@@ -347,23 +376,31 @@ class Shade:
             return
         opacity = 1.0
         if self.state == 'DYING':
-            opacity = max(0.0, 1 - self.state_time / DEATH_TIME)
-        elif self.hurt_time > 0:
-            opacity = 0.35 if int(self.hurt_time * 40) % 2 else 1.0
-        frame = self.motion_data['frames'][self.animation_frame]
+            fade_start = 0.26 if self.death_by_hit else 0
+            opacity = max(0.0, min(1.0, (DEATH_TIME - self.state_time) / (DEATH_TIME - fade_start)))
+        reaction = self.reaction_frame
+        data, image = self.motion_data, self.image
+        facing, recoil_x = self.face_dir, 0
+        if reaction is not None:
+            data, image = self.reaction_data, self.reaction_image
+            facing = -self.hit_direction
+            if self.alive:
+                recoil_x = self.hit_direction * (6 if self.reaction_heavy else 3) * (
+                    self.hurt_time / self.hurt_duration) ** 2
+        frame = data['frames'][reaction if reaction is not None else self.animation_frame]
         left, bottom, width, height = frame['rect']
         feet_x, feet_y = frame['feet']
         from math import sin
         breathing = sin(self.state_time * 2.8) * 0.9 if self.state == 'LIGHT_WAIT' else 0
-        scale = (DRAW_HEIGHT + breathing) / self.motion_data['reference_height']
+        scale = (DRAW_HEIGHT + breathing) / data['reference_height']
         # 원본 동작은 왼쪽을 본다. 반전해도 각 프레임의 발 기준은 유지한다.
-        self.image.opacify(opacity)
-        self.image.clip_composite_draw(
-            left, bottom, width, height, 0, 'h' if self.face_dir > 0 else '',
-            self.x - camera_x + (width / 2 - feet_x) * scale * -self.face_dir,
+        image.opacify(opacity)
+        image.clip_composite_draw(
+            left, bottom, width, height, 0, 'h' if facing > 0 else '',
+            self.x - camera_x + recoil_x + (width / 2 - feet_x) * scale * -facing,
             self.feet_y + (height / 2 - feet_y) * scale, width * scale, height * scale,
         )
-        self.image.opacify(1.0)
+        image.opacify(1.0)
         if not self.alive:
             return
         for index in range(2):

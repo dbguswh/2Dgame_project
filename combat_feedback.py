@@ -45,6 +45,13 @@ class Impact:
     def active(self):
         return self.age < self.duration
 
+    @property
+    def shake_x(self):
+        duration = 0.16 if self.lethal else 0.12
+        amplitude = 3 if self.lethal else 2 if self.heavy else 0
+        decay = max(0.0, 1 - self.age / duration)
+        return sin(self.age * 105) * amplitude * decay
+
     def update(self, delta_time):
         self.age += delta_time
 

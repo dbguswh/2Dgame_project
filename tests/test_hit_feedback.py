@@ -99,3 +99,46 @@ class HitFeedbackTests(unittest.TestCase):
         self.assertGreater(impact.y, self.enemy.feet_y)
         self.enemy.update(0.3, self.player, self.stage)
         self.assertIsNone(self.enemy.impact)
+
+    def test_hurt_animation_changes_pose_without_changing_body_or_warning(self):
+        body = self.enemy.get_bb()
+        self.hit()
+        self.assertEqual(self.enemy.reaction_frame, 0)
+        self.enemy.update(0.11, self.player, self.stage)
+        self.assertEqual(self.enemy.reaction_frame, 1)
+        self.enemy.update(0.07, self.player, self.stage)
+        self.assertEqual(self.enemy.reaction_frame, 2)
+        self.assertEqual(self.enemy.get_bb(), body)
+        self.assertEqual(self.enemy.state, 'WINDUP')
+        self.enemy.update(0.10, self.player, self.stage)
+        self.assertIsNone(self.enemy.reaction_frame)
+
+    def test_heavy_recoil_and_collapse_have_distinct_poses(self):
+        self.hit(stage=2)
+        self.assertEqual(self.enemy.reaction_frame, 1)
+        self.enemy.take_damage(direction=1)
+        self.assertEqual(self.enemy.reaction_frame, 3)
+        self.enemy.update(0.20, self.player, self.stage)
+        self.assertEqual(self.enemy.reaction_frame, 4)
+        self.enemy.update(0.16, self.player, self.stage)
+        self.assertEqual(self.enemy.reaction_frame, 5)
+
+    def test_strike_pose_is_visible_even_if_hit_same_frame(self):
+        self.enemy._enter('STRIKE')
+        self.enemy.take_damage(direction=1)
+        self.assertIsNone(self.enemy.reaction_frame)
+        self.assertEqual(self.enemy.animation_frame, self.enemy.motion_data['strike'])
+
+    def test_power_restoration_uses_dissolve_instead_of_combat_collapse(self):
+        self.enemy.dissolve()
+        self.assertFalse(self.enemy.death_by_hit)
+        self.assertIsNone(self.enemy.reaction_frame)
+        self.assertIsNone(self.enemy.impact)
+
+    def test_only_heavy_or_lethal_hit_shakes_and_shake_decays(self):
+        self.assertEqual(Impact(0, 0, 1, age=0.03).shake_x, 0)
+        heavy = Impact(0, 0, 1, heavy=True, age=0.02)
+        self.assertGreater(abs(heavy.shake_x), 0)
+        self.assertLessEqual(abs(heavy.shake_x), 2)
+        heavy.update(0.2)
+        self.assertEqual(heavy.shake_x, 0)

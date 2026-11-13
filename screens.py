@@ -20,6 +20,8 @@ def draw_choices(font, items, selection, start_y=270):
 def draw_game(game, font):
     player, stage = game.player, game.stage
     camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
+    shake = sum(enemy.impact.shake_x for enemy in game.enemies if enemy.impact is not None)
+    camera_x = max(0, min(stage.width - SCREEN_WIDTH, camera_x + max(-3, min(3, shake))))
     stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
     stage.draw_labels(font, camera_x)
     if player.light is not None:
