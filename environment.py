@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pico2d
 
-from effects import blended, glow
+from effects import blended, glow, segment
 from stage import GROUND_Y
 
 
@@ -103,8 +103,8 @@ class ResidentialScene:
         # 뒤쪽 난간은 구간 끝에서 끊어져 하부 통로로 내려가는 틈을 드러낸다.
         for x in range(int(solid.left + 8), int(solid.right - 3), 48):
             sx = x - camera_x
-            pico2d.draw_line(sx, top, sx, top + 31, 86, 98, 105)
-        pico2d.draw_line(left, top + 31, right, top + 31, 129, 139, 140)
+            segment((sx, top), (sx, top + 31), (86, 98, 105), width=2)
+        segment((left, top + 31), (right, top + 31), (129, 139, 140), width=2)
         pico2d.draw_line(left, top + 14, right, top + 14, 72, 86, 96)
         for end, direction in ((left, 1), (right, -1)):
             for offset in range(0, 18, 6):
@@ -115,8 +115,8 @@ class ResidentialScene:
     def draw_stair_railing(stage, camera_x):
         for step in stage.stair_solids:
             x = step.left + 8 - camera_x
-            pico2d.draw_line(x, step.top, x, step.top + 30, 88, 101, 109)
-            pico2d.draw_line(x, step.top + 30, x + 64, step.top + 62, 139, 145, 142)
+            segment((x, step.top), (x, step.top + 30), (88, 101, 109), width=2)
+            segment((x, step.top + 30), (x + 64, step.top + 62), (139, 145, 142), width=3)
 
     @staticmethod
     def draw_stone(solid, camera_x, width):

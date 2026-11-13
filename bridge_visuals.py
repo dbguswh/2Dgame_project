@@ -4,7 +4,7 @@ from math import cos, sin, pi
 
 import pico2d
 
-from effects import blended, glow, polygon
+from effects import blended, glow, polygon, segment
 from stage import GROUND_Y
 
 
@@ -39,8 +39,7 @@ def draw_bridge(stage, camera_x):
         def line(a, b, color, thickness=1):
             ax, ay = point(*a)
             bx, by = point(*b)
-            for offset in range(thickness):
-                pico2d.draw_line(ax, ay - offset, bx, by - offset, *color)
+            segment((ax, ay), (bx, by), color, width=max(1.5, thickness))
 
         # 두께 있는 철제 상판과 아래쪽 삼각 보강재.
         polygon([point(0, 0), point(half, 0), point(half, -13), point(0, -13)], (62, 77, 89))
@@ -48,8 +47,8 @@ def draw_bridge(stage, camera_x):
         line((0, -29), (half, -29), (79, 96, 108), 4)
         for distance in range(0, int(half), 48):
             end = min(distance + 48, half)
-            line((distance, -12), (end, -29), (112, 125, 127), 2)
-            line((distance, -29), (end, -12), (112, 125, 127), 2)
+            line((distance, -12), (end, -29), (112, 125, 127), 3)
+            line((distance, -29), (end, -12), (112, 125, 127), 3)
             line((distance, -12), (distance, -29), (52, 66, 80), 2)
             for bolt_height in (-9, -25):
                 bx, by = point(distance + 5, bolt_height)

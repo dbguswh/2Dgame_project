@@ -112,3 +112,15 @@ def polygon(points, color):
     triangles = [value for index in range(1, len(points) - 1) for value in (0, index, index + 1)]
     indices = (c_int * len(triangles))(*triangles)
     sdl2.SDL_RenderGeometry(canvas.renderer, None, vertices, len(points), indices, len(triangles))
+
+
+def segment(first, second, color, width=2):
+    """카메라 배율에서도 두께가 유지되는 금속 보·난간 선분이다."""
+    ax, ay = first
+    bx, by = second
+    length = sqrt((bx - ax) ** 2 + (by - ay) ** 2)
+    if length <= 0:
+        return
+    nx, ny = -(by - ay) / length * width / 2, (bx - ax) / length * width / 2
+    polygon(((ax + nx, ay + ny), (bx + nx, by + ny),
+             (bx - nx, by - ny), (ax - nx, ay - ny)), color)
