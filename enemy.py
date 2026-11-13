@@ -188,6 +188,7 @@ class Shade:
         self.attack_event = None
         self.shot_event = None
         self.shot_target = None
+        self.light_push_remaining = 0.0
         self.hit_pause.reset()
         self.apply_knockback(direction, FLASH_KNOCKBACK)
         if self.alive:

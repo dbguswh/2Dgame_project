@@ -104,3 +104,35 @@ class FloodlightTests(unittest.TestCase):
         self.assertEqual(self.enemy.state_time, 0)
         self.assertEqual(self.enemy.light_push_remaining, 0)
         self.assertIsNone(self.enemy.consume_attack())
+
+    def test_deployment_interrupts_multiple_enemies_in_same_update(self):
+        left = Shade(550, 96, identity=1, combat_bounds=(0, 1200))
+        for enemy in (left, self.enemy):
+            enemy._enter('WINDUP')
+            enemy.state_time = 0.69
+        update_world(0.02, self.player, [left, self.enemy], self.stage)
+        self.assertLess(left.x, 550)
+        self.assertGreater(self.enemy.x, 650)
+        self.assertEqual(self.player.health, 3)
+        self.assertEqual((left.health, self.enemy.health), (2, 2))
+        self.assertIsNone(left.consume_attack())
+        self.assertIsNone(self.enemy.consume_attack())
+
+    def test_flash_replaces_recoil_instead_of_delaying_old_push(self):
+        self.tick(0.1)
+        self.assertGreater(self.enemy.light_push_remaining, 0)
+        self.enemy.receive_flash(1)
+        self.assertEqual(self.enemy.light_push_remaining, 0)
+        self.assertEqual(self.enemy.stun_remaining, 1.2)
+
+    def test_blocked_enemy_can_resume_retreat_when_wall_opens(self):
+        left = Solid(560, 96, 576, 300)
+        right = Solid(700, 96, 716, 300)
+        self.stage.solids.extend([left, right])
+        self.tick(1)
+        self.assertEqual(self.enemy.state, 'LIGHT_WAIT')
+        self.assertFalse(self.enemy.is_moving)
+        self.stage.solids.remove(right)
+        self.tick(1.8)
+        self.assertFalse(self.player.light.illuminates(self.enemy.get_bb()))
+        self.assertEqual(self.enemy.state, 'DARK_PATROL')
