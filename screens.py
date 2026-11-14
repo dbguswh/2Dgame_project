@@ -11,6 +11,7 @@ from visibility import draw_darkness, draw_navigation, enemy_is_visible
 from item_art import draw_item
 from inventory import ITEM_NAMES
 from buff_visuals import draw_buffs, draw_buff_timers
+from management_view import draw_city_map, draw_management
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -105,6 +106,10 @@ def draw_session(game, font, menu_font, title_font):
         title_font.draw(350, 365, 'Blackout', (242, 225, 191))
         draw_choices(menu_font, ('시작', '나가기'), game.selection)
         font.draw(320, 105, '위/아래 선택    E 확인    Esc 종료', (164, 175, 192))
+    elif game.state == 'CITY_MAP':
+        draw_city_map(game, font, menu_font)
+    elif game.state == 'MANAGEMENT':
+        draw_management(game, font, menu_font)
     elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR'):
         draw_game(game, font)
         if game.state == 'PAUSED':
@@ -123,4 +128,4 @@ def draw_session(game, font, menu_font, title_font):
             pico2d.draw_rectangle(220, 140, 740, 420, 120, 108, 83)
             menu_font.draw(350, 377, '주택가 복구 완료', (242, 225, 191))
             draw_choices(menu_font, game.CLEAR_ITEMS, game.selection, start_y=290)
-            font.draw(330, 180, '위/아래 선택    E 확인', (164, 175, 192))
+            font.draw(330, 157, '위/아래 선택    E 확인', (164, 175, 192))

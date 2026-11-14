@@ -18,8 +18,8 @@ class CoreUpgrade:
 
 CORE_UPGRADES = (
     CoreUpgrade(CAPACITY, '축전', '배터리 최대치 100', '140', 'Q·R을 위한 저장 용량 증가'),
-    CoreUpgrade(FOCUS, '집광', 'Q 사거리 96px', '120px', '멀리 있는 적을 먼저 제압'),
-    CoreUpgrade(SPREAD, '확산', 'R 반경 160px', '200px', '더 넓은 이동·방어 공간 확보'),
+    CoreUpgrade(FOCUS, '집광', 'Q 사거리', '+25%', '멀리 있는 적을 먼저 제압'),
+    CoreUpgrade(SPREAD, '확산', 'R 조명 범위', '+25%', '더 넓은 이동·방어 공간 확보'),
 )
 UPGRADE_KEYS = frozenset(upgrade.key for upgrade in CORE_UPGRADES)
 
