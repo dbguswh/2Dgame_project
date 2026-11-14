@@ -1,6 +1,7 @@
 """복구 후 관리소 방문당 서로 다른 코어 강화 한 개를 구매한다."""
 
 from dataclasses import dataclass
+from inventory import MEDKIT, LIGHT_BOMB, ITEM_NAMES, STACK_LIMIT
 
 
 UPGRADE_COST = 2
@@ -22,6 +23,21 @@ CORE_UPGRADES = (
     CoreUpgrade(SPREAD, '확산', 'R 조명 범위', '+25%', '더 넓은 이동·방어 공간 확보'),
 )
 UPGRADE_KEYS = frozenset(upgrade.key for upgrade in CORE_UPGRADES)
+
+
+@dataclass(frozen=True)
+class SupplyOffer:
+    slot: int
+    description: str
+    cost: int = 1
+
+    @property
+    def name(self):
+        return ITEM_NAMES[self.slot]
+
+
+SUPPLY_OFFERS = (SupplyOffer(MEDKIT, '사용하면 체력 1칸 회복'),
+                 SupplyOffer(LIGHT_BOMB, '여러 적에게 피해 1·공격 취소'))
 
 
 class ManagementVisit:
@@ -56,4 +72,29 @@ class ManagementVisit:
         player.fragments -= UPGRADE_COST
         self.chosen_upgrade = upgrade.key
         self.notice = f'{upgrade.name} 강화 완료 · 전력 조각 -2'
+        return True
+
+    def supply_blocked_reason(self, player, selection):
+        if selection not in range(len(SUPPLY_OFFERS)):
+            return '선택할 수 없는 보급품입니다'
+        if not self.completed:
+            return '코어 강화를 먼저 완료하세요'
+        offer = SUPPLY_OFFERS[selection]
+        if player.inventory.counts[offer.slot] >= STACK_LIMIT:
+            return f'{offer.name} 보유 한도 {STACK_LIMIT}개에 도달했습니다'
+        if player.fragments < offer.cost:
+            return '전력 조각이 부족합니다'
+        return ''
+
+    def purchase_supply(self, player, selection):
+        reason = self.supply_blocked_reason(player, selection)
+        if reason:
+            self.notice = reason
+            return False
+        offer = SUPPLY_OFFERS[selection]
+        if not player.inventory.add(offer.slot):
+            self.notice = '보유 수량을 확인하세요'
+            return False
+        player.fragments -= offer.cost
+        self.notice = f'{offer.name} +1 · 전력 조각 -{offer.cost}'
         return True
