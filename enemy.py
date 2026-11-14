@@ -596,7 +596,8 @@ class Shade:
                                   top, 255, 108, 160, filled=True)
         if self.state in ('LUNGE_WINDUP', 'LUNGE'):
             from effects import blended, segment
-            distance = LUNGE_SPEED * LUNGE_TIME + BODY_WIDTH / 2 + 32
+            remaining = max(0, LUNGE_TIME - self.state_time) if self.state == 'LUNGE' else LUNGE_TIME
+            distance = LUNGE_SPEED * remaining + BODY_WIDTH / 2 + 32
             region = front_box(self.x, self.face_dir, 0, distance,
                                self.feet_y + 3, self.feet_y + 7, self.solids)
             if region is not None:
