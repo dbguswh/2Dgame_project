@@ -79,7 +79,8 @@ def update_world(delta_time, player, enemies, stage, records=None):
             attack, body = player.get_attack_box(), enemy.get_bb()
             point = ((max(attack[0], body[0]) + min(attack[2], body[2])) / 2,
                      (max(attack[1], body[1]) + min(attack[3], body[3])) / 2)
-            enemy.take_damage(direction=player.face_dir, heavy=heavy, point=point)
+            style='air' if player.attack_kind=='air' else 'rising' if heavy else 'horizontal'
+            enemy.take_damage(direction=player.face_dir, heavy=heavy, point=point, sword_style=style)
             player.hit_pause.trigger(enemy.impact.hitstop)
             if heavy:
                 enemy.apply_knockback(player.face_dir)

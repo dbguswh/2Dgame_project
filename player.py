@@ -291,8 +291,8 @@ class Player:
             return 0.0
         ends = self._attack_frame_ends()
         angles = ((0.04, 0.10, -0.15, -0.11, -0.04, 0.0) if self.attack_kind == 'air'
-                  else (0.05, 0.11, -0.16, -0.09, -0.025, 0.0) if self.attack_stage == 2
-                  else (0.07, 0.13, -0.13, -0.09, -0.035, 0.0))
+                  else (0.04, 0.08, -0.10, -0.06, -0.02, 0.0) if self.attack_stage == 2
+                  else (0.04, 0.08, -0.09, -0.06, -0.02, 0.0))
         frame = self.attack_frame
         start = ends[frame - 1] if frame else 0
         previous = angles[frame - 1] if frame else 0
@@ -598,7 +598,7 @@ class Player:
         return self.motion.get_bb()
 
     def get_attack_box(self):
-        """광검 타격 프레임. 지상·공중 모두 전방 64px이며 벽·발판 뒤는 제외한다."""
+        """광검 타격 프레임. 전방 80px이며 올려 베기는 위쪽, 공중은 아래쪽을 포함한다."""
         if self.attack_kind in ('flash', 'bomb'):
             return None
         if self.attack_kind == 'air':
@@ -608,7 +608,7 @@ class Player:
         start, end = (0.12, 0.24) if self.attack_stage == 2 else (0.1, 0.2)
         if not self.is_attacking or not start <= self.attack_elapsed < end:
             return None
-        return sword_box(self.x, self.feet_y, self.face_dir, False, self.solids)
+        return sword_box(self.x, self.feet_y, self.face_dir, False, self.solids, self.attack_stage == 2)
 
     def get_attack_target(self, targets):
         """(대상 ID, 피격 영역) 목록 중 가까운 한 명을 공격당 한 번만 선택한다."""

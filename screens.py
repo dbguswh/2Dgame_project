@@ -12,6 +12,7 @@ from item_art import draw_item
 from inventory import ITEM_NAMES
 from buff_visuals import draw_buffs, draw_buff_timers
 from management_view import draw_city_map, draw_management
+from sword_visuals import draw_sword_stroke
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -41,6 +42,7 @@ def draw_game(game, font):
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)
+    draw_sword_stroke(player,camera_x)
     draw_buffs(player, camera_x)
     for bomb in player.bombs:
         bomb.draw(camera_x)
@@ -81,7 +83,7 @@ def draw_game(game, font):
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
-    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 베기',
+    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 광검',
               (210, 219, 230))
     font.draw(20, 18, 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴', (177, 191, 207))
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):

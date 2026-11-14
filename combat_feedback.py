@@ -5,7 +5,7 @@ from math import cos, sin
 
 import pico2d
 
-from effects import blended, glow
+from effects import blended, glow, polygon
 
 
 @dataclass
@@ -32,6 +32,7 @@ class Impact:
     heavy: bool = False
     lethal: bool = False
     age: float = 0.0
+    sword_style: str | None = None
 
     @property
     def hitstop(self):
@@ -61,6 +62,14 @@ class Impact:
         x, y, t = self.x - camera_x, self.y, self.age
         count = 13 if self.lethal else 9 if self.heavy else 6
         with blended():
+            if self.sword_style is not None and t < .12:
+                strength=1-t/.12
+                angle=-.65 if self.sword_style=='air' else .85 if self.sword_style=='rising' else .15
+                length=30 if self.heavy or self.lethal else 22
+                dx,dy=cos(angle)*length*self.direction,sin(angle)*length
+                nx,ny=-sin(angle)*2,cos(angle)*2
+                polygon(((x-dx,y-dy),(x+nx,y+ny),(x+dx,y+dy),(x-nx,y-ny)),
+                        (255,244,202),alpha=245*strength)
             # 접점에만 짧은 섬광을 그려 캐릭터의 자세가 가려지지 않도록 한다.
             if t < 0.10:
                 strength = 1 - t / 0.10

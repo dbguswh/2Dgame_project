@@ -161,7 +161,7 @@ class Shade:
             self.bolts.append(ShadowBolt.aimed(*self.shot_event))
         self.shot_event = None
 
-    def take_damage(self, direction=None, heavy=False, point=None):
+    def take_damage(self, direction=None, heavy=False, point=None, sword_style=None):
         if not self.alive:
             return False
         pose = self.animation_frame
@@ -173,7 +173,7 @@ class Shade:
         self.death_by_hit = not self.alive
         if direction is not None:
             self.impact = Impact(*(point or (self.x, self.feet_y + 44)),
-                                 direction, heavy=heavy, lethal=not self.alive)
+                                 direction, heavy=heavy, lethal=not self.alive, sword_style=sword_style)
             self.hit_pause.trigger(self.impact.hitstop)
         if not self.alive:
             self.death_pose = pose
