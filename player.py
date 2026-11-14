@@ -196,7 +196,7 @@ class Player:
             return self.use_medkit()
         if slot in (SPEED, SHIELD):
             if self.inventory.counts[slot] <= 0:
-                self.notice, self.notice_time = f'보유한 {ITEM_NAMES[slot]}이 없습니다', 1.0
+                self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 보유 수량이 없습니다', 1.0
                 return False
             if not self.item_effects.activate(slot):
                 self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 효과가 남아 있습니다', 1.0

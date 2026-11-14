@@ -254,3 +254,52 @@ class TimedItemWorldTests(unittest.TestCase):
         self.assertEqual(self.p.item_effects.shield_remaining, 0)
         self.assertEqual(self.p.invulnerability, 1)
         self.assertEqual(self.p.item_effects.shield_flash, .35)
+
+    def test_each_new_supply_has_one_item_and_survives_death_without_duplication(self):
+        stage = self.game.stage
+        for slot, identity in ((SPEED, 'street-speed'), (SHIELD, 'ascent-shield')):
+            with self.subTest(slot=slot):
+                self.game.restart_stage()
+                self.game.enemies = []
+                box = next(b for b in stage.supply_boxes if b.identity == identity)
+                self.p.x, self.p.feet_y = box.x, box.feet_y
+                tap(self.p, pico2d.SDLK_e)
+                self.game.update(0)
+                self.game.update(.3)
+                self.assertTrue(box.claimed)
+                self.assertEqual(self.p.inventory.counts[slot], 1)
+                self.game.records.restore_after_death(self.p, stage)
+                self.assertTrue(box.claimed)
+                self.assertEqual(self.p.inventory.counts[slot], 1)
+                self.p.x, self.p.feet_y = box.x, box.feet_y
+                tap(self.p, pico2d.SDLK_e)
+                self.game.update(.3)
+                self.assertEqual(self.p.inventory.counts[slot], 1)
+
+    def test_full_speed_and_shield_slots_leave_supplies_until_use(self):
+        for slot in (SPEED, SHIELD):
+            with self.subTest(slot=slot):
+                self.game.restart_stage()
+                self.game.enemies = []
+                self.p.inventory.counts[slot] = 2
+                box = next(b for b in self.game.stage.supply_boxes if b.item == slot)
+                self.p.x, self.p.feet_y = box.x, box.feet_y
+                tap(self.p, pico2d.SDLK_e)
+                self.game.update(0)
+                self.game.update(.3)
+                self.assertFalse(box.claimed)
+                tap(self.p, pico2d.SDLK_1 + slot)
+                tap(self.p, pico2d.SDLK_f)
+                self.game.update(0)
+                self.assertTrue(box.claimed)
+                self.assertEqual(self.p.inventory.counts[slot], 2)
+
+    def test_fully_boosted_run_jump_cannot_cross_unpowered_canal(self):
+        from physics import Motion, RUN_SPEED
+        motion = Motion(self.game.stage.canal[0]-14, self.game.stage.BRIDGE_Y)
+        motion.jump()
+        for _ in range(180):
+            motion.step(1/120, 1, self.game.stage.solids, self.game.stage.width, speed=RUN_SPEED*1.3)
+            if motion.feet_y < self.game.stage.BRIDGE_Y-2:
+                break
+        self.assertLess(motion.x + motion.width/2, self.game.stage.canal[1])

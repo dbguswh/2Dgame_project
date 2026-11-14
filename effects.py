@@ -106,12 +106,12 @@ def light_beam(origin, first, second, alpha=48):
     sdl2.SDL_RenderGeometry(canvas.renderer, None, vertices, 3, None, 0)
 
 
-def polygon(points, color):
+def polygon(points, color, alpha=255):
     """작은 볼록 금속 면을 삼각형 묶음으로 그린다."""
     vertices = (sdl2.SDL_Vertex * len(points))()
     for index, (x, y) in enumerate(points):
         vertices[index].position = sdl2.SDL_FPoint(x, pico2d.get_canvas_height() - 1 - y)
-        vertices[index].color = sdl2.SDL_Color(*color, 255)
+        vertices[index].color = sdl2.SDL_Color(*color, max(0, min(255, int(alpha))))
         vertices[index].tex_coord = sdl2.SDL_FPoint(0, 0)
     triangles = [value for index in range(1, len(points) - 1) for value in (0, index, index + 1)]
     indices = (c_int * len(triangles))(*triangles)

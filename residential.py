@@ -11,7 +11,7 @@ from stage import GROUND_Y, Stage
 from environment import ResidentialScene
 from respawn import RespawnDirector
 from supplies import SupplyBox, draw_battery_pack
-from inventory import ITEM_NAMES, LIGHT_BOMB
+from inventory import ITEM_NAMES, LIGHT_BOMB, SPEED, SHIELD
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,9 @@ class ResidentialStage(Stage):
         self.return_battery_collected = False
         self.supply_boxes = (SupplyBox('entrance-medkit', 240, GROUND_Y),
                              SupplyBox('workshop-medkit', 2120, self.WORKSHOP_Y),
-                             SupplyBox('rooftop-light-bomb', 1696, self.UPPER_FLOOR_Y, item=LIGHT_BOMB))
+                             SupplyBox('rooftop-light-bomb', 1696, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
+                             SupplyBox('street-speed', 368, GROUND_Y, item=SPEED),
+                             SupplyBox('ascent-shield', 1072, 240, item=SHIELD))
         self.fuse_checkpoint = (2160, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()

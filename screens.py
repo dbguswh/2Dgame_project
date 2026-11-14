@@ -9,7 +9,8 @@ from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
 from visibility import draw_darkness, draw_navigation, enemy_is_visible
 from item_art import draw_item
-from inventory import ITEM_NAMES, MEDKIT, LIGHT_BOMB
+from inventory import ITEM_NAMES
+from buff_visuals import draw_buffs, draw_buff_timers
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -39,6 +40,7 @@ def draw_game(game, font):
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)
+    draw_buffs(player, camera_x)
     for bomb in player.bombs:
         bomb.draw(camera_x)
     for enemy in game.enemies:
@@ -84,17 +86,15 @@ def draw_game(game, font):
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
         x = 616 + slot * 82
         selected = player.inventory.selected == slot
-        enabled = slot in (MEDKIT, LIGHT_BOMB)
         pico2d.draw_rectangle(x, 6, x + 78, 60, 27, 33, 39, filled=True)
         pico2d.draw_rectangle(x, 6, x + 78, 60, *( (244, 206, 119) if selected else (68, 77, 88)))
-        font.draw(x + 5, 46, f'{slot + 1} {label}', (235, 223, 192) if enabled else (106, 116, 128))
-        if enabled:
-            draw_item(slot, x + 23, 22, 28)
-            font.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
-        else:
-            font.draw(x + 30, 22, '-', (106, 116, 128))
+        font.draw(x + 5, 46, f'{slot + 1} {label}', (235, 223, 192))
+        draw_item(slot, x + 23, 22, 28)
+        font.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
     selected_name = ITEM_NAMES[player.inventory.selected]
     font.draw(616, 78, f'선택: {selected_name} · F 사용', (241, 211, 150))
+    with blended():
+        draw_buff_timers(font, player.item_effects)
     if player.notice_time > 0:
         font.draw(20, SCREEN_HEIGHT - 84, player.notice, (255, 195, 110))
 

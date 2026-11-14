@@ -1,7 +1,7 @@
 """한 번만 개봉하고 미수령 소모품을 남기는 보급함."""
 
 from dataclasses import dataclass
-from inventory import MEDKIT, LIGHT_BOMB
+from inventory import MEDKIT, LIGHT_BOMB, SHIELD
 from item_art import draw_item
 
 
@@ -55,9 +55,11 @@ class SupplyBox:
         if self.item == MEDKIT:
             pico2d.draw_rectangle(x - 1, y + 7, x + 1, y + 15, 152, 65, 61, filled=True)
             pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 12, 152, 65, 61, filled=True)
-        else:
+        elif self.item == LIGHT_BOMB:
             pico2d.draw_circle(x, y + 11, 4, 178, 128, 53, filled=True)
             pico2d.draw_circle(x, y + 11, 2, 255, 234, 173, filled=True)
+        else:
+            draw_item(self.item, x, y + 11, 16)
         progress = min(1, self.opening_elapsed / OPEN_TIME)
         angle = progress * pi * .48
         hinge = (x - 23, y + 22)
@@ -70,7 +72,8 @@ class SupplyBox:
         if self.pickup_ready:
             px, py = self.pickup_position
             with blended():
-                glow(px - camera_x, py, 19, (175, 222, 162), alpha=75)
+                color = (132, 219, 244) if self.item == SHIELD else (175, 222, 162)
+                glow(px - camera_x, py, 19, color, alpha=75)
             draw_item(self.item, px - camera_x, py, 22)
 
 
