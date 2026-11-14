@@ -44,16 +44,16 @@ class ResidentialStage(Stage):
         self.bridge_gate = Solid(self.canal[0] - 12, self.BRIDGE_Y,
                                  self.canal[0] + 4, self.BRIDGE_Y + 80)
         self.exit_position = (2800, self.BRIDGE_Y)
-        self.fuse_position = (2160, self.WORKSHOP_Y + 16)
+        self.fuse_position = (2240, self.WORKSHOP_Y + 16)
         self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
-        self.return_battery_position = (2088, self.WORKSHOP_Y + 16)
+        self.return_battery_position = (2176, self.WORKSHOP_Y + 16)
         self.return_battery_collected = False
-        self.supply_boxes = (SupplyBox('entrance-medkit', 240, GROUND_Y),
-                             SupplyBox('workshop-medkit', 2120, self.WORKSHOP_Y),
-                             SupplyBox('rooftop-light-bomb', 1696, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
-                             SupplyBox('street-speed', 368, GROUND_Y, item=SPEED),
-                             SupplyBox('ascent-shield', 1072, 240, item=SHIELD))
-        self.fuse_checkpoint = (2160, self.WORKSHOP_Y)
+        self.supply_boxes = (SupplyBox('entrance-medkit', 224, GROUND_Y),
+                             SupplyBox('workshop-medkit', 2112, self.WORKSHOP_Y),
+                             SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
+                             SupplyBox('street-speed', 320, GROUND_Y, item=SPEED),
+                             SupplyBox('ascent-shield', 832, 144, item=SHIELD))
+        self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
         self.visual_time = 0.0
@@ -61,11 +61,11 @@ class ResidentialStage(Stage):
         self.stair_solids = ()
         # 얇은 상승 발판은 아래·옆에서 통과하고 내려올 때 윗면에 착지한다.
         # 발판 사이로 떨어져도 지상에서 왼쪽 첫 발판으로 돌아갈 수 있다.
-        self.approach_ledges = (Solid(768, 128, 864, 144, one_way=True),
+        self.approach_ledges = (Solid(768, 128, 896, 144, one_way=True),
                                 Solid(896, 176, 992, 192, one_way=True),
                                 Solid(1024, 224, 1120, 240, one_way=True))
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),
-                               Solid(1872, self.WORKSHOP_Y - 20, 2208, self.WORKSHOP_Y))
+                               Solid(1872, self.WORKSHOP_Y - 20, 2272, self.WORKSHOP_Y))
         self.workshop_ledges = (Solid(1824, 240, 1904, 256, one_way=True),)
         self.lower_walkways = ()
         self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
@@ -77,7 +77,7 @@ class ResidentialStage(Stage):
         self.solids = [
             Solid(0, 0, self.canal[0], GROUND_Y),
             Solid(self.canal[1], 0, self.width, GROUND_Y),
-            Solid(288, GROUND_Y, 352, 128),
+            Solid(384, GROUND_Y, 448, 128),
             *self.approach_ledges,
             *self.upper_walkways,
             *self.workshop_ledges,
@@ -88,7 +88,7 @@ class ResidentialStage(Stage):
         self.enemy_placements = tuple(
             EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged)
             for index, (x, y, bounds, ranged) in enumerate([
-                (480, GROUND_Y, (352, 752), False), (640, GROUND_Y, (352, 752), True),
+                (560, GROUND_Y, (448, 752), False), (704, GROUND_Y, (448, 752), True),
                 (1328, self.UPPER_FLOOR_Y, (1280, 1712), False),
                 (1472, self.UPPER_FLOOR_Y, (1280, 1712), False),
                 (1600, self.UPPER_FLOOR_Y, (1280, 1712), True),
@@ -128,11 +128,19 @@ class ResidentialStage(Stage):
         if not player.motion.on_ground or player.is_attacking or player.light_cast > 0:
             return None
         return next((box for box in sorted(self.supply_boxes, key=lambda b: abs(player.x - b.x))
-                     if abs(player.x - box.x) <= 48 and abs(player.feet_y - box.feet_y) <= 8), None)
+                     if not box.opened and abs(player.x - box.x) <= 48
+                     and abs(player.feet_y - box.feet_y) <= 8), None)
+
+    def can_interact(self, player):
+        if not super().can_interact(player):
+            return False
+        # 제어함과 옥상 보급함의 범위가 겹쳐도 안내한 가까운 대상만 조작한다.
+        box = self.nearby_supply(player)
+        return box is None or abs(player.x - self.fixture_position[0]) <= abs(player.x - box.x)
 
     def activate_supply(self, player):
         box = self.nearby_supply(player)
-        if box is None:
+        if box is None or self.can_interact(player):
             return False
         if box.open():
             player.notice, player.notice_time = f'{ITEM_NAMES[box.item]} 보급함 개봉 · 앞의 아이템을 회수하세요', 1.4
@@ -266,7 +274,7 @@ class ResidentialStage(Stage):
     def draw_labels(self, font, camera_x):
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
                             (1048, 384, '중앙 제어함'),
-                            (2080, 408, '정비실 · 퓨즈'),
+                            (2152, 408, '정비실 · 퓨즈'),
                             (2782, self.BRIDGE_Y + 140, '병원')):
             font.draw(x - camera_x, y, label, (192, 178, 146))
         x, y = 2854 - camera_x, self.BRIDGE_Y + 140
