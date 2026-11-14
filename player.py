@@ -11,9 +11,10 @@ from combat import front_box, overlaps
 from combat_feedback import HitPause
 from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_effects import ItemEffects
+from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
-from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
+from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, constrain_region, load_deploy_image)
 
 
@@ -110,6 +111,7 @@ class Player:
         self.light_cast = 0.0
         self.interaction_requested = False
         self.fragments = 0
+        self.core_upgrades = set()
         self.flash_requested = False
         self.flash_pending = False
         self.flash_cooldown = 0.0
@@ -190,6 +192,22 @@ class Player:
 
     def add_medkit(self):
         return self.add_item(MEDKIT)
+
+    @property
+    def flash_range(self):
+        return FLASH_RANGE * (1.25 if FOCUS in self.core_upgrades else 1)
+
+    @property
+    def light_radius(self):
+        return LIGHT_RADIUS * (1.25 if SPREAD in self.core_upgrades else 1)
+
+    def apply_core_upgrade(self, key):
+        if key not in UPGRADE_KEYS or key in self.core_upgrades:
+            return False
+        self.core_upgrades.add(key)
+        if key == CAPACITY:
+            self.max_battery = 140
+        return True
 
     def use_selected_item(self, slot):
         if slot == MEDKIT:
@@ -364,7 +382,7 @@ class Player:
             self.notice, self.notice_time = '이 위치에는 조명을 설치할 수 없습니다', 1.2
             return False
         region = constrain_region(region, x, y, self.solids)
-        self.light = PortableLight(x, y, region, art=self.light_deploy_image)
+        self.light = PortableLight(x, y, region, radius=self.light_radius, art=self.light_deploy_image)
         self.battery -= LIGHT_COST
         self.light_cast = LIGHT_CAST_TIME
         self.attack_requested = False
@@ -386,7 +404,7 @@ class Player:
         self.combo_window = 0.0
         self.flash_cooldown = FLASH_COOLDOWN
         self.flash_pending = True
-        box = front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + FLASH_RANGE,
+        box = front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + self.flash_range,
                         self.feet_y + 10, self.feet_y + 72, self.solids)
         self.flash_effect = FlashPulse(self.x, self.feet_y, self.face_dir, box)
         self.jump_requested = False
