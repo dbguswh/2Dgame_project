@@ -23,9 +23,9 @@ IMAGE_PATH = Path(__file__).resolve().parent / "assets/images/characters/player.
 WALK_DATA_PATH = IMAGE_PATH.with_name("player_walk.json")
 RUN_DATA_PATH = IMAGE_PATH.with_name("player_run.json")
 ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
-ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack.json")
-SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_second.json")
-AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_attack_air.json")
+ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_attack.json")
+SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_second.json")
+AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_air.json")
 FLASH_DATA_PATH = IMAGE_PATH.with_name("player_flash.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
@@ -290,7 +290,9 @@ class Player:
         if not self.is_attacking or self.attack_kind in ('flash', 'bomb'):
             return 0.0
         ends = self._attack_frame_ends()
-        angles = (0.035, 0.07, -0.07, -0.045, -0.015, 0.0)
+        angles = ((0.04, 0.10, -0.15, -0.11, -0.04, 0.0) if self.attack_kind == 'air'
+                  else (0.05, 0.11, -0.16, -0.09, -0.025, 0.0) if self.attack_stage == 2
+                  else (0.07, 0.13, -0.13, -0.09, -0.035, 0.0))
         frame = self.attack_frame
         start = ends[frame - 1] if frame else 0
         previous = angles[frame - 1] if frame else 0
@@ -581,6 +583,15 @@ class Player:
             self.feet_y + dx * sin(angle) + dy * cos(angle),
             width * scale, height * scale,
         )
+        for piece in frame.get('pieces', ()) if state in ('attack', 'air_attack', 'flash') else ():
+            left, bottom, width, height = piece['rect']
+            feet_x, feet_y = piece['feet']
+            dx = (width / 2 - feet_x) * scale * self.face_dir
+            dy = (height / 2 - feet_y) * scale
+            image.clip_composite_draw(left, bottom, width, height, angle,
+                                      'h' if self.face_dir < 0 else '',
+                                      self.x-camera_x+dx*cos(angle)-dy*sin(angle),
+                                      self.feet_y+dx*sin(angle)+dy*cos(angle), width*scale, height*scale)
 
     def get_bb(self):
         """이미지와 별도로 실제 지형 충돌에 사용하는 몸통 영역이다."""
