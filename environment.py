@@ -7,6 +7,7 @@ import pico2d
 
 from effects import blended, glow, segment
 from stage import GROUND_Y
+from supplies import SUPPLY_COLORS
 
 
 FACADE_PATH = Path(__file__).resolve().parent / 'assets/images/environments/residential_facades.png'
@@ -63,6 +64,7 @@ class ResidentialScene:
                 self.draw_crate(solid, camera_x)
             else:
                 self.draw_stone(solid, camera_x, width)
+        self.draw_supply_bays(stage, camera_x, width)
         self.draw_street_details(stage, camera_x, width)
         self.draw_stair_railing(stage, camera_x)
         for lamp_x in (160, 704, 1488, 2304, 2784):
@@ -173,6 +175,39 @@ class ResidentialScene:
                                       163, 164, 153, filled=True)
 
     @staticmethod
+    def draw_supply_bays(stage, camera_x, width):
+        # 물품 뒤의 벽면 설비다. 걸을 수 있는 바닥과 추가 충돌체를 혼동시키지 않는다.
+        for box in stage.supply_boxes:
+            x, y = box.x - camera_x, box.feet_y
+            if x < -64 or x > width + 64:
+                continue
+            accent = SUPPLY_COLORS[box.item]
+            pico2d.draw_rectangle(x - 31, y + 2, x + 31, y + 55, 30, 40, 48, filled=True)
+            pico2d.draw_rectangle(x - 31, y + 2, x + 31, y + 55, 77, 89, 96)
+            for side in (-27, 25):
+                pico2d.draw_rectangle(x + side, y + 7, x + side + 2, y + 48,
+                                      94, 102, 102, filled=True)
+            for row in (36, 41):
+                pico2d.draw_line(x - 19, y + row, x + 15, y + row, 58, 73, 82)
+            pico2d.draw_rectangle(x - 20, y + 49, x - 8, y + 51,
+                                  *(accent if not box.opened else (76, 86, 88)), filled=True)
+            pico2d.draw_line(x - 34, y + 1, x + 34, y + 1, 104, 114, 114)
+            for side in (-32, 28):
+                pico2d.draw_line(x + side, y + 1, x + side + 4, y + 5, *accent)
+        # 정비실 끝의 충전 선반과 퓨즈 소켓을 서로 떨어뜨려 배치한다.
+        for position in (stage.return_battery_position, stage.fuse_position):
+            x, pickup_y = position
+            x -= camera_x
+            y = pickup_y - 16
+            if x < -48 or x > width + 48:
+                continue
+            pico2d.draw_rectangle(x - 24, y + 2, x + 24, y + 57, 32, 42, 51, filled=True)
+            pico2d.draw_rectangle(x - 24, y + 2, x + 24, y + 57, 88, 98, 101)
+            pico2d.draw_rectangle(x - 18, y + 34, x + 18, y + 49, 17, 27, 33, filled=True)
+            pico2d.draw_line(x - 16, y + 40, x + 12, y + 40, 112, 146, 152)
+            segment((x - 27, y + 3), (x + 27, y + 3), (126, 137, 134), width=3)
+
+    @staticmethod
     def draw_street_details(stage, camera_x, width):
         # 배경과 별개인 현장 표식으로 실제 이동 구역을 식별한다.
         for left, right in ((24, 240), (2760, 2872)):
@@ -189,9 +224,9 @@ class ResidentialScene:
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33,
                                   38, 43, 47, filled=True)
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33, 117, 105, 78)
-        pico2d.draw_rectangle(2072 - camera_x, 393, 2244 - camera_x, 423,
+        pico2d.draw_rectangle(2144 - camera_x, 393, 2316 - camera_x, 423,
                               36, 44, 47, filled=True)
-        pico2d.draw_rectangle(2072 - camera_x, 393, 2244 - camera_x, 423, 126, 114, 83)
+        pico2d.draw_rectangle(2144 - camera_x, 393, 2316 - camera_x, 423, 126, 114, 83)
         # 정비소의 전선은 제어함으로 이어지는 흐름을 암시한다.
         for left, right in ((1120, 1408), (2024, 2440)):
             for x in range(left, right, 16):

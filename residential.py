@@ -283,10 +283,10 @@ class ResidentialStage(Stage):
         pico2d.draw_line(x - 5, y - 5, x, y, 192, 178, 146)
         if not self.battery_pack_collected:
             x, y = self.battery_pack_position
-            font.draw(x - camera_x - 40, y + 39, '배터리 +50', (157, 197, 208))
+            font.draw(x - camera_x - 40, y - 42, '배터리 +50', (157, 197, 208))
         if not self.return_battery_collected:
             x, y = self.return_battery_position
-            font.draw(x - camera_x - 40, y + 39, '복귀 보급 +50', (157, 197, 208))
+            font.draw(x - camera_x - 40, y - 42, '배터리 +50', (157, 197, 208))
         if self.fuse_state == 'CARRIED' and not self.fixture_powered:
             for wx in (1540, 1984):
                 sx, sy = wx - camera_x, 388

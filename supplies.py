@@ -6,6 +6,7 @@ from item_art import draw_item
 
 
 OPEN_TIME = 0.3
+SUPPLY_COLORS = ((175, 126, 111), (125, 177, 117), (196, 162, 93), (115, 175, 191))
 
 
 @dataclass
@@ -49,6 +50,7 @@ class SupplyBox:
         x, y = self.x - camera_x, self.feet_y
         pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 42, 57, 60, filled=True)
         pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 134, 145, 132)
+        pico2d.draw_line(x - 15, y + 21, x + 15, y + 21, *SUPPLY_COLORS[self.item])
         for side in (-19, 15):
             pico2d.draw_rectangle(x + side, y + 2, x + side + 4, y + 20, 105, 113, 103, filled=True)
         pico2d.draw_rectangle(x - 6, y + 5, x + 6, y + 17, 204, 204, 178, filled=True)
