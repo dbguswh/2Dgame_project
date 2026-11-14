@@ -11,6 +11,7 @@ from stage import GROUND_Y, Stage
 from environment import ResidentialScene
 from respawn import RespawnDirector
 from supplies import SupplyBox, draw_battery_pack
+from fragment_cache import FragmentCache
 from inventory import ITEM_NAMES, LIGHT_BOMB, SPEED, SHIELD
 
 
@@ -53,6 +54,7 @@ class ResidentialStage(Stage):
                              SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
                              SupplyBox('lower-detour-speed', 1040, GROUND_Y, item=SPEED),
                              SupplyBox('connector-shield', 1848, 256, item=SHIELD))
+        self.fragment_cache = FragmentCache('lower-power-cache', 1200, GROUND_Y)
         self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -127,7 +129,8 @@ class ResidentialStage(Stage):
     def nearby_supply(self, player):
         if not player.motion.on_ground or player.is_attacking or player.light_cast > 0:
             return None
-        return next((box for box in sorted(self.supply_boxes, key=lambda b: abs(player.x - b.x))
+        return next((box for box in sorted((*self.supply_boxes, self.fragment_cache),
+                                          key=lambda b: abs(player.x - b.x))
                      if not box.opened and abs(player.x - box.x) <= 48
                      and abs(player.feet_y - box.feet_y) <= 8), None)
 
@@ -143,7 +146,11 @@ class ResidentialStage(Stage):
         if box is None or self.can_interact(player):
             return False
         if box.open():
-            player.notice, player.notice_time = f'{ITEM_NAMES[box.item]} 보급함 개봉 · 앞의 아이템을 회수하세요', 1.4
+            if box is self.fragment_cache:
+                player.fragments += 1
+                player.notice, player.notice_time = '선택 보급고 · 전력 조각 +1', 1.8
+            else:
+                player.notice, player.notice_time = f'{ITEM_NAMES[box.item]} 보급함 개봉 · 앞의 아이템을 회수하세요', 1.4
             return True
         player.notice, player.notice_time = '이미 개봉한 보급함입니다', 1.0
         return False
@@ -176,6 +183,7 @@ class ResidentialStage(Stage):
         self.visual_time += max(0, delta_time)
         for box in self.supply_boxes:
             box.update(delta_time)
+        self.fragment_cache.update(delta_time)
         if self.fixture_powered:
             self.bridge_elapsed = min(self.BRIDGE_TIME, self.bridge_elapsed + max(0, delta_time))
         self.sync_bridge()
@@ -239,6 +247,8 @@ class ResidentialStage(Stage):
             return (*self.fixture_position, label)
         box = self.nearby_supply(player)
         if box is not None and not box.opened:
+            if box is self.fragment_cache:
+                return box.x, box.feet_y, 'E: 선택 보급고 · 조각 +1'
             return box.x, box.feet_y, f'E: {ITEM_NAMES[box.item]} 보급함 열기'
         return None
 
@@ -246,6 +256,7 @@ class ResidentialStage(Stage):
         self.scene.draw(self, camera_x, screen_width, screen_height)
         for box in self.supply_boxes:
             box.draw(camera_x)
+        self.fragment_cache.draw(camera_x)
         self.draw_fixture(camera_x)
         self.draw_bridge(camera_x)
         x, y = self.exit_position
@@ -272,6 +283,10 @@ class ResidentialStage(Stage):
                 draw_battery_pack(position[0] - camera_x, position[1])
 
     def draw_labels(self, font, camera_x):
+        cache = self.fragment_cache
+        label = '보급고 · 회수 완료' if cache.opened else '선택 보급고 · 전력 조각'
+        color = (116, 128, 133) if cache.opened else (191, 173, 126)
+        font.draw(cache.x - camera_x - 84, cache.feet_y + 128, label, color)
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
                             (1048, 384, '중앙 제어함'),
                             (2152, 408, '정비실 · 퓨즈'),
