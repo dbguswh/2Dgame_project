@@ -1,0 +1,11 @@
+{
+  "image": "hospital_interiors.png",
+  "source_size": [1536, 1024],
+  "frames": {
+    "archive": [0, 640, 768, 384],
+    "atrium": [768, 640, 768, 384],
+    "ward": [0, 128, 768, 384],
+    "maintenance": [768, 128, 768, 384]
+  },
+  "note": "원본 2×2 시트의 어두운 하단 여백을 런타임 clip_draw에서 제외한다. 충돌·조명·문은 별도 판정이다."
+}
