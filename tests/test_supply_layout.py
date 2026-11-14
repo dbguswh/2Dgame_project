@@ -25,13 +25,15 @@ class SupplyLayoutTests(unittest.TestCase):
             self.game.handle_event(event)
         self.game.update(0)
 
-    def test_entrance_supplies_are_before_obstacle_and_first_encounter(self):
+    def test_no_free_entrance_supplies_and_first_heal_follows_ground_encounter(self):
         medkit = self.stage.supply_boxes[0]
         speed = next(b for b in self.stage.supply_boxes if b.item == SPEED)
         crate = next(s for s in self.stage.solids if s.bottom == 96 and not s.one_way)
-        self.assertLess(self.stage.start[0], medkit.x)
-        self.assertGreaterEqual(speed.x - medkit.x, 96)
-        self.assertLess(speed.x + 34, crate.left)
+        self.assertFalse(any(b.x < self.stage.enemy_placements[0].bounds[0]
+                             for b in self.stage.supply_boxes))
+        self.assertGreater(medkit.x, self.stage.enemy_placements[0].bounds[1])
+        self.assertGreater(speed.x, self.stage.approach_ledges[0].right)
+        self.assertEqual(speed.feet_y, 96)
         self.assertGreaterEqual(self.stage.enemy_placements[0].bounds[0], crate.right)
 
     def test_every_supply_has_room_for_box_lid_and_loot_on_same_support(self):
@@ -43,14 +45,18 @@ class SupplyLayoutTests(unittest.TestCase):
                 self.assertGreater(y, box.feet_y)
                 self.assertLess(abs(x - box.x), 34)
 
-    def test_shield_is_on_wide_first_landing_and_bomb_precedes_roof_encounter(self):
+    def test_heal_on_first_landing_then_bomb_and_later_connector_shield(self):
         shield = next(b for b in self.stage.supply_boxes if b.item == SHIELD)
         bomb = next(b for b in self.stage.supply_boxes if b.item == LIGHT_BOMB)
         first = self.stage.approach_ledges[0]
         self.assertGreaterEqual(first.right - first.left, 128)
-        self.assertEqual(shield.feet_y, first.top)
-        self.assertGreaterEqual(shield.x - first.left, 48)
-        self.assertGreaterEqual(first.right - shield.x, 48)
+        medkit = self.stage.supply_boxes[0]
+        self.assertEqual(medkit.feet_y, first.top)
+        self.assertGreaterEqual(medkit.x - first.left, 48)
+        self.assertGreaterEqual(first.right - medkit.x, 48)
+        self.assertGreater(shield.x, self.stage.enemy_placements[4].bounds[1])
+        self.assertLess(shield.x, self.stage.enemy_placements[5].bounds[0])
+        self.assertEqual(shield.feet_y, self.stage.workshop_ledges[0].top)
         self.assertEqual(bomb.feet_y, self.stage.UPPER_FLOOR_Y)
         self.assertLess(bomb.x, self.stage.enemy_placements[2].bounds[0])
 

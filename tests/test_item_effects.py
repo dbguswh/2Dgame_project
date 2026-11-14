@@ -257,11 +257,11 @@ class TimedItemWorldTests(unittest.TestCase):
 
     def test_each_new_supply_has_one_item_and_survives_death_without_duplication(self):
         stage = self.game.stage
-        for slot, identity in ((SPEED, 'street-speed'), (SHIELD, 'ascent-shield')):
+        for slot in (SPEED, SHIELD):
             with self.subTest(slot=slot):
                 self.game.restart_stage()
                 self.game.enemies = []
-                box = next(b for b in stage.supply_boxes if b.identity == identity)
+                box = next(b for b in stage.supply_boxes if b.item == slot)
                 self.p.x, self.p.feet_y = box.x, box.feet_y
                 tap(self.p, pico2d.SDLK_e)
                 self.game.update(0)

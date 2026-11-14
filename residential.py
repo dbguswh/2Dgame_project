@@ -48,11 +48,11 @@ class ResidentialStage(Stage):
         self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
         self.return_battery_position = (2176, self.WORKSHOP_Y + 16)
         self.return_battery_collected = False
-        self.supply_boxes = (SupplyBox('entrance-medkit', 224, GROUND_Y),
+        self.supply_boxes = (SupplyBox('ascent-medkit', 832, 144),
                              SupplyBox('workshop-medkit', 2112, self.WORKSHOP_Y),
                              SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
-                             SupplyBox('street-speed', 320, GROUND_Y, item=SPEED),
-                             SupplyBox('ascent-shield', 832, 144, item=SHIELD))
+                             SupplyBox('lower-detour-speed', 1040, GROUND_Y, item=SPEED),
+                             SupplyBox('connector-shield', 1848, 256, item=SHIELD))
         self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -66,7 +66,7 @@ class ResidentialStage(Stage):
                                 Solid(1024, 224, 1120, 240, one_way=True))
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),
                                Solid(1872, self.WORKSHOP_Y - 20, 2272, self.WORKSHOP_Y))
-        self.workshop_ledges = (Solid(1824, 240, 1904, 256, one_way=True),)
+        self.workshop_ledges = (Solid(1808, 240, 1904, 256, one_way=True),)
         self.lower_walkways = ()
         self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
                                   Solid(2752, 204, 2880, self.BRIDGE_Y, one_way=True))
