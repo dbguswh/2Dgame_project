@@ -7,11 +7,12 @@ from player import Player
 from residential import ResidentialStage
 from world import update_world, restore_enemies
 from progress import ProgressRecords
+from upgrades import ManagementVisit, CORE_UPGRADES
 
 
 class GameSession:
     PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
-    CLEAR_ITEMS = ('주택가 다시하기', '타이틀로')
+    CLEAR_ITEMS = ('도시 지도', '주택가 다시하기', '타이틀로')
 
     def __init__(self, stage_factory=ResidentialStage):
         self.stage_factory = stage_factory
@@ -24,6 +25,7 @@ class GameSession:
         self.show_debug = False
         self.play_time = 0.0
         self.records = None
+        self.management_visit = None
 
     @property
     def running(self):
@@ -48,6 +50,31 @@ class GameSession:
         restore_enemies(self.enemies, self.stage)
         self.player.clear_input()
         self.state = 'PLAY'
+        self.selection = 0
+        self.management_visit = None
+
+    def open_city_map(self):
+        if (self.stage is None or not self.stage.completed
+                or self.state not in ('STAGE_CLEAR', 'CITY_MAP', 'MANAGEMENT')):
+            return False
+        if self.management_visit is None:
+            self.management_visit = ManagementVisit()
+        self.state = 'CITY_MAP'
+        self.selection = 0
+        self.player.clear_input()
+        return True
+
+    def open_management(self):
+        if self.state != 'CITY_MAP' or self.management_visit is None:
+            return False
+        self.state = 'MANAGEMENT'
+        self.selection = 0
+        self.player.clear_input()
+        return True
+
+    def return_to_title(self):
+        self.close_world()
+        self.state = 'TITLE'
         self.selection = 0
 
     def clear_input(self):
@@ -81,13 +108,35 @@ class GameSession:
 
         elif self.state == 'STAGE_CLEAR' and new_press:
             if event.key in (pico2d.SDLK_UP, pico2d.SDLK_DOWN):
-                self.selection = 1 - self.selection
-            elif event.key == pico2d.SDLK_ESCAPE or (event.key == pico2d.SDLK_e and self.selection == 1):
-                self.close_world()
-                self.state = 'TITLE'
-                self.selection = 0
+                step = -1 if event.key == pico2d.SDLK_UP else 1
+                self.selection = (self.selection + step) % len(self.CLEAR_ITEMS)
+            elif event.key == pico2d.SDLK_ESCAPE:
+                self.return_to_title()
             elif event.key == pico2d.SDLK_e:
-                self.restart_stage()
+                if self.selection == 0:
+                    self.open_city_map()
+                elif self.selection == 1:
+                    self.restart_stage()
+                else:
+                    self.return_to_title()
+        elif self.state == 'CITY_MAP' and new_press:
+            if event.key == pico2d.SDLK_e:
+                self.open_management()
+            elif event.key == pico2d.SDLK_ESCAPE:
+                self.state = 'STAGE_CLEAR'
+                self.selection = 0
+                self.player.clear_input()
+        elif self.state == 'MANAGEMENT' and new_press:
+            if event.key in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
+                step = -1 if event.key == pico2d.SDLK_LEFT else 1
+                self.selection = (self.selection + step) % len(CORE_UPGRADES)
+            elif event.key == pico2d.SDLK_ESCAPE:
+                self.open_city_map()
+            elif event.key == pico2d.SDLK_e:
+                if self.management_visit.completed:
+                    self.open_city_map()
+                elif self.management_visit.purchase(self.player, self.selection):
+                    self.records.remember(self.player, self.stage)
         elif self.state == 'PLAY':
             if event.type == pico2d.SDL_KEYDOWN and not new_press:
                 return
@@ -136,3 +185,4 @@ class GameSession:
         self.enemies.clear()
         self.stage = None
         self.records = None
+        self.management_visit = None

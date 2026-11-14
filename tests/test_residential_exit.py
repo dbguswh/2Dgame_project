@@ -44,7 +44,7 @@ class ResidentialExitTests(unittest.TestCase):
         self.assertTrue(self.game.records.latest.completed)
         self.assertFalse(self.game.records.entry.completed)
 
-    def test_clear_freezes_time_and_held_e_cannot_restart(self):
+    def test_clear_freezes_time_and_held_e_cannot_advance_then_fresh_e_opens_map(self):
         self.open_bridge()
         self.exit()
         elapsed = self.game.play_time
@@ -53,6 +53,14 @@ class ResidentialExitTests(unittest.TestCase):
         self.assertEqual(self.game.state, 'STAGE_CLEAR')
         self.assertEqual(self.game.play_time, elapsed)
         key(self.game, pico2d.SDLK_e, False)
+        key(self.game, pico2d.SDLK_e)
+        self.assertEqual(self.game.state, 'CITY_MAP')
+        self.assertTrue(self.game.stage.completed)
+        self.assertEqual(self.game.play_time, elapsed)
+        key(self.game, pico2d.SDLK_e, False)
+        key(self.game, pico2d.SDLK_ESCAPE)
+        key(self.game, pico2d.SDLK_ESCAPE, False)
+        key(self.game, pico2d.SDLK_DOWN)
         key(self.game, pico2d.SDLK_e)
         self.assertEqual(self.game.state, 'PLAY')
         self.assertFalse(self.game.stage.completed)
@@ -65,6 +73,8 @@ class ResidentialExitTests(unittest.TestCase):
         self.open_bridge()
         self.exit()
         key(self.game, pico2d.SDLK_e, False)
+        key(self.game, pico2d.SDLK_DOWN)
+        key(self.game, pico2d.SDLK_DOWN, False)
         key(self.game, pico2d.SDLK_DOWN)
         key(self.game, pico2d.SDLK_e)
         self.assertEqual(self.game.state, 'TITLE')
