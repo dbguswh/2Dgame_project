@@ -1,4 +1,4 @@
-"""복구 후 관리소 방문당 서로 다른 코어 강화 한 개를 구매한다."""
+"""복구 후 관리소의 코어 강화와 선택 보급 구매 규칙."""
 
 from dataclasses import dataclass
 from inventory import MEDKIT, LIGHT_BOMB, ITEM_NAMES, STACK_LIMIT
@@ -28,7 +28,7 @@ UPGRADE_KEYS = frozenset(upgrade.key for upgrade in CORE_UPGRADES)
 @dataclass(frozen=True)
 class SupplyOffer:
     slot: int
-    description: str
+    description: tuple[str, str]
     cost: int = 1
 
     @property
@@ -36,8 +36,8 @@ class SupplyOffer:
         return ITEM_NAMES[self.slot]
 
 
-SUPPLY_OFFERS = (SupplyOffer(MEDKIT, '사용하면 체력 1칸 회복'),
-                 SupplyOffer(LIGHT_BOMB, '여러 적에게 피해 1·공격 취소'))
+SUPPLY_OFFERS = (SupplyOffer(MEDKIT, ('피해를 입었을 때', '사용할 치료제를 비축한다.')),
+                 SupplyOffer(LIGHT_BOMB, ('여러 적에게 피해를 주고', '진행 중 공격을 끊는다.')))
 
 
 class ManagementVisit:

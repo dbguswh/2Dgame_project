@@ -284,9 +284,9 @@ class ResidentialStage(Stage):
 
     def draw_labels(self, font, camera_x):
         cache = self.fragment_cache
-        label = '보급고 · 회수 완료' if cache.opened else '선택 보급고 · 전력 조각'
+        label = '보급고 · 회수 완료' if cache.opened else '선택 보급고'
         color = (116, 128, 133) if cache.opened else (191, 173, 126)
-        font.draw(cache.x - camera_x - 84, cache.feet_y + 128, label, color)
+        font.draw(cache.x - camera_x - 55, cache.feet_y + 164, label, color)
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
                             (1048, 384, '중앙 제어함'),
                             (2152, 408, '정비실 · 퓨즈'),

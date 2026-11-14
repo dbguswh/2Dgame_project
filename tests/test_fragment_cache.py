@@ -93,6 +93,24 @@ class FragmentCacheTests(unittest.TestCase):
         self.game.update(2)
         self.assertEqual(self.cache.opening_elapsed, before)
 
+    def test_opening_and_fatal_hit_in_same_update_preserve_one_reward(self):
+        from enemy import Shade
+        from projectiles import ShadowBolt
+        self.stand_by_cache()
+        self.p.health = 1
+        enemy = Shade(560, 96, combat_bounds=(448, 752))
+        enemy.bolts.append(ShadowBolt.aimed((self.p.x, 140), (self.p.x + 1, 140)))
+        self.game.enemies = [enemy]
+        tap(self.game, pico2d.SDLK_e)
+        self.game.update(0)
+        self.assertEqual(self.p.respawn_count, 1)
+        self.assertTrue(self.cache.opened)
+        self.assertEqual(self.p.fragments, 1)
+        self.assertTrue(self.game.records.latest.fragment_cache_state[1])
+        self.game.enemies = []
+        self.open_cache()
+        self.assertEqual(self.p.fragments, 1)
+
     def test_optional_cache_funds_one_purchase_after_upgrade_without_extra_currency(self):
         self.open_cache()
         self.complete_stage()

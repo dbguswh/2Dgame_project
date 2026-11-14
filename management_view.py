@@ -1,4 +1,4 @@
-"""도시의 다음 목적지와 관리소의 코어 강화 선택 화면."""
+"""도시 지도와 관리소의 코어 강화·선택 보급 구매 화면."""
 
 from math import cos, sin, pi
 
@@ -125,8 +125,6 @@ def draw_management(game, font, heading):
 
 def draw_supply_shop(game, font, heading):
     p, visit = game.player, game.management_visit
-    descriptions = (('피해를 입었을 때', '사용할 치료제를 비축한다.'),
-                    ('여러 적에게 피해를 주고', '진행 중 공격을 끊는다.'))
     for index, offer in enumerate(SUPPLY_OFFERS):
         x = 52 + index * 288
         selected = game.selection == index
@@ -141,7 +139,7 @@ def draw_supply_shop(game, font, heading):
         amount = p.inventory.counts[offer.slot]
         font.draw(x + 24, 329, f'보유 {amount} / {STACK_LIMIT}', (171, 189, 206))
         heading.draw(x + 24, 294, f'조각 {offer.cost}개', (241, 226, 188))
-        for row, text in enumerate(descriptions[index]):
+        for row, text in enumerate(offer.description):
             font.draw(x + 24, 250 - row * 24, text, (184, 200, 215))
         label = ('보유 한도 도달' if amount >= STACK_LIMIT else '전력 조각 부족') if reason else 'E: 1개 구매'
         font.draw(x + 24, 200, label, (153, 160, 165) if reason else (159, 214, 177))
