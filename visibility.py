@@ -79,7 +79,7 @@ def build_field(stage, player, camera_x, width=960, height=540):
                  144, 136, 0.68)
     start_x, start_y = stage.start
     field.reveal(start_x - camera_x, start_y + 88, 172, 184, 0.78)
-    for region in getattr(stage, 'fixed_light_regions', ()):
+    for region in getattr(stage, 'local_light_regions', getattr(stage, 'fixed_light_regions', ())):
         for row in range(field.rows):
             y = (row + .5) * GRID_STEP
             if not region.bottom <= y <= region.top:

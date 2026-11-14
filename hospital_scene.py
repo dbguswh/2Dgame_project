@@ -118,17 +118,19 @@ class HospitalScene:
     @staticmethod
     def draw_door(door, camera_x, lit):
         x, y = door.x-camera_x, door.feet_y
-        pico2d.draw_rectangle(x-22, y, x+22, 440, 19, 31, 39, filled=True)
-        for offset in (-23, 18):
-            pico2d.draw_rectangle(x+offset, y, x+offset+5, 443, 92, 117, 122, filled=True)
-        bottom = y+(440-y)*door.progress
-        if bottom < 440:
-            pico2d.draw_rectangle(x-12, bottom, x+12, 440, 62, 83, 88, filled=True)
-            for yy in range(int(bottom)+5, 441, 16):
-                pico2d.draw_line(x-10, yy, x+10, yy, 109, 132, 129)
+        top = y+door.height
+        pico2d.draw_rectangle(x-34, y, x+34, top, 19, 31, 39, filled=True)
+        for offset in (-35, 30):
+            pico2d.draw_rectangle(x+offset, y, x+offset+5, top+3, 92, 117, 122, filled=True)
+        bottom = y+door.height*door.progress
+        if bottom < top:
+            pico2d.draw_rectangle(x-24, bottom, x+24, top, 62, 83, 88, filled=True)
+            for yy in range(int(bottom)+5, int(top)+1, 16):
+                pico2d.draw_line(x-22, yy, x+22, yy, 109, 132, 129)
         color = (224, 216, 142) if lit else (162, 89, 88)
-        pico2d.draw_rectangle(x-20, 441, x+20, 448, *color, filled=True)
-        pico2d.draw_rectangle(x-7, y+112, x+7, y+116, *color, filled=True)
+        pico2d.draw_rectangle(x-32, top+1, x+32, top+8, *color, filled=True)
+        if bottom < y+112:
+            pico2d.draw_rectangle(x-7, y+112, x+7, y+116, *color, filled=True)
 
     @staticmethod
     def draw_terminal(stage, camera_x):

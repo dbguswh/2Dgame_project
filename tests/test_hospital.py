@@ -8,6 +8,8 @@ from progress import ProgressRecords
 from enemy import Shade
 from world import update_world, restore_enemies
 from inventory import SHIELD
+from visibility import build_field
+from projectiles import ShadowBolt
 
 
 class HospitalTests(unittest.TestCase):
@@ -45,6 +47,29 @@ class HospitalTests(unittest.TestCase):
         self.assertTrue(self.s.doors['B'].is_open)
         self.assertTrue(self.s.doors['A'].is_open)
         self.assertNotIn(self.s.doors['B'].solid, self.s.solids)
+
+    def test_final_exit_is_back_wall_door_and_never_blocks_b_corridor(self):
+        self.assertNotIn(self.s.doors['exit'].solid, self.s.solids)
+        self.assertFalse(self.s.doors['exit'].is_open)
+        m = Motion(2032, 96)
+        self.walk(m, 2280)
+        self.assertFalse(self.s.completed)
+
+    def test_global_restoration_fades_dark_rooms_and_hub_absorbs_shadow_bolts(self):
+        self.at(1920)
+        self.s.fixture_powered = True
+        start = build_field(self.s, self.p, 0).sample(192, 200)
+        self.s.update(.6)
+        halfway = build_field(self.s, self.p, 0).sample(192, 200)
+        self.s.update(.6)
+        self.assertGreater(start, halfway)
+        self.assertEqual(build_field(self.s, self.p, 0).sample(192, 200), 0)
+        self.s.fixture_powered = False
+        self.at(1680)
+        bolt = ShadowBolt.aimed((1640, 140), (1680, 140))
+        bolt.update(.3, self.s.solids, self.p, fixed_light=self.s.is_temporarily_lit)
+        self.assertTrue(bolt.absorbed)
+        self.assertFalse(bolt.consume_hit())
 
     def test_either_part_order_requires_both_and_grants_reward_once(self):
         for order in (('A', 'B'), ('B', 'A')):

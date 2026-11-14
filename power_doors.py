@@ -11,6 +11,8 @@ class PowerDoor:
     feet_y: float = 96
     progress: float = 0
     duration: float = .55
+    height: float = 344
+    blocks_corridor: bool = True
 
     @property
     def is_open(self):
@@ -18,7 +20,7 @@ class PowerDoor:
 
     @property
     def solid(self):
-        return Solid(self.x - 12, self.feet_y, self.x + 12, 440)
+        return Solid(self.x - 24, self.feet_y, self.x + 24, self.feet_y+self.height)
 
     def update(self, delta_time, target_open):
         direction = 1 if target_open else -1

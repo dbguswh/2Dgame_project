@@ -33,7 +33,7 @@ class HospitalStage(Stage):
         self.latch_positions = {'A': (880, 96), 'B': (2960, 96)}
         self.doors = {'A': PowerDoor('hospital-a', 948, progress=1),
                       'B': PowerDoor('hospital-b', 2892),
-                      'exit': PowerDoor('hospital-exit', 2112)}
+                      'exit': PowerDoor('hospital-exit', 2112, height=176, blocks_corridor=False)}
         self.power_restore_elapsed = 0.0
         self.record_time = 0.0
         self.visual_time = 0.0
@@ -64,11 +64,15 @@ class HospitalStage(Stage):
         self.update(0)
 
     @property
+    def local_light_regions(self):
+        corridor = self.light_regions[1 if self.circuit == 'A' else 3]
+        return self.light_regions[2], corridor
+
+    @property
     def fixed_light_regions(self):
         if self.fixture_powered:
             return (LightRegion(0, 96, self.width, 540),)
-        corridor = self.light_regions[1 if self.circuit == 'A' else 3]
-        return self.light_regions[2], corridor
+        return self.local_light_regions
 
     def is_temporarily_lit(self, box):
         return any(overlaps(box, (r.left, r.bottom, r.right, r.top)) for r in self.fixed_light_regions)
@@ -90,7 +94,7 @@ class HospitalStage(Stage):
         for key, door in self.doors.items():
             target = self.fixture_powered or key != 'exit' and (self.circuit == key or self.return_open[key])
             door.update(dt, target)
-        self.solids = self.base_solids + [d.solid for d in self.doors.values() if not d.is_open]
+        self.solids = self.base_solids + [d.solid for d in self.doors.values() if d.blocks_corridor and not d.is_open]
         for box in self.supply_boxes:
             box.update(dt)
         self.fragment_cache.update(dt)
@@ -237,3 +241,9 @@ class HospitalStage(Stage):
                 font.draw(x-camera_x, y, text, (170, 196, 196))
         if not self.battery_pack_collected:
             font.draw(1710-camera_x, 70, '비상 배터리 +50', (142, 198, 206))
+        for key, (x, y) in self.part_positions.items():
+            if not self.parts[key] and -60 < x-camera_x < 960:
+                font.draw(x-camera_x-42, y+30, '예비 퓨즈' if key == 'A' else '전원 모듈', (223, 206, 151))
+        if self.record_time > 0:
+            font.draw(36, 384, '시설 기록: 그림자 핵이 중앙 전력망을 잠식하고 있다.', (231, 215, 159))
+            font.draw(36, 359, '다음 임무: 변전소 차단기 2개로 봉쇄 설비를 가동한다.', (196, 207, 211))
