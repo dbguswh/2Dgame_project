@@ -9,7 +9,8 @@ import pico2d
 from physics import Motion, MOVE_SPEED, RUN_SPEED, Solid
 from combat import front_box, overlaps
 from combat_feedback import HitPause
-from inventory import Inventory, ITEM_NAMES, MEDKIT, LIGHT_BOMB
+from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
+from item_effects import ItemEffects
 from light_bomb import LightBomb
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
@@ -114,6 +115,7 @@ class Player:
         self.flash_cooldown = 0.0
         self.flash_effect = None
         self.inventory = Inventory()
+        self.item_effects = ItemEffects()
         self.bombs = []
         self.requested_item = None
         self.use_medkit_requested = False
@@ -192,6 +194,17 @@ class Player:
     def use_selected_item(self, slot):
         if slot == MEDKIT:
             return self.use_medkit()
+        if slot in (SPEED, SHIELD):
+            if self.inventory.counts[slot] <= 0:
+                self.notice, self.notice_time = f'보유한 {ITEM_NAMES[slot]}이 없습니다', 1.0
+                return False
+            if not self.item_effects.activate(slot):
+                self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 효과가 남아 있습니다', 1.0
+                return False
+            self.inventory.consume(slot)
+            effect = '이동 속도 +30% · 5초' if slot == SPEED else '적 공격 1회 차단 · 6초'
+            self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 사용 · {effect}', 1.3
+            return True
         if slot != LIGHT_BOMB:
             self.notice, self.notice_time = '아직 사용할 수 없는 장비입니다', 1.0
             return False
@@ -391,6 +404,7 @@ class Player:
         return min(candidates, key=lambda target: abs((target[1][0] + target[1][2]) / 2 - self.x))[0]
 
     def update(self, delta_time, area_width, solids=None, light_regions=None):
+        speed_factor = self.item_effects.update(delta_time)
         self.heal_effect = max(0.0, self.heal_effect - delta_time)
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
         self.notice_time = max(0.0, self.notice_time - delta_time)
@@ -457,7 +471,7 @@ class Player:
             self.air_attack_data["visible_half_width"] * DRAW_HEIGHT
             / self.air_attack_data["reference_height"],
         )
-        speed = RUN_SPEED if self.run_held else MOVE_SPEED
+        speed = (RUN_SPEED if self.run_held else MOVE_SPEED) * max(speed_factor, self.item_effects.speed_multiplier)
         self.motion.step(delta_time, direction, solids, area_width, margin, speed=speed)
         if self.motion.on_ground:
             self.air_attack_used = False
@@ -597,11 +611,15 @@ class Player:
             return
         self.notice = "낙하 피해 -1: 마지막 안전 발판으로 복귀"
         self.x, self.feet_y = self.last_safe_position
-        self.reset_actions_after_return()
+        self.reset_actions_after_return(clear_consumable_effects=False)
         self.notice_time = 2.0
 
     def take_damage(self):
         if self.invulnerability > 0 or self.health <= 0:
+            return False
+        if self.item_effects.absorb_attack():
+            self.invulnerability = 1.0
+            self.notice, self.notice_time = '보호막 차단 · 체력 유지', .9
             return False
         self.health -= 1
         self.hit_pause.reset()
@@ -630,7 +648,7 @@ class Player:
         self.light = None
         self.reset_actions_after_return()
 
-    def reset_actions_after_return(self, invulnerability=1.0):
+    def reset_actions_after_return(self, invulnerability=1.0, clear_consumable_effects=True):
         self.hit_pause.reset()
         self.motion.velocity_y = 0
         self.motion.on_ground = True
@@ -654,6 +672,8 @@ class Player:
         self.flash_effect = None
         self.heal_effect = 0.0
         self.bombs.clear()
+        if clear_consumable_effects:
+            self.item_effects.clear()
 
     def draw_flash(self, camera_x=0):
         if self.flash_effect is not None:
