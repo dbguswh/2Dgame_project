@@ -13,6 +13,7 @@ from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_effects import ItemEffects
 from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb
+from light_sword import sword_box
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, constrain_region, load_deploy_image)
@@ -586,28 +587,17 @@ class Player:
         return self.motion.get_bb()
 
     def get_attack_box(self):
-        """타격 프레임의 전방 1타일. 공중은 아래쪽이며 벽·발판 뒤는 제외한다."""
+        """광검 타격 프레임. 지상·공중 모두 전방 64px이며 벽·발판 뒤는 제외한다."""
         if self.attack_kind in ('flash', 'bomb'):
             return None
         if self.attack_kind == 'air':
             if not self.is_attacking or not 0.10 <= self.attack_elapsed < 0.22:
                 return None
-            attack = front_box(
-                self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + 32,
-                self.feet_y - 16, self.feet_y + 48, self.solids,
-            )
-            if attack is None:
-                return None
-            left, bottom, right, top = attack
-            for solid in self.solids:
-                if left < solid.right and right > solid.left and bottom < solid.top <= self.feet_y:
-                    bottom = solid.top
-            return (left, bottom, right, top) if top > bottom else None
+            return sword_box(self.x, self.feet_y, self.face_dir, True, self.solids)
         start, end = (0.12, 0.24) if self.attack_stage == 2 else (0.1, 0.2)
         if not self.is_attacking or not start <= self.attack_elapsed < end:
             return None
-        return front_box(self.x, self.face_dir, BODY_WIDTH / 2, BODY_WIDTH / 2 + 32,
-                         self.feet_y + 12, self.feet_y + 64, self.solids)
+        return sword_box(self.x, self.feet_y, self.face_dir, False, self.solids)
 
     def get_attack_target(self, targets):
         """(대상 ID, 피격 영역) 목록 중 가까운 한 명을 공격당 한 번만 선택한다."""

@@ -156,7 +156,7 @@ class PlayerControlsTests(unittest.TestCase):
                 self.assertEqual(self.player.get_attack_box() is not None, index in (2, 3))
                 if index in (2, 3):
                     box = self.player.get_attack_box()
-                    self.assertEqual(box[2] - box[0], 32)
+                    self.assertEqual(box[2] - box[0], 64)
 
     def test_attack_finishes_after_visible_recovery(self):
         key(self.player, pico2d.SDLK_w)

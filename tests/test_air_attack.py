@@ -172,7 +172,7 @@ class AirAttackTests(unittest.TestCase):
                 self.assertEqual(self.player.get_attack_box() is not None, index in (2, 3))
                 if index in (2, 3):
                     box = self.player.get_attack_box()
-                    self.assertEqual(box[2] - box[0], 32)
+                    self.assertEqual(box[2] - box[0], 64)
 
     def test_left_air_hit_and_sprite_are_mirrored(self):
         self.player.face_dir = -1
