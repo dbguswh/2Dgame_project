@@ -1,13 +1,11 @@
 """운하 주택가의 지형과 필수 이동 경로."""
 
-from dataclasses import dataclass
-
 import pico2d
 
 from lighting import LightRegion
 from combat import overlaps
 from physics import Solid
-from stage import GROUND_Y, Stage
+from stage import GROUND_Y, Stage, EnemyPlacement
 from environment import ResidentialScene
 from respawn import RespawnDirector
 from supplies import SupplyBox, draw_battery_pack
@@ -15,17 +13,11 @@ from fragment_cache import FragmentCache
 from inventory import ITEM_NAMES, LIGHT_BOMB, SPEED, SHIELD
 
 
-@dataclass(frozen=True)
-class EnemyPlacement:
-    identity: str
-    x: float
-    feet_y: float
-    bounds: tuple
-    ranged: bool = False
-
-
 class ResidentialStage(Stage):
     name = '운하 주택가'
+    stage_id = 'residential'
+    next_stage_id = 'hospital'
+    destination_name = '운하 병원'
     BRIDGE_TIME = 2.4
     UPPER_FLOOR_Y = 288
     WORKSHOP_Y = 304

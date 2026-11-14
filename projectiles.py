@@ -35,7 +35,7 @@ class ShadowBolt:
         return (self.x - BOLT_RADIUS, self.y - BOLT_RADIUS,
                 self.x + BOLT_RADIUS, self.y + BOLT_RADIUS)
 
-    def update(self, delta_time, solids, player, light=None):
+    def update(self, delta_time, solids, player, light=None, fixed_light=None):
         if not self.active:
             self.fade = max(0.0, self.fade - delta_time)
             return
@@ -49,7 +49,8 @@ class ShadowBolt:
             if any(overlaps(box, (s.left, s.bottom, s.right, s.top)) for s in solids):
                 self.active = False
                 break
-            if light is not None and light.illuminates(box):
+            if ((light is not None and light.illuminates(box))
+                    or (fixed_light is not None and fixed_light(box))):
                 self.active = False
                 self.absorbed = True
                 self.fade = 0.32

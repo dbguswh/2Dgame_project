@@ -1,6 +1,7 @@
 """1주차 이동·충돌을 확인할 두 화면 길이의 구간."""
 
 import pico2d
+from dataclasses import dataclass
 
 from physics import EPSILON, Solid
 from lighting import LightRegion
@@ -10,7 +11,21 @@ TILE_SIZE = 32
 GROUND_Y = TILE_SIZE * 3
 
 
+@dataclass(frozen=True)
+class EnemyPlacement:
+    identity: str
+    x: float
+    feet_y: float
+    bounds: tuple
+    ranged: bool = False
+
+
 class Stage:
+    name = '시험 구간'
+    stage_id = 'test'
+    next_stage_id = None
+    destination_name = ''
+
     def __init__(self):
         self.width = 1920
         self.start = (160, GROUND_Y)
@@ -86,6 +101,27 @@ class Stage:
 
     def activate_exit(self, player):
         return False
+
+    def interact(self, player):
+        if self.activate_exit(player):
+            player.clear_input()
+            return True
+        if self.activate_fixture(player):
+            player.checkpoint_position = self.fixture_checkpoint
+            player.notice = '구역 조명 복구 · 안전 지점 확보'
+            player.notice_time = 2.2
+            return True
+        action = getattr(self, 'activate_supply', None)
+        return action(player) if action is not None else False
+
+    def is_temporarily_lit(self, box):
+        return False
+
+    def capture_state(self):
+        return ()
+
+    def restore_state(self, state):
+        pass
 
     def draw(self, camera_x, screen_width, screen_height):
         background = (31, 35, 45) if self.fixture_powered else (19, 25, 38)

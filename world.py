@@ -5,13 +5,16 @@ from combat import overlaps
 
 def restore_enemies(enemies, stage):
     for enemy in enemies:
-        if stage.fixture_powered:
+        if stage.fixture_powered or stage.is_temporarily_lit(enemy.get_bb()):
             enemy.dissolve()
         else:
             enemy.reset()
     director = getattr(stage, 'respawns', None)
     if director is not None:
         director.reset(powered=stage.fixture_powered)
+        for point in director.points:
+            if not stage.fixture_powered and stage.is_temporarily_lit(point.get_bb()):
+                point.state = 'WAITING'
 
 
 def update_world(delta_time, player, enemies, stage, records=None):
@@ -33,18 +36,9 @@ def update_world(delta_time, player, enemies, stage, records=None):
     interaction_requested = player.interaction_requested
     player.interaction_requested = False
     if interaction_requested:
-        if stage.activate_exit(player):
-            player.clear_input()
-        elif stage.activate_fixture(player):
-            player.checkpoint_position = stage.fixture_checkpoint
-            player.notice = '구역 조명 복구 · 안전 지점 확보'
-            player.notice_time = 2.2
-        else:
-            supply_action = getattr(stage, 'activate_supply', None)
-            if supply_action is not None:
-                supply_action(player)
-    if stage.fixture_powered:
-        for enemy in enemies:
+        stage.interact(player)
+    for enemy in enemies:
+        if stage.fixture_powered or stage.is_temporarily_lit(enemy.get_bb()):
             enemy.dissolve()
     if records is not None:
         # Q·R 소비와 E 복구를 적의 타격보다 먼저 최신 기록에 반영한다.
@@ -93,7 +87,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
             enemy.mark_attack_contact()
             player.take_damage()
         for bolt in enemy.bolts:
-            bolt.update(delta_time, stage.solids, player, player.light)
+            bolt.update(delta_time, stage.solids, player, player.light, fixed_light=stage.is_temporarily_lit)
             if bolt.consume_hit():
                 player.take_damage()
         enemy.bolts[:] = [bolt for bolt in enemy.bolts if bolt.active or bolt.fade > 0]
@@ -113,4 +107,5 @@ def update_world(delta_time, player, enemies, stage, records=None):
     director = getattr(stage, 'respawns', None)
     if director is not None:
         director.update(delta_time, player, enemies, powered=stage.fixture_powered,
-                        previous_light=previous_light, previous_light_remaining=previous_light_remaining)
+                        previous_light=previous_light, previous_light_remaining=previous_light_remaining,
+                        temporary_light=stage.is_temporarily_lit)

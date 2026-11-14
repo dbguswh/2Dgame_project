@@ -24,6 +24,7 @@ class ProgressSnapshot:
     inventory_counts: tuple = (0, 0, 0, 0)
     core_upgrades: tuple = ()
     fragment_cache_state: tuple = ()
+    stage_state: tuple = ()
 
     @classmethod
     def capture(cls, player, stage):
@@ -36,7 +37,7 @@ class ProgressSnapshot:
                    getattr(stage, 'return_battery_collected', False),
                    tuple(box.snapshot() for box in getattr(stage, 'supply_boxes', ())),
                    player.inventory.snapshot(), tuple(sorted(player.core_upgrades)),
-                   cache.snapshot() if cache is not None else ())
+                   cache.snapshot() if cache is not None else (), stage.capture_state())
 
 
 class ProgressRecords:
@@ -73,6 +74,7 @@ class ProgressRecords:
         cache = getattr(stage, 'fragment_cache', None)
         if cache is not None and snapshot.fragment_cache_state:
             cache.restore(snapshot.fragment_cache_state)
+        stage.restore_state(snapshot.stage_state)
         stage.update(0)
 
     def restore_after_death(self, player, stage):

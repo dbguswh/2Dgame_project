@@ -40,7 +40,7 @@ class RespawnDirector:
             point.appear_remaining = 0.0
 
     def update(self, delta_time, player, enemies, powered=False,
-               previous_light=None, previous_light_remaining=0.0):
+               previous_light=None, previous_light_remaining=0.0, temporary_light=None):
         dt = max(0.0, delta_time)
         self.visual_time += dt
         self.actors = {enemy.identity: enemy for enemy in enemies}
@@ -68,7 +68,8 @@ class RespawnDirector:
                 # 처치가 일어난 갱신의 시간을 대기에서 미리 빼지 않는다.
                 point.appear_remaining = 0.0
                 continue
-            lit = player.light is not None and player.light.illuminates(point.get_bb())
+            lit = ((player.light is not None and player.light.illuminates(point.get_bb()))
+                   or (temporary_light is not None and temporary_light(point.get_bb())))
             covered_time = (min(dt, previous_light_remaining)
                             if previous_light is not None and not previous_light.active
                             and previous_light.covers(point.get_bb()) else 0.0)

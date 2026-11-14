@@ -64,6 +64,8 @@ class DarknessField:
 def restoration_progress(stage):
     if not stage.fixture_powered:
         return 0.0
+    if hasattr(stage, 'power_restore_elapsed'):
+        return min(1, stage.power_restore_elapsed / POWER_FADE_TIME)
     if not hasattr(stage, 'BRIDGE_TIME'):
         return 1.0
     return max(0.0, min(1.0, stage.bridge_elapsed / POWER_FADE_TIME))
@@ -77,6 +79,16 @@ def build_field(stage, player, camera_x, width=960, height=540):
                  144, 136, 0.68)
     start_x, start_y = stage.start
     field.reveal(start_x - camera_x, start_y + 88, 172, 184, 0.78)
+    for region in getattr(stage, 'fixed_light_regions', ()):
+        for row in range(field.rows):
+            y = (row + .5) * GRID_STEP
+            if not region.bottom <= y <= region.top:
+                continue
+            for col in range(field.cols):
+                x = camera_x + (col + .5) * GRID_STEP
+                if region.left <= x <= region.right:
+                    index = row * field.cols + col
+                    field.values[index] = min(field.values[index], round(field.alpha * .16))
     light = player.light
     if light is not None and light.active:
         region = (light.region.left - camera_x, light.region.bottom,
@@ -138,6 +150,7 @@ def draw_navigation(stage, player, camera_x, width=960):
 
 
 def enemy_is_visible(stage, player, enemy):
-    return (stage.fixture_powered or abs(player.x - enemy.x) < 160
+    return (stage.fixture_powered or stage.is_temporarily_lit(enemy.get_bb())
+            or abs(player.x - enemy.x) < 160
             and abs(player.feet_y - enemy.feet_y) < 112
             or player.light is not None and player.light.illuminates(enemy.get_bb()))
