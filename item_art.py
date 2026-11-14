@@ -3,11 +3,11 @@
 import json
 from pathlib import Path
 
-from inventory import MEDKIT, LIGHT_BOMB
+from inventory import MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 
 
 ROOT = Path(__file__).resolve().parent / 'assets/images/items'
-ASSETS = {MEDKIT: 'medkit', LIGHT_BOMB: 'light_bomb'}
+ASSETS = {MEDKIT: 'medkit', SPEED: 'speed_booster', LIGHT_BOMB: 'light_bomb', SHIELD: 'shield_pack'}
 _images = {}
 
 
