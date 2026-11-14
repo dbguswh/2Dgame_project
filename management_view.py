@@ -25,14 +25,16 @@ def upgrade_names(player):
 def draw_city_map(game, font, heading):
     draw_background(game)
     heading.draw(52, 488, '도시 지도', (242, 225, 191))
-    font.draw(52, 450, '주택가 복구 완료 · 다음 목적지: 운하 병원', (178, 194, 209))
+    font.draw(52, 450, f'{game.stage.name} 복구 완료 · 다음 목적지: {game.stage.destination_name}', (178, 194, 209))
     with blended():
         for y in range(163, 211, 6):
             pico2d.draw_line(55, y, 902, y, 41, 77, 96, a=95)
     segment((153, 305), (478, 305), (191, 160, 99), width=3)
     segment((478, 305), (802, 305), (61, 76, 90), width=2)
-    for x, color, completed in ((153, (233, 195, 117), True),
-                                (478, (135, 209, 226), False),
+    done = game.completed_stage_ids
+    hospital_done = 'hospital' in done
+    for x, color, completed in ((153, (233, 195, 117), 'residential' in done),
+                                (478, (135, 209, 226), hospital_done),
                                 (802, (93, 105, 119), False)):
         with blended():
             glow(x, 305, 43 if completed else 30, color, alpha=95 if completed else 40)
@@ -47,8 +49,8 @@ def draw_city_map(game, font, heading):
     heading.draw(447, 251, '병원', (180, 219, 232))
     heading.draw(756, 251, '변전소', (134, 149, 166))
     font.draw(112, 220, '복구 완료', (199, 194, 161))
-    font.draw(428, 220, '다음 목적지', (150, 199, 216))
-    font.draw(749, 220, '병원 복구 후', (112, 129, 146))
+    font.draw(428, 220, '복구 완료' if hospital_done else '다음 목적지', (150, 199, 216))
+    font.draw(749, 220, '개발 예정' if hospital_done else '병원 복구 후', (112, 129, 146))
     font.draw(52, 135, f'보유 전력 조각  {game.player.fragments}', (242, 213, 149))
     font.draw(52, 105, f'현재 강화: {upgrade_names(game.player)}', (182, 198, 209))
     for slot, amount in enumerate(game.player.inventory.counts):
@@ -125,37 +127,45 @@ def draw_management(game, font, heading):
 
 def draw_supply_shop(game, font, heading):
     p, visit = game.player, game.management_visit
-    for index, offer in enumerate(SUPPLY_OFFERS):
-        x = 52 + index * 288
+    count = 4 if game.can_depart else 3
+    stride = 216 if game.can_depart else 288
+    card_width = stride-18
+    def card(index, title):
+        x = 52 + index * stride
         selected = game.selection == index
-        reason = visit.supply_blocked_reason(p, index)
         edge = (240, 205, 131) if selected else (66, 83, 99)
-        pico2d.draw_rectangle(x, 183, x + 270, 410, 18, 29, 42, filled=True)
-        pico2d.draw_rectangle(x, 183, x + 270, 410, *edge)
+        pico2d.draw_rectangle(x, 183, x+card_width, 410, 18, 29, 42, filled=True)
+        pico2d.draw_rectangle(x, 183, x+card_width, 410, *edge)
         if selected:
-            pico2d.draw_rectangle(x + 1, 406, x + 269, 410, *edge, filled=True)
-        heading.draw(x + 24, 381, offer.name, edge if selected else (204, 215, 222))
-        draw_item(offer.slot, x + 216, 357, 54)
+            pico2d.draw_rectangle(x+1, 406, x+card_width-1, 410, *edge, filled=True)
+        heading.draw(x+18, 381, title, edge if selected else (204, 215, 222))
+        return x
+
+    for index, offer in enumerate(SUPPLY_OFFERS):
+        x = card(index, offer.name)
+        reason = visit.supply_blocked_reason(p, index)
+        draw_item(offer.slot, x+card_width-32, 349, 38)
         amount = p.inventory.counts[offer.slot]
         font.draw(x + 24, 329, f'보유 {amount} / {STACK_LIMIT}', (171, 189, 206))
         heading.draw(x + 24, 294, f'조각 {offer.cost}개', (241, 226, 188))
-        for row, text in enumerate(offer.description):
+        description = (('체력 1칸 회복', '소모품으로 보관') if index == 0 else ('범위 피해 1', '적의 공격 취소')) if count == 4 else offer.description
+        for row, text in enumerate(description):
             font.draw(x + 24, 250 - row * 24, text, (184, 200, 215))
         label = ('보유 한도 도달' if amount >= STACK_LIMIT else '전력 조각 부족') if reason else 'E: 1개 구매'
         font.draw(x + 24, 200, label, (153, 160, 165) if reason else (159, 214, 177))
-    x = 628
-    selected = game.selection == len(SUPPLY_OFFERS)
-    edge = (240, 205, 131) if selected else (66, 83, 99)
-    pico2d.draw_rectangle(x, 183, x + 270, 410, 18, 29, 42, filled=True)
-    pico2d.draw_rectangle(x, 183, x + 270, 410, *edge)
-    if selected:
-        pico2d.draw_rectangle(x + 1, 406, x + 269, 410, *edge, filled=True)
-    heading.draw(x + 24, 381, '도시 지도', edge if selected else (204, 215, 222))
+    x = card(2, '도시 지도')
     font.draw(x + 24, 329, '보급품 구매는 선택', (171, 189, 206))
     heading.draw(x + 24, 294, '돌아가기', (241, 226, 188))
     font.draw(x + 24, 250, '남은 조각과 소모품을', (184, 200, 215))
     font.draw(x + 24, 226, '그대로 유지한다.', (184, 200, 215))
     font.draw(x + 24, 200, 'E: 지도 확인', (159, 214, 177))
+    if game.can_depart:
+        x = card(3, '병원 출발')
+        font.draw(x+18, 329, '다음 스테이지', (171, 189, 206))
+        heading.draw(x+18, 294, '운하 병원', (241, 226, 188))
+        font.draw(x+18, 250, '체력·배터리 회복', (184, 200, 215))
+        font.draw(x+18, 226, '장비·소모품 이월', (184, 200, 215))
+        font.draw(x+18, 200, 'E: 병원으로 이동', (159, 214, 177))
     font.draw(52, 145, visit.notice, (240, 210, 146))
     font.draw(52, 111, f'체력 {p.health}/3   배터리 {p.battery}/{p.max_battery}   구매 시 보유 수량만 증가',
               (167, 193, 211))

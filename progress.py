@@ -94,7 +94,7 @@ class ProgressRecords:
         player.health = self.entry.health
         player.x, player.feet_y = self.entry.position
         player.last_safe_position = self.entry.position
-        player.face_dir = 1
+        player.face_dir = getattr(stage, 'start_direction', 1)
         player.light = None
         player.reset_actions_after_return(invulnerability=0.0)
         player.notice = '구간을 처음부터 다시 시작합니다'

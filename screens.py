@@ -73,9 +73,11 @@ def draw_game(game, font):
     minutes, seconds = divmod(int(game.play_time), 60)
     font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
     font.draw(20, SCREEN_HEIGHT - 58, stage.objective, (188, 200, 212))
-    if stage.fuse_state != 'ABSENT':
+    if stage.fuse_state != 'ABSENT' or stage.stage_id == 'hospital':
         font.draw(840, SCREEN_HEIGHT - 58, f'조각 {player.fragments}', (170, 197, 211))
-    if stage.fuse_state != 'ABSENT':
+    if hasattr(stage, 'hud_status'):
+        font.draw(635, SCREEN_HEIGHT - 28, stage.hud_status, (255, 223, 137))
+    elif stage.fuse_state != 'ABSENT':
         label = {'WORLD': '미획득', 'CARRIED': '보유', 'INSTALLED': '설치 완료'}[stage.fuse_state]
         font.draw(635, SCREEN_HEIGHT - 28, f'퓨즈 {label}', (255, 223, 137))
     prompt = stage.interaction_prompt(player)
@@ -112,9 +114,13 @@ def draw_session(game, font, menu_font, title_font):
         draw_city_map(game, font, menu_font)
     elif game.state == 'MANAGEMENT':
         draw_management(game, font, menu_font)
-    elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR'):
+    elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR', 'TRANSITION'):
         draw_game(game, font)
-        if game.state == 'PAUSED':
+        if game.state == 'TRANSITION':
+            alpha = int(255 * max(0, 1-abs(game.transition_elapsed-.35)/.35))
+            with blended():
+                pico2d.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5, 11, 18, a=alpha, filled=True)
+        elif game.state == 'PAUSED':
             pico2d.draw_rectangle(250, 90, 710, 440, 15, 21, 32, filled=True)
             pico2d.draw_rectangle(250, 90, 710, 440, 120, 108, 83)
             menu_font.draw(410, 405, '일시정지', (242, 225, 191))
@@ -128,6 +134,6 @@ def draw_session(game, font, menu_font, title_font):
                                       6, 11, 20, a=165, filled=True)
             pico2d.draw_rectangle(220, 140, 740, 420, 15, 21, 32, filled=True)
             pico2d.draw_rectangle(220, 140, 740, 420, 120, 108, 83)
-            menu_font.draw(350, 377, '주택가 복구 완료', (242, 225, 191))
-            draw_choices(menu_font, game.CLEAR_ITEMS, game.selection, start_y=290)
+            menu_font.draw(350, 377, f'{game.stage.name} 복구 완료', (242, 225, 191))
+            draw_choices(menu_font, game.clear_items, game.selection, start_y=290)
             font.draw(330, 157, '위/아래 선택    E 확인', (164, 175, 192))

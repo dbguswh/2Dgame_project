@@ -81,6 +81,7 @@ class ManagementTests(unittest.TestCase):
         tap(self.game, pico2d.SDLK_e)
         self.assertIs(self.game.management_visit, visit)
         tap(self.game, pico2d.SDLK_RIGHT)
+        tap(self.game, pico2d.SDLK_RIGHT)  # 병원 출발 항목 다음 치료제로 순환
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual((self.p.fragments, self.p.core_upgrades), (3, {FOCUS}))
         self.assertEqual(self.p.medkits, 1)
@@ -90,6 +91,7 @@ class ManagementTests(unittest.TestCase):
         self.p.fragments = 3
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual(self.game.selection, 2)
+        tap(self.game, pico2d.SDLK_RIGHT)
         tap(self.game, pico2d.SDLK_RIGHT)
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual((self.p.fragments, self.p.medkits), (0, 1))
@@ -108,6 +110,7 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(self.game.state, 'MANAGEMENT')
         self.assertEqual((self.game.selection, self.p.fragments, self.p.medkits), (2, 4, 0))
         key(self.game, pico2d.SDLK_e, False)
+        tap(self.game, pico2d.SDLK_RIGHT)
         tap(self.game, pico2d.SDLK_RIGHT)
         key(self.game, pico2d.SDLK_e)
         for _ in range(3):
