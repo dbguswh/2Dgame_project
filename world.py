@@ -90,6 +90,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
         enemy.launch_pending_shot()
         attack = enemy.consume_attack()
         if enemy.alive and overlaps(attack, player.get_bb()):
+            enemy.mark_attack_contact()
             player.take_damage()
         for bolt in enemy.bolts:
             bolt.update(delta_time, stage.solids, player, player.light)

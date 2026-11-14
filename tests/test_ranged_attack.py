@@ -111,7 +111,7 @@ class RangedAttackTests(unittest.TestCase):
         game.update(1, focused=False)
         self.assertEqual(snapshot, (bolt.x, bolt.y, bolt.remaining))
 
-    def test_running_behind_shooter_during_locked_aim_avoids_hit_without_invulnerability(self):
+    def test_straight_running_into_shooter_triggers_close_intercept(self):
         stage = Stage()
         stage.solids = [Solid(0, 0, 960, 96)]
         player = Player(400, 96)
@@ -123,5 +123,5 @@ class RangedAttackTests(unittest.TestCase):
         for _ in range(144):
             update_world(1 / 120, player, [enemy], stage)
         self.assertGreater(player.x, enemy.x)
-        self.assertEqual(player.health, 3)
-        self.assertEqual(player.invulnerability, 0)
+        self.assertEqual(player.health, 2)
+        self.assertGreater(player.invulnerability, 0)

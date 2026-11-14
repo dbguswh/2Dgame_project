@@ -28,6 +28,10 @@ LIGHT_STATES = ('RETREAT', 'LIGHT_WAIT', 'DARK_PATROL')
 RANGED_WINDUP = 0.65
 RANGED_RELEASE = 0.24
 RANGED_COOLDOWN = 1.8
+LUNGE_RANGE = 144
+LUNGE_WINDUP = 0.45
+LUNGE_TIME = 0.22
+LUNGE_SPEED = 360
 
 
 class Shade:
@@ -75,6 +79,7 @@ class Shade:
         self.stun_remaining = 0.0
         self.repelled_light = None
         self.light_push_remaining = 0.0
+        self.lunge_hit = False
         if can_shoot:
             self.ranged_data = json.loads(RANGED_DATA_PATH.read_text(encoding='utf-8'))
             self.ranged_image = pico2d.load_image(str(RANGED_DATA_PATH.with_name(self.ranged_data['image'])))
@@ -95,9 +100,9 @@ class Shade:
     def animation_frame(self):
         if self.state in ('DYING', 'DEAD'):
             return self.death_pose
-        if self.state in ('WINDUP', 'RANGED_WINDUP'):
+        if self.state in ('WINDUP', 'LUNGE_WINDUP', 'RANGED_WINDUP'):
             return self.motion_data['windup']
-        if self.state in ('STRIKE', 'RANGED_RELEASE'):
+        if self.state in ('STRIKE', 'LUNGE', 'RANGED_RELEASE'):
             return self.motion_data['strike']
         if self.state == 'STUNNED':
             return self.motion_data['walk'][3]
@@ -117,7 +122,7 @@ class Shade:
             phase = 0 if self.state_time < 0.10 else 1 if self.state_time < 0.28 else 2
             return self.reaction_data['defeat'][phase]
         # 실제 타격이 시작되면 피격 자세보다 적의 공격 자세를 우선해 위험을 보여준다.
-        if self.alive and self.hurt_time > 0 and self.state not in ('STRIKE', 'RANGED_RELEASE'):
+        if self.alive and self.hurt_time > 0 and self.state not in ('STRIKE', 'LUNGE', 'RANGED_RELEASE'):
             elapsed = self.hurt_duration - self.hurt_time
             phase = (1 if elapsed < 0.13 else 2) if self.reaction_heavy else (
                 0 if elapsed < 0.06 else 1 if elapsed < 0.13 else 2)
@@ -143,9 +148,22 @@ class Shade:
         self.state = state
         self.state_time = 0.0
         self.is_moving = False
+        if state == 'LUNGE':
+            self.lunge_hit = False
 
     def get_attack_box(self):
-        return self._reach_box() if self.state == 'STRIKE' else None
+        return self._reach_box() if self.state in ('STRIKE', 'LUNGE') else None
+
+    def mark_attack_contact(self):
+        # 돌진은 여러 프레임에 걸쳐 움직이지만 같은 공격으로 두 번 피해를 주지 않는다.
+        if self.state == 'LUNGE':
+            self.lunge_hit = True
+
+    def _begin_lunge(self, player):
+        self.face_dir = 1 if player.x > self.x else -1
+        self.shot_target = None
+        self.shot_event = None
+        self._enter('LUNGE_WINDUP')
 
     def consume_attack(self):
         attack = self.attack_event
@@ -226,6 +244,7 @@ class Shade:
         self.reaction_heavy = False
         self.death_by_hit = False
         self.retreat_retry = 0.0
+        self.lunge_hit = False
         self.death_pose = 0
         self.retreat_light = None
         self.retreat_direction = 0
@@ -450,10 +469,29 @@ class Shade:
             return
         if self._update_light_response(delta_time, player, stage, light):
             return
+        if self.state in ('LUNGE_WINDUP', 'LUNGE'):
+            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+                self._enter('PATROL')
+            elif self.state == 'LUNGE_WINDUP':
+                if self.state_time >= LUNGE_WINDUP:
+                    self._enter('LUNGE')
+                    self.attack_event = self._reach_box()
+            elif self.state_time >= LUNGE_TIME:
+                self._enter('RECOVER')
+            else:
+                if not pushed:
+                    self._move(delta_time, self.face_dir, LUNGE_SPEED, stage)
+                if not self.lunge_hit:
+                    self.attack_event = self._reach_box()
+            return
         if self.state in ('RANGED_WINDUP', 'RANGED_RELEASE'):
             self.is_moving = False
             if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
                 self._enter('PATROL')
+            elif (self.state == 'RANGED_WINDUP' and self.state_time < RANGED_WINDUP - 0.2
+                  and self.can_see(player) and 60 < abs(player.x - self.x) <= LUNGE_RANGE):
+                # 조준 초기의 정면 접근에만 새 돌진 예고로 전환한다. 발사 직전 추적 조준은 없다.
+                self._begin_lunge(player)
             elif self.state == 'RANGED_WINDUP' and self.state_time >= RANGED_WINDUP:
                 origin = (self.x + self.face_dir * 30, self.feet_y + 44)
                 self.shot_event = (origin, self.shot_target)
@@ -484,7 +522,9 @@ class Shade:
             if abs(player.x - self.x) > 1:
                 self.face_dir = 1 if player.x > self.x else -1
             distance = abs(player.x - self.x)
-            if (self.can_shoot and 112 <= distance <= 352 and self.shot_cooldown <= 0
+            if 60 < distance <= LUNGE_RANGE:
+                self._begin_lunge(player)
+            elif (self.can_shoot and 112 <= distance <= 352 and self.shot_cooldown <= 0
                     and not any(bolt.active for bolt in self.bolts)):
                 self.shot_target = (player.x, player.feet_y + 40)
                 self._enter('RANGED_WINDUP')
@@ -546,13 +586,29 @@ class Shade:
             color = (202, 91, 214) if index < self.health else (69, 57, 78)
             pico2d.draw_rectangle(left, self.feet_y + 112, left + 10,
                                   self.feet_y + 116, *color, filled=True)
-        if self.state == 'WINDUP':
+        if self.state in ('WINDUP', 'LUNGE_WINDUP'):
             left = self.x - camera_x - 12
             top = self.feet_y + 124
             pico2d.draw_rectangle(left, top - 3, left + 24, top,
                                   66, 38, 63, filled=True)
-            pico2d.draw_rectangle(left, top - 3, left + 24 * self.state_time / WINDUP_TIME,
+            duration = LUNGE_WINDUP if self.state == 'LUNGE_WINDUP' else WINDUP_TIME
+            pico2d.draw_rectangle(left, top - 3, left + 24 * min(1, self.state_time / duration),
                                   top, 255, 108, 160, filled=True)
+        if self.state in ('LUNGE_WINDUP', 'LUNGE'):
+            from effects import blended, segment
+            distance = LUNGE_SPEED * LUNGE_TIME + BODY_WIDTH / 2 + 32
+            region = front_box(self.x, self.face_dir, 0, distance,
+                               self.feet_y + 3, self.feet_y + 7, self.solids)
+            if region is not None:
+                left, bottom, right, top = region
+                color = (234, 95, 144)
+                with blended():
+                    pico2d.draw_rectangle(left - camera_x, bottom, right - camera_x, top,
+                                          *color, a=110, filled=True)
+                tip = (right if self.face_dir > 0 else left) - camera_x
+                for height in (-5, 5):
+                    segment((tip - self.face_dir * 8, bottom + height),
+                            (tip, bottom), color, width=2)
         if self.can_shoot and show_health:
             pico2d.draw_circle(self.x - camera_x + 21, self.feet_y + 114, 3,
                                192, 107, 242, filled=True)

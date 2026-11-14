@@ -24,9 +24,10 @@ class ShadeTests(unittest.TestCase):
 
     def test_seen_player_causes_chase_at_80_pixels_per_second(self):
         self.player.x = 300
+        self.enemy.motion.x = 480  # 돌진 거리 바깥, 발견 거리 안에서는 기존 추적 속도다.
         self.enemy.update(1 / 60, self.player, self.stage)
         self.assertEqual(self.enemy.state, 'CHASE')
-        self.assertAlmostEqual(self.enemy.x, 440 - 80 / 60)
+        self.assertAlmostEqual(self.enemy.x, 480 - 80 / 60)
 
     def test_player_outside_section_or_on_other_floor_is_not_chased(self):
         self.player.x = self.stage.combat_bounds[1] + 8
