@@ -68,7 +68,7 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(self.game.records.latest.fragments, 0)
         self.assertEqual(self.game.records.entry.core_upgrades, ())
 
-    def test_leaving_and_reopening_management_preserves_visit_limit(self):
+    def test_reopening_preserves_upgrade_limit_and_allows_supply_purchase(self):
         self.enter()
         self.p.fragments = 6
         tap(self.game, pico2d.SDLK_RIGHT)
@@ -80,8 +80,39 @@ class ManagementTests(unittest.TestCase):
         tap(self.game, pico2d.SDLK_e)
         tap(self.game, pico2d.SDLK_e)
         self.assertIs(self.game.management_visit, visit)
+        tap(self.game, pico2d.SDLK_RIGHT)
         tap(self.game, pico2d.SDLK_e)
-        self.assertEqual((self.p.fragments, self.p.core_upgrades), (4, {FOCUS}))
+        self.assertEqual((self.p.fragments, self.p.core_upgrades), (3, {FOCUS}))
+        self.assertEqual(self.p.medkits, 1)
+
+    def test_supply_purchase_updates_latest_counts_and_preserves_entry(self):
+        self.enter()
+        self.p.fragments = 3
+        tap(self.game, pico2d.SDLK_e)
+        self.assertEqual(self.game.selection, 2)
+        tap(self.game, pico2d.SDLK_RIGHT)
+        tap(self.game, pico2d.SDLK_e)
+        self.assertEqual((self.p.fragments, self.p.medkits), (0, 1))
+        self.assertEqual(self.game.records.latest.inventory_counts, (1, 0, 0, 0))
+        self.assertEqual(self.game.records.latest.fragments, 0)
+        self.assertEqual(self.game.records.entry.inventory_counts, (0, 0, 0, 0))
+        self.game.restart_stage()
+        self.assertEqual((self.p.fragments, self.p.medkits), (0, 0))
+
+    def test_repeated_e_neither_exits_after_upgrade_nor_buys_extra_supply(self):
+        self.enter()
+        self.p.fragments = 6
+        key(self.game, pico2d.SDLK_e)
+        for _ in range(3):
+            key(self.game, pico2d.SDLK_e)
+        self.assertEqual(self.game.state, 'MANAGEMENT')
+        self.assertEqual((self.game.selection, self.p.fragments, self.p.medkits), (2, 4, 0))
+        key(self.game, pico2d.SDLK_e, False)
+        tap(self.game, pico2d.SDLK_RIGHT)
+        key(self.game, pico2d.SDLK_e)
+        for _ in range(3):
+            key(self.game, pico2d.SDLK_e)
+        self.assertEqual((self.p.fragments, self.p.medkits), (3, 1))
 
     def test_map_and_management_freeze_world_timers_and_do_not_heal_or_charge(self):
         self.enter()

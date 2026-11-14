@@ -7,7 +7,7 @@ from player import Player
 from residential import ResidentialStage
 from world import update_world, restore_enemies
 from progress import ProgressRecords
-from upgrades import ManagementVisit, CORE_UPGRADES
+from upgrades import ManagementVisit, CORE_UPGRADES, SUPPLY_OFFERS
 
 
 class GameSession:
@@ -68,7 +68,7 @@ class GameSession:
         if self.state != 'CITY_MAP' or self.management_visit is None:
             return False
         self.state = 'MANAGEMENT'
-        self.selection = 0
+        self.selection = len(SUPPLY_OFFERS) if self.management_visit.completed else 0
         self.player.clear_input()
         return True
 
@@ -129,14 +129,20 @@ class GameSession:
         elif self.state == 'MANAGEMENT' and new_press:
             if event.key in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT):
                 step = -1 if event.key == pico2d.SDLK_LEFT else 1
-                self.selection = (self.selection + step) % len(CORE_UPGRADES)
+                count = len(SUPPLY_OFFERS) + 1 if self.management_visit.completed else len(CORE_UPGRADES)
+                self.selection = (self.selection + step) % count
             elif event.key == pico2d.SDLK_ESCAPE:
                 self.open_city_map()
             elif event.key == pico2d.SDLK_e:
                 if self.management_visit.completed:
-                    self.open_city_map()
+                    if self.selection == len(SUPPLY_OFFERS):
+                        self.open_city_map()
+                    elif self.management_visit.purchase_supply(self.player, self.selection):
+                        self.records.remember(self.player, self.stage)
                 elif self.management_visit.purchase(self.player, self.selection):
                     self.records.remember(self.player, self.stage)
+                    # 구매 직후 E 유지로 보급품까지 연속 구매하지 않으며 지도 복귀를 기본 선택한다.
+                    self.selection = len(SUPPLY_OFFERS)
         elif self.state == 'PLAY':
             if event.type == pico2d.SDL_KEYDOWN and not new_press:
                 return
