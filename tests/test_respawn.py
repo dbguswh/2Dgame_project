@@ -34,6 +34,51 @@ class RespawnTests(unittest.TestCase):
         self.assertEqual(self.enemy.resets, 0)
         self.assertEqual(self.point.state, 'OCCUPIED')
 
+    def test_event_warning_runs_full_countdown_then_returns_to_normal_cycle(self):
+        self.kill()
+        self.director.arm_warning(['a'],4)
+        self.tick(3.99)
+        self.assertFalse(self.enemy.alive)
+        self.assertEqual(self.point.state,'WARNING')
+        self.tick(.01)
+        self.assertTrue(self.enemy.alive)
+        self.assertEqual(self.point.warning_duration,1)
+        self.kill()
+        self.tick(9)
+        self.tick(.99)
+        self.assertFalse(self.enemy.alive)
+        self.tick(.01)
+        self.assertTrue(self.enemy.alive)
+
+    def test_event_warning_cannot_spawn_under_light_or_next_to_player(self):
+        self.kill()
+        self.director.arm_warning(['a'],4)
+        self.player.x=450
+        self.tick(5)
+        self.assertFalse(self.enemy.alive)
+        self.assertEqual(self.point.state,'WAITING')
+        self.player.x=200
+        self.player.light=PortableLight(500,120,LightRegion(0,96,960,540))
+        self.tick(5)
+        self.assertFalse(self.enemy.alive)
+        self.player.light=None
+        self.tick(0)
+        self.tick(3.99)
+        self.assertFalse(self.enemy.alive)
+        self.tick(.01)
+        self.assertTrue(self.enemy.alive)
+
+    def test_event_warning_ignores_living_and_sealed_slots_and_reset_clears_duration(self):
+        self.tick(0)
+        self.director.arm_warning(['a'],4)
+        self.assertEqual(self.point.state,'OCCUPIED')
+        self.kill()
+        self.director.arm_warning(['a'],4)
+        self.director.reset(powered=True)
+        self.director.arm_warning(['a'],4)
+        self.assertEqual(self.point.state,'SEALED')
+        self.assertEqual(self.point.warning_duration,1)
+
     def test_full_nine_second_wait_then_full_one_second_warning(self):
         self.kill()
         self.assertEqual(self.point.remaining, 9)

@@ -19,6 +19,7 @@ class SpawnPoint:
     warning_elapsed: float = 0.0
     generation: int = 0
     appear_remaining: float = 0.0
+    warning_duration: float = WARNING_DURATION
 
     def get_bb(self):
         return self.x - 24, self.feet_y, self.x + 24, self.feet_y + 88
@@ -38,6 +39,20 @@ class RespawnDirector:
             point.warning_elapsed = 0.0
             point.generation = 0
             point.appear_remaining = 0.0
+            point.warning_duration = WARNING_DURATION
+
+    def arm_warning(self, identities, seconds):
+        """정전으로 비워진 지점을 충분한 카운트다운 뒤 다시 활성화한다."""
+        identities = set(identities)
+        for point in self.points:
+            enemy = self.actors.get(point.identity)
+            if point.identity not in identities or point.state == 'SEALED' or enemy is not None and enemy.alive:
+                continue
+            point.state = 'WARNING'
+            point.remaining = 0
+            point.warning_elapsed = 0
+            point.warning_duration = max(.1, seconds)
+            point.appear_remaining = 0
 
     def update(self, delta_time, player, enemies, powered=False,
                previous_light=None, previous_light_remaining=0.0, temporary_light=None):
@@ -60,6 +75,7 @@ class RespawnDirector:
                 point.state = 'OCCUPIED'
                 point.remaining = RESPAWN_DELAY
                 point.warning_elapsed = 0.0
+                point.warning_duration = WARNING_DURATION
                 continue
             if point.state == 'OCCUPIED':
                 point.state = 'WAITING'
@@ -80,14 +96,15 @@ class RespawnDirector:
                     point.state = 'WAITING'
                     point.warning_elapsed = 0.0
                 else:
-                    point.warning_elapsed = min(WARNING_DURATION, point.warning_elapsed + dt)
-                    if point.warning_elapsed >= WARNING_DURATION - 0.000000001:
+                    point.warning_elapsed = min(point.warning_duration, point.warning_elapsed + dt)
+                    if point.warning_elapsed >= point.warning_duration - 0.000000001:
                         enemy.reset()
                         point.state = 'OCCUPIED'
                         point.remaining = RESPAWN_DELAY
                         point.warning_elapsed = 0.0
                         point.generation += 1
                         point.appear_remaining = 0.35
+                        point.warning_duration = WARNING_DURATION
             elif not lit:
                 point.remaining = max(0.0, point.remaining - dark_time)
                 if point.remaining <= 0.000000001:
@@ -122,7 +139,7 @@ class RespawnDirector:
                     glow(x, y + 28, 38, (170, 86, 224), alpha=100 * point.appear_remaining / 0.35)
             if point.state != 'WARNING':
                 continue
-            progress = point.warning_elapsed / WARNING_DURATION
+            progress = point.warning_elapsed / point.warning_duration
             with blended():
                 glow(x, y + 3, 22 + progress * 14, (155, 72, 213), alpha=180, squash=0.20)
                 glow(x, y + 35, 25 + progress * 14, (109, 55, 163), alpha=70 + progress * 60)
@@ -151,6 +168,6 @@ class RespawnDirector:
             pico2d.draw_rectangle(x - 18, bar_y, x + 18, bar_y + 3, 52, 31, 66, filled=True)
             pico2d.draw_rectangle(x - 18, bar_y, x - 18 + 36 * progress, bar_y + 3,
                                   193, 113, 232, filled=True)
-            seconds = max(0.1, ceil((WARNING_DURATION - point.warning_elapsed) * 10 - 0.000000001) / 10)
+            seconds = max(0.1, ceil((point.warning_duration - point.warning_elapsed) * 10 - 0.000000001) / 10)
             font.draw(x - 50, label_y, f'출현 {seconds:.1f}초 전', (210, 155, 235))
 
