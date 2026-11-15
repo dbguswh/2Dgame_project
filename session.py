@@ -198,6 +198,8 @@ class GameSession:
                 self.player.clear_input()
             elif new_press and event.key == pico2d.SDLK_F1:
                 self.show_debug = not self.show_debug
+            elif getattr(self.stage, 'controls_locked', False):
+                self.player.clear_input()
             else:
                 self.player.handle_event(event)
         elif self.state == 'PAUSED' and new_press:

@@ -117,6 +117,9 @@ class Stage:
     def is_temporarily_lit(self, box):
         return False
 
+    def before_update(self, player):
+        """움직이는 지형의 탑승자를 월드 갱신 전에 연결한다."""
+
     def capture_state(self):
         return ()
 

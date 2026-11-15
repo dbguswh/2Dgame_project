@@ -19,6 +19,7 @@ def restore_enemies(enemies, stage):
 
 def update_world(delta_time, player, enemies, stage, records=None):
     """이동, 적의 준비, 플레이어 타격, 살아 있는 적의 타격 순으로 판정한다."""
+    stage.before_update(player)
     stage.update(delta_time)
     previous_light = player.light
     previous_light_remaining = previous_light.remaining if previous_light is not None else 0.0
