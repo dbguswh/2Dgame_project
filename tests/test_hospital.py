@@ -38,6 +38,12 @@ class HospitalTests(unittest.TestCase):
 
     def test_switch_uses_sliding_door_collision_and_return_latch_persists(self):
         self.interact(self.s.latch_positions['A'])
+        self.assertFalse(self.s.return_open['A'])
+        self.at(192,288)
+        self.s.collect_pickups(self.p)
+        self.s.update(.55)
+        self.assertFalse(self.s.doors['A'].is_open)
+        self.interact(self.s.latch_positions['A'])
         self.interact(self.s.terminal_position)
         self.assertEqual(self.s.circuit, 'B')
         self.s.update(.3)

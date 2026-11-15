@@ -91,7 +91,7 @@ class GameSession:
         p.light = None
         p.reset_actions_after_return(invulnerability=0)
         p.face_dir = getattr(self.stage, 'start_direction', 1)
-        p.notice = ('운하 병원 · 중앙 단말기로 A/B 회로를 전환하세요'
+        p.notice = ('운하 병원 · 부품 분리 시 정전, 수동 개방 후 중앙 복귀'
                     if self.stage.stage_id == 'hospital' else '중앙 변전소 · 하부 차단기로 승강기 전원을 공급하세요')
         p.notice_time = 3.5
         self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds,
