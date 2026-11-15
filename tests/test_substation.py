@@ -129,3 +129,17 @@ class SubstationTests(unittest.TestCase):
         update_world(1/120,self.p,[],self.s)
         self.assertIs(self.s.lift.rider,self.p)
         self.assertEqual(self.p.feet_y,self.s.lift.y)
+
+    def test_upper_cover_separates_encounters_and_basic_jump_clears_it(self):
+        m=Motion(2448,352)
+        self.assertTrue(m.jump())
+        for _ in range(80):
+            m.step(1/120,1 if m.x<2512 else 0,self.s.solids,self.s.width)
+        self.assertEqual(m.feet_y,400)
+        from projectiles import ShadowBolt
+        bolt=ShadowBolt.aimed((2400,396),(2650,396))
+        self.at((2650,352))
+        bolt.update(1,self.s.solids,self.p)
+        self.assertFalse(bolt.active)
+        self.assertFalse(bolt.consume_hit())
+        self.assertEqual(sum(e.ranged for e in self.s.enemy_placements if e.feet_y==352),1)

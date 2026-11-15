@@ -31,7 +31,8 @@ class SubstationStage(Stage):
         self.power_restore_elapsed = 0
         self.upper_gallery = Solid(1856,332,2880,352,True)
         self.base_solids = [Solid(0,0,self.width,96),self.upper_gallery,
-                            Solid(896,96,960,128),Solid(3200,96,3264,128)]
+                            Solid(896,96,960,128),Solid(3200,96,3264,128),
+                            Solid(2480,352,2544,400)]
         self.light_regions = [LightRegion(0,96,1536,332),LightRegion(1536,96,2032,540),
                               LightRegion(2032,96,2880,332),LightRegion(2032,352,2880,540),
                               LightRegion(2880,96,3840,540)]
@@ -42,7 +43,7 @@ class SubstationStage(Stage):
             for i,(x,y,bounds,ranged) in enumerate((
                 (560,96,(448,864),False),(784,96,(448,864),True),
                 (1120,96,(1008,1488),False),(1280,96,(1008,1488),True),(1432,96,(1008,1488),False),
-                (2112,352,(2064,2736),False),(2368,352,(2064,2736),True),(2640,352,(2064,2736),True),
+                (2112,352,(2064,2464),False),(2368,352,(2064,2464),True),(2640,352,(2560,2736),False),
                 (3328,96,(3280,3776),False),(3616,96,(3280,3776),True))))
         self.respawns = RespawnDirector(self.enemy_placements)
         self.scene = None
@@ -190,6 +191,6 @@ class SubstationStage(Stage):
 
     def draw_labels(self, font, camera_x):
         for x,y,text in ((190,214,'독립 충전 전원'),(1500,235,'1번 차단기'),
-                         (1684,470,'상부 전기실'),(2720,470,'2번 차단기')):
+                         (2080,308,'상부 전기실'),(2720,308,'2번 차단기')):
             if -160 < x-camera_x < 960:
                 font.draw(x-camera_x,y,text,(181,196,198))
