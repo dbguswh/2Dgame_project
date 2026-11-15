@@ -1,0 +1,10 @@
+{
+  "image": "substation_interiors.png",
+  "source_size": [1536, 1024],
+  "frames": {
+    "entry": [0, 640, 768, 384],
+    "machine": [768, 640, 768, 384],
+    "upper": [0, 128, 768, 384],
+    "containment": [768, 128, 768, 384]
+  }
+}
