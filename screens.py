@@ -73,7 +73,7 @@ def draw_game(game, font):
     minutes, seconds = divmod(int(game.play_time), 60)
     font.draw(840, SCREEN_HEIGHT - 28, f'{minutes:02}:{seconds:02}', (164, 175, 192))
     font.draw(20, SCREEN_HEIGHT - 58, stage.objective, (188, 200, 212))
-    if stage.fuse_state != 'ABSENT' or stage.stage_id == 'hospital':
+    if stage.fuse_state != 'ABSENT' or stage.stage_id in ('hospital','substation'):
         font.draw(840, SCREEN_HEIGHT - 58, f'조각 {player.fragments}', (170, 197, 211))
     if hasattr(stage, 'hud_status'):
         font.draw(635, SCREEN_HEIGHT - 28, stage.hud_status, (255, 223, 137))

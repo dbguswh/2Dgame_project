@@ -89,7 +89,7 @@ class HospitalTransitionTests(unittest.TestCase):
         self.assertEqual((p.battery, p.fragments, p.face_dir), (140, 1, -1))
         self.assertEqual((p.x, p.feet_y), g.stage.start)
 
-    def test_hospital_completion_allows_second_upgrade_but_not_unbuilt_substation(self):
+    def test_hospital_completion_allows_second_upgrade_and_substation_departure(self):
         g = self.g
         self.depart()
         g.update(.7)
@@ -104,5 +104,11 @@ class HospitalTransitionTests(unittest.TestCase):
         tap(g, pico2d.SDLK_RIGHT)
         tap(g, pico2d.SDLK_e)
         self.assertTrue(g.management_visit.completed)
+        self.assertTrue(g.can_depart)
+        self.assertTrue(g.depart())
+        g.update(.7)
+        self.assertEqual(g.stage.stage_id, 'substation')
+        self.assertEqual(g.player.core_upgrades, {CAPACITY,'focus'})
+        self.assertEqual(g.completed_stage_ids, {'residential','hospital'})
+        self.assertFalse(any(g.stage.breakers))
         self.assertFalse(g.can_depart)
-        self.assertFalse(g.depart())

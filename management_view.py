@@ -50,7 +50,7 @@ def draw_city_map(game, font, heading):
     heading.draw(756, 251, '변전소', (134, 149, 166))
     font.draw(112, 220, '복구 완료', (199, 194, 161))
     font.draw(428, 220, '복구 완료' if hospital_done else '다음 목적지', (150, 199, 216))
-    font.draw(749, 220, '개발 예정' if hospital_done else '병원 복구 후', (112, 129, 146))
+    font.draw(749, 220, '다음 목적지' if hospital_done else '병원 복구 후', (112, 129, 146))
     font.draw(52, 135, f'보유 전력 조각  {game.player.fragments}', (242, 213, 149))
     font.draw(52, 105, f'현재 강화: {upgrade_names(game.player)}', (182, 198, 209))
     for slot, amount in enumerate(game.player.inventory.counts):
@@ -160,12 +160,13 @@ def draw_supply_shop(game, font, heading):
     font.draw(x + 24, 226, '그대로 유지한다.', (184, 200, 215))
     font.draw(x + 24, 200, 'E: 지도 확인', (159, 214, 177))
     if game.can_depart:
-        x = card(3, '병원 출발')
+        destination = '병원' if game.stage.next_stage_id == 'hospital' else '변전소'
+        x = card(3, f'{destination} 출발')
         font.draw(x+18, 329, '다음 스테이지', (171, 189, 206))
-        heading.draw(x+18, 294, '운하 병원', (241, 226, 188))
+        heading.draw(x+18, 294, game.stage.destination_name, (241, 226, 188))
         font.draw(x+18, 250, '체력·배터리 회복', (184, 200, 215))
         font.draw(x+18, 226, '장비·소모품 이월', (184, 200, 215))
-        font.draw(x+18, 200, 'E: 병원으로 이동', (159, 214, 177))
+        font.draw(x+18, 200, f'E: {destination} 이동', (159, 214, 177))
     font.draw(52, 145, visit.notice, (240, 210, 146))
     font.draw(52, 111, f'체력 {p.health}/3   배터리 {p.battery}/{p.max_battery}   구매 시 보유 수량만 증가',
               (167, 193, 211))

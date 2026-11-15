@@ -6,12 +6,14 @@ from enemy import Shade
 from player import Player
 from residential import ResidentialStage
 from hospital import HospitalStage
+from substation import SubstationStage
 from world import update_world, restore_enemies
 from progress import ProgressRecords
 from upgrades import ManagementVisit, CORE_UPGRADES, SUPPLY_OFFERS
 
 
 class GameSession:
+    NEXT_STAGES = {'hospital': HospitalStage, 'substation': SubstationStage}
     PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
     CLEAR_ITEMS = ('도시 지도', '주택가 다시하기', '타이틀로')
 
@@ -64,7 +66,7 @@ class GameSession:
     @property
     def can_depart(self):
         return (self.stage is not None and self.stage.completed
-                and self.stage.stage_id == 'residential'
+                and self.stage.next_stage_id in self.NEXT_STAGES
                 and self.management_visit is not None and self.management_visit.completed)
 
     @property
@@ -80,16 +82,18 @@ class GameSession:
         self.player.clear_input()
         return True
 
-    def _enter_hospital(self):
-        self.stage = HospitalStage()
+    def _enter_next_stage(self):
+        self.stage = self.NEXT_STAGES[self.stage.next_stage_id]()
         p = self.player
         p.x, p.feet_y = self.stage.start
         p.spawn_position = p.checkpoint_position = p.last_safe_position = self.stage.start
         p.health, p.battery = 3, p.max_battery
         p.light = None
         p.reset_actions_after_return(invulnerability=0)
-        p.face_dir = self.stage.start_direction
-        p.notice, p.notice_time = '운하 병원 · 중앙 단말기로 A/B 회로를 전환하세요', 3.5
+        p.face_dir = getattr(self.stage, 'start_direction', 1)
+        p.notice = ('운하 병원 · 중앙 단말기로 A/B 회로를 전환하세요'
+                    if self.stage.stage_id == 'hospital' else '중앙 변전소 · 하부 차단기로 승강기 전원을 공급하세요')
+        p.notice_time = 3.5
         self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds,
                               can_shoot=e.ranged) for e in self.stage.enemy_placements]
         restore_enemies(self.enemies, self.stage)
@@ -229,7 +233,7 @@ class GameSession:
         if self.state == 'TRANSITION':
             self.transition_elapsed = min(.7, self.transition_elapsed + max(0, delta_time))
             if self.transition_elapsed >= .35 and not self.transition_swapped:
-                self._enter_hospital()
+                self._enter_next_stage()
                 self.transition_swapped = True
             if self.transition_elapsed >= .7:
                 self.state = 'PLAY'
