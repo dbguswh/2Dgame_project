@@ -43,7 +43,7 @@ class HospitalScene:
         for x in range(160, stage.width, 256):
             if -40 <= x-camera_x <= width+40:
                 lit = stage.fixture_powered or 1664 <= x <= 2176 or (
-                    stage.circuit == 'A' and 960 <= x <= 1664 or stage.circuit == 'B' and 2176 <= x <= 2880)
+                    stage.powered_circuit == 'A' and 960 <= x <= 1664 or stage.powered_circuit == 'B' and 2176 <= x <= 2880)
                 self.draw_wall_lamp(x-camera_x, 390, lit)
         for box in stage.supply_boxes:
             if -48 < box.x-camera_x < width+48:
@@ -52,7 +52,7 @@ class HospitalScene:
         stage.fragment_cache.draw(camera_x)
         for key, door in stage.doors.items():
             if -48 < door.x-camera_x < width+48:
-                self.draw_door(door, camera_x, stage.fixture_powered or key != 'exit' and (stage.circuit == key or stage.return_open[key]))
+                self.draw_door(door, camera_x, stage.door_should_open(key))
         self.draw_terminal(stage, camera_x)
         self.draw_repair_device(stage, camera_x)
         for key, position in stage.latch_positions.items():
@@ -61,8 +61,20 @@ class HospitalScene:
             pico2d.draw_rectangle(x-7, y+26, x+7, y+44, 31, 46, 52, filled=True)
             segment((x-4, y+33), (x+5, y+37), (213, 188, 126), width=3)
         for key, (wx, y) in stage.part_positions.items():
+            x = wx-camera_x
+            pico2d.draw_rectangle(x-23,y-16,x+23,y+29,31,50,58,filled=True)
+            pico2d.draw_rectangle(x-23,y-16,x+23,y+29,116,138,140)
+            pico2d.draw_rectangle(x-11,y-12,x+11,y+15,13,28,38,filled=True)
+            connected = not stage.parts[key]
+            color = (209,200,128) if connected else (166,92,82)
+            pico2d.draw_rectangle(x-17,y+21,x+17,y+24,*color,filled=True)
+            if not connected and stage.circuit == key and stage.blackout_remaining > 0:
+                with blended():
+                    glow(x,y+8,42,(203,91,73),alpha=110*stage.blackout_remaining/1.2)
+            for dx in (-16,16):
+                segment((x+dx,y-16),(x+dx,y-28),(92,126,132),2)
             if not stage.parts[key]:
-                self.draw_part(key, wx-camera_x, y)
+                self.draw_part(key,x,y)
         if not stage.battery_pack_collected:
             draw_battery_pack(stage.battery_pack_position[0]-camera_x, stage.battery_pack_position[1])
 

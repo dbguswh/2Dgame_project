@@ -30,17 +30,17 @@ class HospitalStage(Stage):
         self.parts = {'A': False, 'B': False}
         self.returned = {'A': False, 'B': False}
         self.return_open = {'A': False, 'B': False}
-        self.return_checkpoints = {'A': (816,96), 'B': (2992,96)}
+        self.return_checkpoints = {'A': (912,96), 'B': (2992,96)}
         self.blackout_remaining = 0.0
         self.part_positions = {'A': (192, 304), 'B': (3712, 112)}
-        self.latch_positions = {'A': (880, 96), 'B': (2960, 96)}
+        self.latch_positions = {'A': (904,96), 'B': (2960,96)}
         self.doors = {'A': PowerDoor('hospital-a', 948, progress=1),
                       'B': PowerDoor('hospital-b', 2892),
                       'exit': PowerDoor('hospital-exit', 2112, height=176, blocks_corridor=False)}
         self.power_restore_elapsed = 0.0
         self.record_time = 0.0
         self.visual_time = 0.0
-        self.supply_boxes = (SupplyBox('hospital-a-return-medkit', 816, 96, item=MEDKIT),
+        self.supply_boxes = (SupplyBox('hospital-a-return-medkit', 1000, 96, item=MEDKIT),
                              SupplyBox('hospital-b-return-bomb', 3632, 96, item=LIGHT_BOMB),
                              SupplyBox('hospital-hub-shield', 2048, 96, item=SHIELD))
         self.fragment_cache = FragmentCache('hospital-upper-cache', 704, 336)
@@ -303,8 +303,6 @@ class HospitalStage(Stage):
                 font.draw(x-camera_x-66, y+60, '분리하면 회로 차단', (196,149,117))
         pending = self.returning_key
         if pending:
-            if self.blackout_remaining > 0:
-                font.draw(36,384,f'{pending} 전원 차단 · 안쪽 스위치로 문을 여세요',(240,172,117))
             warnings = [p.warning_duration-p.warning_elapsed for p in self.corridor_points(pending) if p.state == 'WARNING']
             if warnings:
                 from math import ceil

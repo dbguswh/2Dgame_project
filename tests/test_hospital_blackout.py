@@ -157,3 +157,21 @@ class HospitalBlackoutTests(unittest.TestCase):
         bolt.update(1,self.s.solids,self.p)
         self.assertFalse(bolt.consume_hit())
         self.assertFalse(bolt.active)
+
+    def test_a_descent_reaches_ground_switch_then_medkit_without_crossing_closed_gate(self):
+        self.take('A');self.s.update(.55)
+        m=Motion(704,336)
+        for _ in range(400):
+            m.step(1/120,1 if m.x<912 else 0,self.s.solids,self.s.width)
+        self.assertEqual(m.feet_y,96)
+        self.assertLessEqual(m.x+12,self.s.doors['A'].solid.left+1e-5)
+        self.at((m.x,m.feet_y))
+        target=self.s._target(self.p)
+        self.assertEqual((target[0],target[2]),('latch','A'))
+        self.s.interact(self.p);self.s.update(.55)
+        for _ in range(100):m.step(1/120,1 if m.x<1000 else 0,self.s.solids,self.s.width)
+        self.assertGreaterEqual(m.x,998)
+        self.at((m.x,m.feet_y))
+        target=self.s._target(self.p)
+        self.assertEqual(target[0],'supply')
+        self.assertEqual(target[2].item,MEDKIT)
