@@ -128,7 +128,7 @@ class BombWorldTests(unittest.TestCase):
         self.assertFalse(self.p.flash_pending)
         self.assertEqual(self.p.animation_state, 'flash')
 
-    def test_f_keeps_item_selected_at_input_and_holding_does_not_repeat(self):
+    def test_switching_item_cancels_pending_charge_without_using_either_item(self):
         event = pico2d.Event(pico2d.SDL_KEYDOWN)
         event.key = pico2d.SDLK_f
         self.p.handle_event(event)
@@ -136,8 +136,9 @@ class BombWorldTests(unittest.TestCase):
         for _ in range(90):
             self.p.handle_event(event)
             self.p.update(1 / 120, self.stage.width, self.stage.solids)
-        self.assertEqual(self.p.inventory.counts[LIGHT_BOMB], 1)
-        self.assertEqual(len(self.p.bombs), 1)
+        self.assertEqual(self.p.inventory.counts[LIGHT_BOMB], 2)
+        self.assertEqual(len(self.p.bombs), 0)
+        self.assertIsNone(self.p.bomb_aim)
 
     def test_empty_and_busy_actions_do_not_consume(self):
         self.p.attack_elapsed = .1
@@ -166,6 +167,7 @@ class BombWorldTests(unittest.TestCase):
         velocity = self.p.motion.velocity_y
         self.p.face_dir = -1
         self.assertTrue(self.p.use_selected_item(LIGHT_BOMB))
+        self.assertTrue(self.p.release_bomb())
         self.p.update(0, self.stage.width, self.stage.solids)
         self.assertEqual(self.p.motion.velocity_y, velocity)
         self.p.face_dir = 1
@@ -221,6 +223,7 @@ class BombWorldTests(unittest.TestCase):
 
     def test_pause_and_focus_loss_freeze_fuse_and_clear_pending_input(self):
         self.p.use_selected_item(LIGHT_BOMB)
+        self.p.release_bomb()
         bomb = self.p.bombs[0]
         self.game.state = 'PAUSED'
         self.game.update(1)

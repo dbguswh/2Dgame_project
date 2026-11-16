@@ -12,7 +12,7 @@ from combat_feedback import HitPause
 from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_effects import ItemEffects
 from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
-from light_bomb import LightBomb
+from light_bomb import LightBomb, BombAim
 from light_sword import sword_box
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
@@ -120,6 +120,11 @@ class Player:
         self.inventory = Inventory()
         self.item_effects = ItemEffects()
         self.bombs = []
+        self.bomb_aim = None
+        self.bomb_start_requested = False
+        self.bomb_release_requested = False
+        self.bomb_air_direction = 0
+        self.bomb_air_speed = MOVE_SPEED
         self.requested_item = None
         self.use_medkit_requested = False
         self.heal_effect = 0.0
@@ -141,7 +146,7 @@ class Player:
         self.motion.feet_y = value
 
     def handle_event(self, event):
-        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT,
+        if event.key not in (pico2d.SDLK_LEFT, pico2d.SDLK_RIGHT, pico2d.SDLK_UP, pico2d.SDLK_DOWN,
                               pico2d.SDLK_SPACE, pico2d.SDLK_q, pico2d.SDLK_w, pico2d.SDLK_r, pico2d.SDLK_e,
                               pico2d.SDLK_1, pico2d.SDLK_2, pico2d.SDLK_3, pico2d.SDLK_4, pico2d.SDLK_f,
                               pico2d.SDLK_LSHIFT, pico2d.SDLK_RSHIFT):
@@ -158,13 +163,22 @@ class Player:
             elif event.key == pico2d.SDLK_e and event.key not in self.pressed_keys:
                 self.interaction_requested = True
             elif event.key == pico2d.SDLK_f and event.key not in self.pressed_keys:
-                self.use_medkit_requested = True
-                self.requested_item = self.inventory.selected
+                if self.inventory.selected == LIGHT_BOMB:
+                    self.bomb_start_requested = True
+                else:
+                    self.use_medkit_requested = True
+                    self.requested_item = self.inventory.selected
             elif pico2d.SDLK_1 <= event.key <= pico2d.SDLK_4 and event.key not in self.pressed_keys:
-                self.inventory.select(event.key - pico2d.SDLK_1)
-                self.notice, self.notice_time = f'{ITEM_NAMES[self.inventory.selected]} 선택 · F로 사용', 1.0
+                slot = event.key - pico2d.SDLK_1
+                if slot != self.inventory.selected:
+                    self.cancel_bomb_aim()
+                self.inventory.select(slot)
+                hint = 'F 유지·놓아 투척' if slot == LIGHT_BOMB else 'F로 사용'
+                self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 선택 · {hint}', 1.0
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
+            if event.key == pico2d.SDLK_f and (self.bomb_aim is not None or self.bomb_start_requested):
+                self.bomb_release_requested = True
             self.pressed_keys.discard(event.key)
 
     def clear_input(self):
@@ -176,6 +190,12 @@ class Player:
         self.interaction_requested = False
         self.use_medkit_requested = False
         self.requested_item = None
+        self.cancel_bomb_aim()
+
+    def cancel_bomb_aim(self):
+        self.bomb_aim = None
+        self.bomb_start_requested = False
+        self.bomb_release_requested = False
 
     @property
     def medkits(self):
@@ -188,7 +208,8 @@ class Player:
     def add_item(self, slot):
         if not self.inventory.add(slot):
             return False
-        self.notice, self.notice_time = f'{ITEM_NAMES[slot]} +1 · {slot + 1} 선택 후 F 사용', 1.5
+        hint = 'F 유지·놓아 투척' if slot == LIGHT_BOMB else 'F 사용'
+        self.notice, self.notice_time = f'{ITEM_NAMES[slot]} +1 · {slot + 1} 선택 후 {hint}', 1.5
         return True
 
     def add_medkit(self):
@@ -227,19 +248,51 @@ class Player:
         if slot != LIGHT_BOMB:
             self.notice, self.notice_time = '아직 사용할 수 없는 장비입니다', 1.0
             return False
+        return self.begin_bomb_aim()
+
+    def begin_bomb_aim(self):
         if self.is_attacking or self.light_cast > 0:
             self.notice, self.notice_time = '현재 동작을 마친 뒤 투척하세요', 1.0
             return False
-        if not self.inventory.consume(LIGHT_BOMB):
+        if self.inventory.counts[LIGHT_BOMB] <= 0:
             self.notice, self.notice_time = '보유한 광탄이 없습니다', 1.0
             return False
-        self.bombs.append(LightBomb(self.x, self.feet_y + 44, self.face_dir))
+        self.bomb_aim = BombAim(self.face_dir)
+        self.bomb_air_direction = (int(pico2d.SDLK_RIGHT in self.pressed_keys)
+                                   - int(pico2d.SDLK_LEFT in self.pressed_keys))
+        self.bomb_air_speed = ((RUN_SPEED if self.run_held else MOVE_SPEED)
+                               * self.item_effects.speed_multiplier)
+        self.combo_queued = False
+        self.combo_window = 0.0
+        self.notice, self.notice_time = '광탄 조준 · F 놓아 투척 · 방향키로 조절', 1.2
+        return True
+
+    def release_bomb(self):
+        aim = self.bomb_aim
+        self.cancel_bomb_aim()
+        if aim is None or not self.inventory.consume(LIGHT_BOMB):
+            return False
+        self.face_dir = aim.direction
+        self.bombs.append(LightBomb(self.x, self.feet_y + 44, aim.direction,
+                                    charge=aim.charge, angle=aim.angle))
         self.attack_kind = 'bomb'
         self.attack_elapsed = 0.0
         self.combo_queued = False
         self.combo_window = 0.0
         self.notice, self.notice_time = '광탄 투척', 1.0
         return True
+
+    def _update_bomb_aim(self, dt):
+        if self.bomb_aim is None:
+            return
+        direction = (int(pico2d.SDLK_RIGHT in self.pressed_keys)
+                     - int(pico2d.SDLK_LEFT in self.pressed_keys))
+        elevation = (int(pico2d.SDLK_UP in self.pressed_keys)
+                     - int(pico2d.SDLK_DOWN in self.pressed_keys))
+        self.bomb_aim.update(0 if self.bomb_release_requested else dt, direction, elevation)
+        self.face_dir = self.bomb_aim.direction
+        if self.bomb_release_requested:
+            self.release_bomb()
 
     def use_medkit(self):
         if self.medkits <= 0:
@@ -358,6 +411,8 @@ class Player:
 
     @property
     def animation_state(self):
+        if self.bomb_aim is not None:
+            return 'bomb_aim'
         if self.is_attacking:
             if self.attack_kind in ('flash', 'bomb'):
                 return 'flash'
@@ -449,6 +504,18 @@ class Player:
         combo_open = self.combo_window > 0
         self._advance_attack(delta_time)
         higher_priority_action = self.light_requested or self.flash_requested
+        if (self.bomb_aim is not None and (higher_priority_action or self.attack_requested
+                                         or self.jump_requested or self.interaction_requested)):
+            self.cancel_bomb_aim()
+        if self.bomb_start_requested:
+            self.bomb_start_requested = False
+            if not higher_priority_action and not self.jump_requested and not self.interaction_requested:
+                if self.begin_bomb_aim():
+                    self.attack_requested = False
+                else:
+                    self.bomb_release_requested = False
+            else:
+                self.bomb_release_requested = False
         if self.light_requested:
             regions = light_regions if light_regions is not None else [LightRegion(0, 96, area_width, 540)]
             self._install_light(regions)
@@ -459,6 +526,7 @@ class Player:
             self.attack_requested = False
         self.light_requested = False
         self.flash_requested = False
+        self._update_bomb_aim(delta_time)
         if self.use_medkit_requested:
             slot = self.requested_item if self.requested_item is not None else self.inventory.selected
             if slot != LIGHT_BOMB or not higher_priority_action:
@@ -473,11 +541,13 @@ class Player:
         direction = int(pico2d.SDLK_RIGHT in self.pressed_keys) - int(
             pico2d.SDLK_LEFT in self.pressed_keys
         )
+        if self.bomb_aim is not None:
+            direction = 0 if self.motion.on_ground else self.bomb_air_direction
         if (self.is_attacking and (self.attack_kind == 'ground'
                                   or (self.attack_kind in ('flash', 'bomb') and self.motion.on_ground))) or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
-        if direction and not self.is_attacking:
+        if direction and not self.is_attacking and self.bomb_aim is None:
             self.face_dir = direction
         previous_x = self.x
 
@@ -493,6 +563,8 @@ class Player:
             / self.air_attack_data["reference_height"],
         )
         speed = (RUN_SPEED if self.run_held else MOVE_SPEED) * max(speed_factor, self.item_effects.speed_multiplier)
+        if self.bomb_aim is not None and not self.motion.on_ground:
+            speed = self.bomb_air_speed
         self.motion.step(delta_time, direction, solids, area_width, margin, speed=speed)
         if self.motion.on_ground:
             self.air_attack_used = False
@@ -529,8 +601,8 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state in ('attack', 'air_attack', 'flash'):
-            if state == 'flash':
+        if state in ('attack', 'air_attack', 'flash', 'bomb_aim'):
+            if state in ('flash', 'bomb_aim'):
                 data, image = self.flash_data, self.flash_image
             elif state == 'air_attack':
                 data, image = self.air_attack_data, self.air_attack_image
@@ -538,7 +610,7 @@ class Player:
                 data, image = self.second_attack_data, self.second_attack_image
             else:
                 data, image = self.attack_data, self.attack_image
-            frame = data['frames'][self.attack_frame]
+            frame = data['frames'][0 if state == 'bomb_aim' else self.attack_frame]
             left, bottom, width, height = frame['rect']
             feet_x, feet_y = frame['feet']
             scale = DRAW_HEIGHT / data['reference_height']
@@ -583,7 +655,7 @@ class Player:
             self.feet_y + dx * sin(angle) + dy * cos(angle),
             width * scale, height * scale,
         )
-        for piece in frame.get('pieces', ()) if state in ('attack', 'air_attack', 'flash') else ():
+        for piece in frame.get('pieces', ()) if state in ('attack', 'air_attack', 'flash', 'bomb_aim') else ():
             left, bottom, width, height = piece['rect']
             feet_x, feet_y = piece['feet']
             dx = (width / 2 - feet_x) * scale * self.face_dir
@@ -625,6 +697,7 @@ class Player:
 
     def _return_after_fall(self):
         self.health -= 1
+        self.cancel_bomb_aim()
         if self.health <= 0:
             self._respawn()
             return
@@ -642,6 +715,7 @@ class Player:
             return False
         self.health -= 1
         self.hit_pause.reset()
+        self.cancel_bomb_aim()
         self.attack_elapsed = None
         self.attack_requested = False
         self.flash_pending = False
