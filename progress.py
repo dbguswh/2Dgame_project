@@ -61,6 +61,7 @@ class ProgressRecords:
         stage.fixture_powered = snapshot.fixture_powered
         stage.fuse_state = snapshot.fuse_state
         stage.bridge_elapsed = snapshot.bridge_elapsed
+        if hasattr(stage,'reveal_light_elapsed'):stage.reveal_light_elapsed=snapshot.bridge_elapsed
         stage.completed = snapshot.completed
         player.fragments = snapshot.fragments
         stage.reward_claimed = snapshot.reward_claimed

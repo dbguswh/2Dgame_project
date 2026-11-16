@@ -51,6 +51,7 @@ class ResidentialStage(Stage):
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
         self.visual_time = 0.0
+        self.reveal_light_elapsed = 0.0
         self.light_regions = [LightRegion(0, GROUND_Y, self.width, 540)]
         self.stair_solids = ()
         # 얇은 상승 발판은 아래·옆에서 통과하고 내려올 때 윗면에 착지한다.
@@ -184,6 +185,7 @@ class ResidentialStage(Stage):
         self.fragment_cache.update(delta_time)
         if self.fixture_powered:
             self.bridge_elapsed = min(self.BRIDGE_TIME, self.bridge_elapsed + max(0, delta_time))
+            self.reveal_light_elapsed += max(0,delta_time)
         self.sync_bridge()
 
     def sync_bridge(self):

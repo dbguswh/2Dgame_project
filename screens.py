@@ -30,6 +30,8 @@ def draw_game(game, font):
     camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
     shake = sum(enemy.impact.shake_x for enemy in game.enemies if enemy.impact is not None)
     camera_x = max(0, min(stage.width - SCREEN_WIDTH, camera_x + max(-3, min(3, shake))))
+    reveal=game.bridge_reveal
+    if reveal is not None and reveal.active:camera_x=reveal.camera_x
     stage.draw(camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
     director = getattr(stage, 'respawns', None)
     if director is not None:
@@ -44,6 +46,10 @@ def draw_game(game, font):
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)
+    if (player.weapon=='ring' and player.ring_unlocked and not player.is_attacking
+            and player.halo is None and player.bomb_aim is None and player.light_cast<=0):
+        from enemy_art import draw_halo
+        draw_halo(player.x-camera_x+player.face_dir*20,player.feet_y+49)
     draw_sword_stroke(player,camera_x)
     draw_buffs(player, camera_x)
     for bomb in player.bombs:
@@ -55,6 +61,9 @@ def draw_game(game, font):
     if director is not None:
         director.draw_signals(camera_x, font, SCREEN_WIDTH)
     draw_bomb_aim(player, stage.solids, font, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    if reveal is not None and reveal.active:
+        reveal.draw(font,SCREEN_WIDTH,SCREEN_HEIGHT)
+        return
     if game.show_debug:
         stage.draw_debug(camera_x)
         player.draw_debug(camera_x)

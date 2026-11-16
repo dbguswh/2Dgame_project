@@ -4,6 +4,7 @@ import pico2d
 
 from enemy import Shade
 from enemy_factory import create_enemy
+from bridge_reveal import BridgeReveal
 from player import Player
 from residential import ResidentialStage
 from hospital import HospitalStage
@@ -34,6 +35,7 @@ class GameSession:
         self.completed_stage_ids = set()
         self.transition_elapsed = 0.0
         self.transition_swapped = False
+        self.bridge_reveal = None
 
     @property
     def running(self):
@@ -56,6 +58,7 @@ class GameSession:
         self.state = 'PLAY'
 
     def restart_stage(self):
+        self.bridge_reveal = None
         self.completed_stage_ids.discard(self.stage.stage_id)
         self.records.restore_entry(self.player, self.stage)
         restore_enemies(self.enemies, self.stage)
@@ -143,6 +146,13 @@ class GameSession:
             self.pressed_keys.add(event.key)
         else:
             self.pressed_keys.discard(event.key)
+        if self.state=='PLAY' and self.bridge_reveal is not None and self.bridge_reveal.active:
+            if new_press and event.key==pico2d.SDLK_SPACE:
+                self.bridge_reveal.skip(self.stage)
+                self._finish_bridge_reveal()
+            elif new_press and event.key==pico2d.SDLK_ESCAPE:
+                self.state='PAUSED';self.selection=0;self.player.clear_input()
+            return
         if self.state == 'TITLE':
             if not new_press:
                 return
@@ -244,7 +254,20 @@ class GameSession:
                 self.state = 'PLAY'
             return
         if self.state == 'PLAY':
+            if self.bridge_reveal is not None and self.bridge_reveal.active:
+                self.bridge_reveal.update(delta_time,self.stage)
+                if not self.bridge_reveal.active:self._finish_bridge_reveal()
+                return
+            was_powered=self.stage.fixture_powered
             update_world(delta_time, self.player, self.enemies, self.stage, self.records)
+            if self.stage.stage_id=='residential' and not was_powered and self.stage.fixture_powered:
+                self.bridge_reveal=BridgeReveal.start(self.player,self.stage)
+                self.player.clear_input()
+                self.stage.bridge_elapsed=0
+                self.stage.reveal_light_elapsed=0
+                self.stage.sync_bridge()
+                self.records.remember(self.player,self.stage)
+                return
             self.play_time += delta_time
             if self.stage.completed:
                 self.completed_stage_ids.add(self.stage.stage_id)
@@ -252,7 +275,14 @@ class GameSession:
                 self.selection = 0
                 self.player.clear_input()
 
+    def _finish_bridge_reveal(self):
+        self.stage.apply_rewards(self.player)
+        self.player.clear_input()
+        self.player.notice,self.player.notice_time='다리를 건너 출구로 이동하세요',2.8
+        self.records.remember(self.player,self.stage)
+
     def close_world(self):
+        self.bridge_reveal=None
         self.title_time = 0.0
         self.player = None
         self.enemies.clear()

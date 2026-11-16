@@ -68,7 +68,7 @@ def restoration_progress(stage):
         return min(1, stage.power_restore_elapsed / POWER_FADE_TIME)
     if not hasattr(stage, 'BRIDGE_TIME'):
         return 1.0
-    return max(0.0, min(1.0, stage.bridge_elapsed / POWER_FADE_TIME))
+    return max(0.0, min(1.0, getattr(stage,'reveal_light_elapsed',stage.bridge_elapsed) / POWER_FADE_TIME))
 
 
 def build_field(stage, player, camera_x, width=960, height=540):
