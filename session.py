@@ -3,6 +3,7 @@
 import pico2d
 
 from enemy import Shade
+from enemy_factory import create_enemy
 from player import Player
 from residential import ResidentialStage
 from hospital import HospitalStage
@@ -46,8 +47,7 @@ class GameSession:
         if self.stage.stage_id in ('hospital','substation'):self.player.unlock_ring()
         self.completed_stage_ids.clear()
         if self.stage.enemy_placements:
-            self.enemies = [Shade(e.x,e.feet_y,identity=e.identity,combat_bounds=e.bounds,can_shoot=e.ranged)
-                            for e in self.stage.enemy_placements]
+            self.enemies = [create_enemy(e) for e in self.stage.enemy_placements]
         else:
             self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]
         self.records = ProgressRecords(self.player, self.stage)
@@ -95,8 +95,7 @@ class GameSession:
         p.notice = ('운하 병원 · 부품 분리 시 정전, 수동 개방 후 중앙 복귀'
                     if self.stage.stage_id == 'hospital' else '중앙 변전소 · 하부 차단기로 승강기 전원을 공급하세요')
         p.notice_time = 3.5
-        self.enemies = [Shade(e.x,e.feet_y,identity=e.identity,combat_bounds=e.bounds,can_shoot=e.ranged)
-                        for e in self.stage.enemy_placements]
+        self.enemies = [create_enemy(e) for e in self.stage.enemy_placements]
         restore_enemies(self.enemies, self.stage)
         self.records = ProgressRecords(p, self.stage)
         self.management_visit = None

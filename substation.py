@@ -39,7 +39,8 @@ class SubstationStage(Stage):
         self.supply_boxes = (SupplyBox('substation-medkit',992,96,item=MEDKIT),
                              SupplyBox('substation-bomb',1376,96,item=LIGHT_BOMB),
                              SupplyBox('substation-shield',2032,352,item=SHIELD))
-        self.enemy_placements = tuple(EnemyPlacement(f'substation-shade-{i}',x,y,bounds,ranged)
+        self.enemy_placements = tuple(EnemyPlacement(f'substation-shade-{i}',x,y,bounds,ranged,
+            'brute' if i in (0,2,5,7,8) else 'wraith' if i==9 else 'shade')
             for i,(x,y,bounds,ranged) in enumerate((
                 (560,96,(448,864),False),(784,96,(448,864),True),
                 (1120,96,(1008,1488),False),(1280,96,(1008,1488),True),(1432,96,(1008,1488),False),

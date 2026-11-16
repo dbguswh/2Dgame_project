@@ -56,7 +56,8 @@ class HospitalStage(Stage):
         self.light_regions = [LightRegion(0, 96, 960, 540), LightRegion(960, 96, 1664, 540),
                               LightRegion(1664, 96, 2176, 540), LightRegion(2176, 96, 2880, 540),
                               LightRegion(2880, 96, 3840, 540)]
-        self.enemy_placements = tuple(EnemyPlacement(f'hospital-shade-{i}', x, y, bounds, ranged)
+        self.enemy_placements = tuple(EnemyPlacement(f'hospital-shade-{i}', x, y, bounds, ranged,
+                                                     'wraith' if i in (3,7) else 'shade')
             for i, (x, y, bounds, ranged) in enumerate((
                 (336, 288, (128, 480), False), (624, 336, (512, 752), True),
                 (1120, 96, (1008, 1600), False), (1472, 96, (1008, 1600), True),

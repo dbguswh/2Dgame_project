@@ -18,6 +18,7 @@ class EnemyPlacement:
     feet_y: float
     bounds: tuple
     ranged: bool = False
+    kind: str = 'shade'
 
 
 class Stage:
