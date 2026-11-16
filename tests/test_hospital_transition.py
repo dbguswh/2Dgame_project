@@ -24,6 +24,7 @@ class HospitalTransitionTests(unittest.TestCase):
         g.player.fragments = 3
         g.open_city_map()
         g.open_management()
+        tap(g,pico2d.SDLK_e)  # 첫 관리소 무기 획득 안내 확인
 
     def depart(self):
         self.management()

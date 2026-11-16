@@ -44,6 +44,9 @@ class ManagementTests(unittest.TestCase):
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual(self.game.state, 'MANAGEMENT')
 
+        # 최초 무기 획득 안내를 읽고 새 E로 확인한 뒤 강화한다.
+        tap(self.game,pico2d.SDLK_e)
+
     def test_map_is_unavailable_before_stage_clear(self):
         self.assertFalse(self.game.open_city_map())
         self.assertFalse(self.game.open_management())

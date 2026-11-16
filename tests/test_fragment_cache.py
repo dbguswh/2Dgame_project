@@ -117,6 +117,7 @@ class FragmentCacheTests(unittest.TestCase):
         self.assertEqual(self.p.fragments, 3)
         tap(self.game, pico2d.SDLK_e)
         tap(self.game, pico2d.SDLK_e)
+        tap(self.game, pico2d.SDLK_e)  # 새 무기 획득 안내 확인
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual(self.p.fragments, 1)
         tap(self.game, pico2d.SDLK_LEFT)
@@ -127,7 +128,7 @@ class FragmentCacheTests(unittest.TestCase):
     def test_skipping_cache_still_funds_upgrade_and_does_not_require_shopping(self):
         self.complete_stage()
         self.assertEqual(self.p.fragments, 2)
-        for _ in range(3):
+        for _ in range(4):
             tap(self.game, pico2d.SDLK_e)
         self.assertTrue(self.game.management_visit.completed)
         self.assertEqual(self.p.fragments, 0)

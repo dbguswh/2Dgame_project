@@ -92,7 +92,6 @@ def draw_management(game, font, heading):
     heading.draw(52, 488, '관리소', (242, 225, 191))
     heading.draw(748, 488, f'전력 조각 {p.fragments}', (242, 211, 142))
     font.draw(52, 450, f'현재 강화: {upgrade_names(p)}', (185, 202, 215))
-    if p.ring_unlocked:font.draw(52,423,'광륜 해금 완료 · A 무기 전환 · W 투척 · ↑+W 위쪽 투척',(233,204,143))
     if visit.completed:
         draw_supply_shop(game, font, heading)
         return

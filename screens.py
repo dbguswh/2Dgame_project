@@ -16,6 +16,7 @@ from management_view import draw_city_map, draw_management
 from sword_visuals import draw_sword_stroke
 from title_view import draw_title
 from halo_view import draw_halo_aim
+from stage_notice_view import draw_weapon_acquired,draw_stage_transition
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -132,14 +133,13 @@ def draw_session(game, font, menu_font, title_font):
     elif game.state == 'CITY_MAP':
         draw_city_map(game, font, menu_font)
     elif game.state == 'MANAGEMENT':
-        draw_management(game, font, menu_font)
+        if game.weapon_tip_open:draw_weapon_acquired(font,menu_font)
+        else:draw_management(game, font, menu_font)
+    elif game.state=='TRANSITION':
+        draw_stage_transition(game,font,menu_font)
     elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR', 'TRANSITION'):
         draw_game(game, font)
-        if game.state == 'TRANSITION':
-            alpha = int(255 * max(0, 1-abs(game.transition_elapsed-.35)/.35))
-            with blended():
-                pico2d.draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5, 11, 18, a=alpha, filled=True)
-        elif game.state == 'PAUSED':
+        if game.state == 'PAUSED':
             pico2d.draw_rectangle(250, 90, 710, 440, 15, 21, 32, filled=True)
             pico2d.draw_rectangle(250, 90, 710, 440, 120, 108, 83)
             menu_font.draw(410, 405, '일시정지', (242, 225, 191))

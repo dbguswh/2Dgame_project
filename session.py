@@ -36,6 +36,7 @@ class GameSession:
         self.transition_elapsed = 0.0
         self.transition_swapped = False
         self.bridge_reveal = None
+        self.weapon_tip_open = False
 
     @property
     def running(self):
@@ -58,6 +59,7 @@ class GameSession:
         self.state = 'PLAY'
 
     def restart_stage(self):
+        self.weapon_tip_open=False
         self.bridge_reveal = None
         self.completed_stage_ids.discard(self.stage.stage_id)
         self.records.restore_entry(self.player, self.stage)
@@ -78,7 +80,7 @@ class GameSession:
         return ('도시 지도', f'{self.stage.name} 다시하기', '타이틀로')
 
     def depart(self):
-        if self.state != 'MANAGEMENT' or not self.can_depart:
+        if self.state != 'MANAGEMENT' or not self.can_depart or self.weapon_tip_open:
             return False
         self.state = 'TRANSITION'
         self.transition_elapsed = 0.0
@@ -95,9 +97,8 @@ class GameSession:
         p.light = None
         p.reset_actions_after_return(invulnerability=0)
         p.face_dir = getattr(self.stage, 'start_direction', 1)
-        p.notice = ('운하 병원 · 부품 분리 시 정전, 수동 개방 후 중앙 복귀'
-                    if self.stage.stage_id == 'hospital' else '중앙 변전소 · 하부 차단기로 승강기 전원을 공급하세요')
-        p.notice_time = 3.5
+        p.notice = ''
+        p.notice_time = 0
         self.enemies = [create_enemy(e) for e in self.stage.enemy_placements]
         restore_enemies(self.enemies, self.stage)
         self.records = ProgressRecords(p, self.stage)
@@ -122,6 +123,8 @@ class GameSession:
         self.selection = len(SUPPLY_OFFERS) if self.management_visit.completed else 0
         self.player.clear_input()
         if self.stage.stage_id=='residential' and self.player.unlock_ring():
+            self.weapon_tip_open=True
+            self.player.notice_time=0
             self.records.remember(self.player,self.stage)
         return True
 
@@ -146,6 +149,11 @@ class GameSession:
             self.pressed_keys.add(event.key)
         else:
             self.pressed_keys.discard(event.key)
+        if self.state=='MANAGEMENT' and self.weapon_tip_open:
+            if new_press and event.key==pico2d.SDLK_e:
+                self.weapon_tip_open=False
+                self.player.clear_input()
+            return
         if self.state=='PLAY' and self.bridge_reveal is not None and self.bridge_reveal.active:
             if new_press and event.key==pico2d.SDLK_SPACE:
                 self.bridge_reveal.skip(self.stage)
@@ -282,6 +290,7 @@ class GameSession:
         self.records.remember(self.player,self.stage)
 
     def close_world(self):
+        self.weapon_tip_open=False
         self.bridge_reveal=None
         self.title_time = 0.0
         self.player = None
