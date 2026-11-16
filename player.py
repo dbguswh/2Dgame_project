@@ -701,7 +701,14 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        if state in ('attack', 'air_attack', 'flash', 'bomb_aim'):
+        from sword_carry import carried_frame
+        carried=carried_frame(self,state)
+        if carried is not None:
+            data,image,frame=carried
+            left,bottom,width,height=frame['rect']
+            feet_x,feet_y=frame['feet']
+            scale=DRAW_HEIGHT/data['reference_height']
+        elif state in ('attack', 'air_attack', 'flash', 'bomb_aim'):
             if state in ('flash', 'bomb_aim'):
                 data, image = self.flash_data, self.flash_image
             elif state == 'air_attack':
