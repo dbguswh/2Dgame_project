@@ -70,7 +70,7 @@ class ResidentialLevelsTests(unittest.TestCase):
         with patch('pico2d.load_image', return_value=Mock()):
             player = Player(1400, 96)
             light = PortableLight(1400, 120, self.stage.light_regions[0])
-            for placement in self.stage.enemy_placements[2:4]:
+            for placement in (p for p in self.stage.enemy_placements if p.feet_y==288 and p.kind=='shade'):
                 enemy = Shade(placement.x, placement.feet_y, combat_bounds=placement.bounds)
                 for _ in range(300):
                     enemy.update(1 / 120, player, self.stage, light)

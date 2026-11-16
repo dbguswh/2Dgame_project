@@ -42,7 +42,7 @@ class ResidentialStage(Stage):
         self.return_battery_position = (2176, self.WORKSHOP_Y + 16)
         self.return_battery_collected = False
         self.supply_boxes = (SupplyBox('ascent-medkit', 832, 144),
-                             SupplyBox('workshop-medkit', 2112, self.WORKSHOP_Y),
+                             SupplyBox('workshop-medkit', 1648, GROUND_Y),
                              SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
                              SupplyBox('lower-detour-speed', 1040, GROUND_Y, item=SPEED),
                              SupplyBox('connector-shield', 1848, 256, item=SHIELD))
@@ -59,10 +59,13 @@ class ResidentialStage(Stage):
         self.approach_ledges = (Solid(768, 128, 896, 144, one_way=True),
                                 Solid(896, 176, 992, 192, one_way=True),
                                 Solid(1024, 224, 1120, 240, one_way=True))
-        self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y),
+        self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y, one_way=True),
                                Solid(1872, self.WORKSHOP_Y - 20, 2272, self.WORKSHOP_Y))
         self.workshop_ledges = (Solid(1808, 240, 1904, 256, one_way=True),)
-        self.lower_walkways = ()
+        # 아래 골목에서 옥상/정비실 연결로로 다시 올라가는 동쪽 계단식 발판.
+        self.lower_walkways = (Solid(1664,128,1744,144,one_way=True),
+                               Solid(1736,176,1816,192,one_way=True),
+                               Solid(1792,224,1856,240,one_way=True))
         self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
                                   Solid(2752, 204, 2880, self.BRIDGE_Y, one_way=True))
         self.return_ledges = (Solid(2240, 128, 2288, 144, one_way=True),
@@ -81,15 +84,15 @@ class ResidentialStage(Stage):
             *self.return_ledges,
         ]
         self.enemy_placements = tuple(
-            EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged)
-            for index, (x, y, bounds, ranged) in enumerate([
-                (560, GROUND_Y, (448, 752), False), (704, GROUND_Y, (448, 752), True),
-                (1328, self.UPPER_FLOOR_Y, (1280, 1712), False),
-                (1472, self.UPPER_FLOOR_Y, (1280, 1712), False),
-                (1600, self.UPPER_FLOOR_Y, (1280, 1712), True),
-                (1904, self.WORKSHOP_Y, (1872, 2064), False),
-                (1968, self.WORKSHOP_Y, (1872, 2064), False),
-                (2032, self.WORKSHOP_Y, (1872, 2064), True),
+            EnemyPlacement(f'residential-shade-{index}', x, y, bounds, ranged,kind)
+            for index, (x, y, bounds, ranged,kind) in enumerate([
+                (560, GROUND_Y, (448, 752), False,'shade'), (704, GROUND_Y, (448, 752), True,'shade'),
+                (1328, self.UPPER_FLOOR_Y, (1280, 1712), False,'shade'),
+                (1360, GROUND_Y, (1280, 1632), False,'shade'),
+                (1600, self.UPPER_FLOOR_Y, (1280, 1712), False,'wraith'),
+                (1904, self.WORKSHOP_Y, (1872, 2064), False,'shade'),
+                (1520, GROUND_Y, (1280, 1632), True,'shade'),
+                (2032, self.WORKSHOP_Y, (1872, 2064), True,'shade'),
             ]))
         self.respawns = RespawnDirector(self.enemy_placements)
         # 정비실이 전부 점등되면 연결 발판을 거쳐 옥상으로 후퇴할 수 있다.
@@ -288,6 +291,8 @@ class ResidentialStage(Stage):
         color = (116, 128, 133) if cache.opened else (191, 173, 126)
         font.draw(cache.x - camera_x - 55, cache.feet_y + 164, label, color)
         for x, y, label in ((133, GROUND_Y + 188, '대피소'),
+                            (1300, 208, '아래 골목 · 보급'),
+                            (1690, 208, '연결로 ↑'),
                             (1048, 384, '중앙 제어함'),
                             (2152, 408, '정비실 · 퓨즈'),
                             (2782, self.BRIDGE_Y + 140, '병원')):

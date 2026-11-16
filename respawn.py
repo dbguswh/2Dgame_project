@@ -150,6 +150,14 @@ class RespawnDirector:
                     pico2d.draw_line(sx, sy, sx + sin(index) * 3, sy + 6,
                                       192, 110, 232, a=int(220 * (1 - phase)))
             enemy = self.actors.get(point.identity)
+            if enemy is not None and getattr(enemy,'kind','shade') in ('wraith','brute'):
+                from types import SimpleNamespace
+                from enemy_art import draw_enemy
+                kind=enemy.kind
+                ghost=SimpleNamespace(x=point.x,feet_y=point.feet_y+(112 if kind=='wraith' else 0),
+                                      face_dir=-1,alive=True)
+                draw_enemy(ghost,kind,0,camera_x,opacity_scale=.12+progress*.38)
+                enemy=None  # 기본 지상형 실루엣을 겹쳐 그리지 않는다.
             if enemy is not None:
                 data = enemy.motion_data
                 frame = data['frames'][data['walk'][0]]

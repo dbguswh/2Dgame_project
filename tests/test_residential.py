@@ -17,7 +17,7 @@ class ResidentialLayoutTests(unittest.TestCase):
         self.assertEqual(len({e.identity for e in placements}), 8)
         self.assertEqual(sum(e.ranged for e in placements), 3)
         self.assertEqual(sorted(sum(e.bounds == bounds for e in placements)
-                                for bounds in {e.bounds for e in placements}), [2, 3, 3])
+                                for bounds in {e.bounds for e in placements}), [2, 2, 2, 2])
         for checkpoint in (self.stage.start, self.stage.fuse_checkpoint,
                            self.stage.fixture_checkpoint):
             self.assertIsNotNone(self.stage.safe_position(Motion(*checkpoint)))
@@ -58,6 +58,33 @@ class ResidentialLayoutTests(unittest.TestCase):
                 self.assertEqual(motion.feet_y, self.stage.UPPER_FLOOR_Y)
                 return
         self.fail(f'중앙 제어함으로 복귀하지 못함: {motion}')
+
+    def test_lower_alley_has_combat_healing_and_basic_jump_return_to_roof(self):
+        from inventory import MEDKIT
+        lower=[e for e in self.stage.enemy_placements if e.feet_y==96 and e.x>1000]
+        self.assertEqual(len(lower),2)
+        medkit=next(b for b in self.stage.supply_boxes if b.item==MEDKIT and b.x>1000)
+        self.assertEqual(medkit.feet_y,96)
+        self.assertGreater(medkit.x,max(e.bounds[1] for e in lower))
+        body=Motion(1648,96)
+        for x,y in ((1710,144),(1775,192),(1798,240),(1760,288)):
+            self.assertTrue(body.jump())
+            for _ in range(180):
+                direction=0 if abs(x-body.x)<1.2 else 1 if x>body.x else -1
+                body.step(1/120,direction,self.stage.solids,self.stage.width)
+                if body.on_ground:break
+            self.assertEqual(body.feet_y,y,(x,y,body))
+
+    @patch('pico2d.load_image',return_value=Mock())
+    def test_rooftop_flyer_does_not_attack_lower_route(self,_):
+        from enemy_factory import create_enemy
+        from player import Player
+        w=create_enemy(next(e for e in self.stage.enemy_placements if e.kind=='wraith'))
+        p=Player(1500,96)
+        for _ in range(500):
+            w.update(1/120,p,self.stage)
+            self.assertIsNone(w.consume_attack())
+            self.assertNotIn(w.state,('DIVE','DIVE_WINDUP'))
 
     def test_unpowered_canal_cannot_be_jumped_even_with_speed_item(self):
         left, right = self.stage.canal
