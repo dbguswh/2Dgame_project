@@ -90,8 +90,18 @@ class WorkshopRetreatTests(unittest.TestCase):
         light.remaining=0
         self.player.x,self.player.feet_y=2020,304
         positions=[]
-        for _ in range(2880):
+        for _ in range(1440):
             enemy.update(1/120,self.player,self.stage,light)
             positions.append(enemy.x)
         self.assertGreater(max(positions),1896)
         self.assertGreaterEqual(enemy.feet_y,288)
+
+    def test_unseen_enemy_returns_to_original_post_after_light_ends(self):
+        enemy,light=self.enemy(),self.light(2020)
+        for _ in range(960):enemy.update(1/120,self.player,self.stage,light)
+        self.player.x=2800
+        light.remaining=0
+        for _ in range(1440):enemy.update(1/120,self.player,self.stage,light)
+        self.assertIsNone(enemy.escape_bounds)
+        self.assertGreaterEqual(enemy.x,1896)
+        self.assertEqual(enemy.feet_y,304)

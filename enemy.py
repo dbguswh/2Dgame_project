@@ -478,6 +478,23 @@ class Shade:
             # 경계에서 한 프레임씩 멈추지 않고 같은 프레임에 반대 방향으로 걸음을 잇는다.
             self._move(delta_time, self.face_dir, 48, stage)
 
+    def _return_to_post(self, delta_time, player, stage, light):
+        if self.escape_bounds is None or (light is not None and light.active):
+            return False
+        left,right=self.combat_bounds
+        if (left+BODY_WIDTH/2 <= self.x <= right-BODY_WIDTH/2 and self.motion.on_ground
+                and abs(self.feet_y-self.spawn_position[1]) < 8):
+            self.escape_bounds=None
+            self.patrol_bounds=(left+BODY_WIDTH/2+4,right-BODY_WIDTH/2-4)
+            return False
+        if self.can_see(player):
+            return False
+        # 빛이 끝나면 멀리서 무작정 배회하지 않고 원래 교전 지점으로 돌아간다.
+        self.state='PATROL'
+        self.face_dir=1 if self.x < left+BODY_WIDTH/2 else -1
+        self._move(delta_time,self.face_dir,80,stage)
+        return True
+
     def update(self, delta_time, player, stage, light=None):
         self.solids = stage.solids
         self.active_light = light
@@ -516,6 +533,8 @@ class Shade:
                 self._enter('CHASE')
             return
         if self._update_light_response(delta_time, player, stage, light):
+            return
+        if self._return_to_post(delta_time,player,stage,light):
             return
         if not self.motion.on_ground:
             # 연결 발판으로 내려가는 도중에는 공중에 멈춰 공격하지 않는다.
