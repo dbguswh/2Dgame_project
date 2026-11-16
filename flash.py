@@ -8,8 +8,8 @@ from effects import blended, glow, light_beam
 
 
 FLASH_COST = 20
-FLASH_RANGE = 96
-FLASH_COOLDOWN = 0.6
+FLASH_RANGE = 160
+FLASH_COOLDOWN = 0.8
 FLASH_STUN = 1.2
 FLASH_KNOCKBACK = 48
 FLASH_FRAME_ENDS = (0.04, 0.08, 0.12, 0.19, 0.26, 0.32)
@@ -44,5 +44,7 @@ class FlashPulse:
                     pico2d.draw_line(x, y + offset, end, y + offset,
                                       255, 239, 184, a=int(175 * strength))
                 glow(x, y, 22, (255, 224, 155), alpha=210 * strength)
+                # 유효 거리의 끝도 읽혀 짧은 근접 베기와 구분되게 한다.
+                glow(end,y,8,(255,239,190),alpha=130*strength)
         with blended():
             glow(x, y, 12, (255, 245, 211), alpha=220 * strength)

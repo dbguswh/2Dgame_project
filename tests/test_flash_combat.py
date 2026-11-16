@@ -110,7 +110,7 @@ class FlashCombatTests(unittest.TestCase):
         tap(self.player)
         update_world(0, self.player, [farther, self.enemy], self.stage)
         self.assertEqual((self.enemy.health, farther.health), (1, 2))
-        self.tick(0.61)
+        self.tick(0.81)
         self.cast()
         self.assertFalse(self.enemy.alive)
         self.assertEqual(self.player.battery, 60)

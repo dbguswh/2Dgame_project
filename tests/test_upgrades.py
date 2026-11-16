@@ -56,7 +56,7 @@ class UpgradeTests(unittest.TestCase):
                 self.assertTrue(ManagementVisit().purchase(p, second))
                 self.assertEqual(p.fragments, 0)
                 self.assertEqual(p.max_battery, 140 if 0 in (first, second) else 100)
-                self.assertEqual(p.flash_range, 120 if 1 in (first, second) else 96)
+                self.assertEqual(p.flash_range, 200 if 1 in (first, second) else 160)
                 self.assertEqual(p.light_radius, 200 if 2 in (first, second) else 160)
                 self.assertFalse(p.apply_core_upgrade(CORE_UPGRADES[first].key))
 
@@ -65,7 +65,7 @@ class UpgradeTests(unittest.TestCase):
         self.visit.purchase(self.p, 1)
         self.p.update(0, 960, [Solid(0, 0, 960, 96)])
         self.p._cast_flash()
-        self.assertEqual(self.p.flash_effect.box[2], 532)
+        self.assertEqual(self.p.flash_effect.box[2], 612)
         self.assertEqual(self.p.battery, 80)
         self.assertEqual(self.p.consume_flash_target([('far', (526, 96, 550, 184))]), 'far')
         self.p.reset_actions_after_return()

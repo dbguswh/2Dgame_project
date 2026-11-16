@@ -51,11 +51,11 @@ class FlashInputTests(unittest.TestCase):
         tap(self.player)
         self.player.update(0, 960)
         self.assertEqual(self.player.battery, 80)
-        self.tick(0.21)
+        self.tick(0.41)
         tap(self.player)
         self.player.update(0, 960)
         self.assertEqual(self.player.battery, 60)
-        self.tick(0.7)
+        self.tick(0.9)
         self.player.battery = 19
         tap(self.player)
         self.player.update(0, 960)
