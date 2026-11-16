@@ -25,6 +25,8 @@ def clear_resources():
     clear_title()
     from enemy_art import clear_resources as clear_new_actors
     clear_new_actors()
+    from controls_view import clear_resources as clear_controls
+    clear_controls()
     if _glow_texture is not None and _glow_renderer is canvas.renderer:
         sdl2.SDL_DestroyTexture(_glow_texture)
     _glow_texture = None

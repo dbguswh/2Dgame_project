@@ -63,14 +63,15 @@ def draw_buffs(player, camera_x=0):
 
 def draw_buff_timers(font, effects):
     for slot, remaining, duration, label, x, color in (
-        (SPEED, effects.speed_remaining, SPEED_DURATION, '속도', 20, (139, 233, 166)),
-        (SHIELD, effects.shield_remaining, SHIELD_DURATION, '보호막', 300, (144, 225, 247)),
+        (SPEED, effects.speed_remaining, SPEED_DURATION, '속도', 690, (139, 233, 166)),
+        (SHIELD, effects.shield_remaining, SHIELD_DURATION, '보호막', 690, (144, 225, 247)),
     ):
         if remaining <= 0:
             continue
-        pico2d.draw_rectangle(x - 5, 68, x + 248, 94, 13, 23, 30, a=220, filled=True)
-        draw_item(slot, x + 8, 82, 21)
+        y=112 if slot==SPEED else 142
+        pico2d.draw_rectangle(x - 5, y-14, x + 248, y+12, 13, 23, 30, a=220, filled=True)
+        draw_item(slot, x + 8, y, 21)
         seconds = max(.1, ceil((remaining - 1e-9) * 10) / 10)
-        font.draw(x + 25, 82, f'{label} {seconds:.1f}초', color)
-        pico2d.draw_rectangle(x + 155, 78, x + 238, 83, 48, 60, 69, filled=True)
-        pico2d.draw_rectangle(x + 155, 78, x + 155 + 83 * remaining / duration, 83, *color, filled=True)
+        font.draw(x + 25, y, f'{label} {seconds:.1f}초', color)
+        pico2d.draw_rectangle(x + 155, y-4, x + 238, y+1, 48, 60, 69, filled=True)
+        pico2d.draw_rectangle(x + 155, y-4, x + 155 + 83 * remaining / duration, y+1, *color, filled=True)

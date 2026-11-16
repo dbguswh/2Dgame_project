@@ -17,6 +17,7 @@ from sword_visuals import draw_sword_stroke
 from title_view import draw_title
 from halo_view import draw_halo_aim
 from stage_notice_view import draw_weapon_acquired,draw_stage_transition
+from controls_view import draw_controls,fonts as control_fonts
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -73,7 +74,8 @@ def draw_game(game, font):
             alpha = min(210, (y - SCREEN_HEIGHT + 112) * 3)
             pico2d.draw_rectangle(0, y, SCREEN_WIDTH - 1, y + 3,
                                   9, 14, 23, a=alpha, filled=True)
-        pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, 64, 9, 14, 23, a=190, filled=True)
+        pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, 96, 9, 16, 25, a=240, filled=True)
+        pico2d.draw_line(0,96,SCREEN_WIDTH-1,96,57,72,83,a=210)
     hp_color = (160, 239, 183) if player.heal_effect > 0 else (235, 240, 245)
     font.draw(20, SCREEN_HEIGHT - 28, f'체력 {player.health} / 3', hp_color)
     battery_color = (255, 215, 126) if player.battery >= 50 else (238, 145, 118)
@@ -97,29 +99,18 @@ def draw_game(game, font):
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
-    controls = ('←/→ 방향  ↑/↓ 각도  F 놓아 투척' if player.bomb_aim is not None
-                else 'W 놓아 투척  ↑/↓ 각도  ←/→ 방향' if player.halo_aim is not None
-                else f'방향키 이동  Shift 달리기  Space 점프  W {"광륜 조준" if player.weapon=="ring" else "광검"}')
-    font.draw(20, 44, controls,
-              (210, 219, 230))
-    item_controls = ('충전 1초 · 다른 행동이나 슬롯 선택으로 취소' if player.bomb_aim is not None
-                     else 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴')
-    font.draw(20, 18, item_controls, (177, 191, 207))
-    weapon_label='광륜' if player.weapon=='ring' else '광검'
-    weapon_hint=('복귀 중' if player.halo is not None and player.halo.active else
-                 'A 전환 · W 유지/놓아 투척' if player.weapon=='ring' else 'A 전환 · ↑+W 올려 베기') if player.ring_unlocked else '↑+W 올려 베기'
-    font.draw(20,112,f'무기: {weapon_label} · {weapon_hint}',(225,205,158))
+    draw_controls(player,font)
+    small,_=control_fonts()
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
         x = 616 + slot * 82
         selected = player.inventory.selected == slot
         pico2d.draw_rectangle(x, 6, x + 78, 60, 27, 33, 39, filled=True)
         pico2d.draw_rectangle(x, 6, x + 78, 60, *( (244, 206, 119) if selected else (68, 77, 88)))
-        font.draw(x + 5, 46, f'{slot + 1} {label}', (235, 223, 192))
+        small.draw(x + 5, 47, f'{slot + 1} {label}', (235, 223, 192))
         draw_item(slot, x + 23, 22, 28)
-        font.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
+        small.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
     selected_name = ITEM_NAMES[player.inventory.selected]
-    item_hint = 'F 유지 / 놓아 투척' if player.inventory.selected == LIGHT_BOMB else 'F 사용'
-    font.draw(616, 78, f'선택: {selected_name} · {item_hint}', (241, 211, 150))
+    small.draw(616, 81, f'1~4 선택   F {"유지·놓아 투척" if player.inventory.selected==LIGHT_BOMB else "사용"}  ·  {selected_name}', (213, 199, 165))
     with blended():
         draw_buff_timers(font, player.item_effects)
     if player.notice_time > 0:

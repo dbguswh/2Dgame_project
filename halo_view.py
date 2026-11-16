@@ -21,6 +21,5 @@ def draw_halo_aim(player,stage,font,camera_x):
         draw_halo(x-camera_x,y,size=30)
     label_x=max(18,min(655,x-camera_x-45))
     label_y=y+72 if y+112<430 else y-60
-    pico2d.draw_rectangle(label_x-8,label_y-30,label_x+276,label_y+18,8,14,22,filled=True)
+    pico2d.draw_rectangle(label_x-8,label_y-16,label_x+220,label_y+16,8,14,22,filled=True)
     font.draw(label_x,label_y,f'각도 {aim.angle:.0f}°   상승 {max(0,end_y-y):.0f}px',(255,222,150))
-    font.draw(label_x,label_y-22,'↑/↓ 각도  ←/→ 방향  W 놓아 투척',(206,218,226))
