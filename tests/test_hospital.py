@@ -119,7 +119,7 @@ class HospitalTests(unittest.TestCase):
         self.s.parts['B'] = True
         self.s.interact(self.p)
         self.assertTrue(shield.opened)
-        self.at(1360)
+        self.at(self.s.battery_pack_position[0])
         self.s.collect_pickups(self.p)
         self.assertFalse(self.s.battery_pack_collected)
         self.p.battery = 20

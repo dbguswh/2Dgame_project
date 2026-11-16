@@ -45,6 +45,7 @@ def draw_game(game, font, show_hud=True):
     for enemy in game.enemies:
         enemy.draw(camera_x, signals=False)
     player.draw(camera_x)
+    if hasattr(stage,'draw_foreground'):stage.draw_foreground(player,camera_x)
     draw_darkness(stage, player, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
     draw_navigation(stage, player, camera_x, SCREEN_WIDTH)
     stage.draw_labels(font, camera_x)

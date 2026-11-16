@@ -21,11 +21,11 @@ class HospitalStage(Stage):
     def __init__(self):
         super().__init__()
         self.width = 2880
-        self.start = (1472, GROUND_Y)
-        self.fixture_position = (1536, GROUND_Y)
+        self.start = (1432, GROUND_Y)
+        self.fixture_position = (1488, GROUND_Y)
         self.fixture_checkpoint = self.start
-        self.terminal_position = (1408, GROUND_Y)
-        self.exit_position = (1600, GROUND_Y)
+        self.terminal_position = (1376, GROUND_Y)
+        self.exit_position = (1664, GROUND_Y)
         self.circuit = 'A'
         self.parts = {'A': False, 'B': False}
         self.returned = {'A': False, 'B': False}
@@ -35,18 +35,18 @@ class HospitalStage(Stage):
         self.return_checkpoints = {'A': (912,96), 'B': (2128,96)}
         self.blackout_remaining = 0.0
         self.part_positions = {'A': (192, 304), 'B': (2752, 112)}
-        self.latch_positions = {'A': (904,96), 'B': (2112,96)}
+        self.latch_positions = {'A': (880,96), 'B': (2112,96)}
         self.doors = {'A': PowerDoor('hospital-a', 948, progress=1),
                       'B': PowerDoor('hospital-b', 2036),
-                      'exit': PowerDoor('hospital-exit', 1600, height=176, blocks_corridor=False)}
+                      'exit': PowerDoor('hospital-exit', 1664, height=176, blocks_corridor=False)}
         self.power_restore_elapsed = 0.0
         self.record_time = 0.0
         self.visual_time = 0.0
-        self.supply_boxes = (SupplyBox('hospital-a-return-medkit', 1000, 96, item=MEDKIT),
+        self.supply_boxes = (SupplyBox('hospital-a-return-medkit', 1072, 96, item=MEDKIT),
                              SupplyBox('hospital-b-return-bomb', 2672, 96, item=LIGHT_BOMB),
                              SupplyBox('hospital-hub-shield', 1568, 96, item=SHIELD))
         self.fragment_cache = FragmentCache('hospital-upper-cache', 704, 336)
-        self.battery_pack_position = (1360, 112)
+        self.battery_pack_position = (1328, 112)
         self.ascent_ledges = (Solid(768, 128, 896, 144, True), Solid(640, 176, 736, 192, True),
                               Solid(512, 224, 608, 240, True))
         self.archive_gallery = Solid(128, 268, 480, 288, True)
@@ -331,3 +331,11 @@ class HospitalStage(Stage):
     def draw_labels(self, font, camera_x):
         from hospital_ui import draw_labels
         draw_labels(self,font,camera_x)
+
+    def draw_foreground(self,player,camera_x):
+        # 상자 앞면만 발보다 앞에 그려 상자를 뚫고 서 있는 듯한 겹침을 줄인다.
+        from effects import blended
+        for box in self.supply_boxes:
+            if abs(player.x-box.x)>44 or abs(player.feet_y-box.feet_y)>8:continue
+            x,y=box.x-camera_x,box.feet_y
+            with blended((x-40,y,x+40,y+24)):box.draw(camera_x)

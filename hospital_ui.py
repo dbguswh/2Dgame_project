@@ -23,8 +23,8 @@ def draw_labels(stage,font,camera_x):
             small.draw(center-218,y,route+'  '+circuit_status(stage,key),color)
         small.draw(center-218,315,'회로 E 선택 → 방 교전 → 부품 E 분리 → 귀환',(162,180,192))
     # 목적지 명패. 가까운 E 안내와 겹치지 않는 위치에만 표시한다.
-    for wx,y,text,w in ((760,286,'A 창고',86),(1408,244,'회로 선택',102),
-                         (1536,278,'부품 설치',102),(2576,268,'B 정비실',102)):
+    for wx,y,text,w in ((760,286,'A 창고',86),(stage.terminal_position[0],244,'회로 선택',102),
+                         (stage.fixture_position[0],278,'부품 설치',102),(2576,268,'B 정비실',102)):
         x=wx-camera_x
         if 18+w/2<=x<=942-w/2:
             pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,24,32,filled=True)
