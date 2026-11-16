@@ -17,13 +17,11 @@ class HospitalScene:
 
     def draw(self, stage, camera_x, width, height):
         pico2d.draw_rectangle(0, 0, width, height, 12, 23, 32, filled=True)
-        for index, key in enumerate(('archive', 'atrium', 'ward', 'maintenance')):
+        for index, key in enumerate(('archive', 'atrium', 'maintenance')):
             x = index * 960-camera_x
             if x+960 < 0 or x > width:
                 continue
             self.image.clip_draw(*self.data['frames'][key], x+480, 336, 960, 480)
-        if camera_x < 2400 and camera_x+width > 1440:
-            self.image.clip_draw(*self.data['frames']['atrium'], 1920-camera_x, 336, 960, 480)
         for region in stage.fixed_light_regions:
             a, b = max(0, region.left-camera_x), min(width, region.right-camera_x)
             if a < b:
@@ -42,8 +40,7 @@ class HospitalScene:
         # 천장 전선과 벽면 조명은 회로 A/B를 따라 켜진다.
         for x in range(160, stage.width, 256):
             if -40 <= x-camera_x <= width+40:
-                lit = stage.fixture_powered or 1664 <= x <= 2176 or (
-                    stage.powered_circuit == 'A' and 960 <= x <= 1664 or stage.powered_circuit == 'B' and 2176 <= x <= 2880)
+                lit = stage.is_temporarily_lit((x-1,96,x+1,100))
                 self.draw_wall_lamp(x-camera_x, 390, lit)
         for box in stage.supply_boxes:
             if -48 < box.x-camera_x < width+48:
@@ -75,6 +72,9 @@ class HospitalScene:
                 segment((x+dx,y-16),(x+dx,y-28),(92,126,132),2)
             if not stage.parts[key]:
                 self.draw_part(key,x,y)
+                if not stage.room_cleared[key]:
+                    for dx in (-16,0,16):
+                        segment((x+dx,y-14),(x+dx,y+18),(148,92,174),2)
         if not stage.battery_pack_collected:
             draw_battery_pack(stage.battery_pack_position[0]-camera_x, stage.battery_pack_position[1])
 

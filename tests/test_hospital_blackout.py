@@ -28,7 +28,8 @@ class HospitalBlackoutTests(unittest.TestCase):
     def take(self,key):
         x,y=self.s.part_positions[key]
         self.at((x,y-16))
-        self.s.collect_pickups(self.p)
+        self.s.room_cleared[key]=True;self.s.circuit=key
+        self.s.interact(self.p)
 
     def actors(self):
         enemies=[Shade(e.x,e.feet_y,identity=e.identity,combat_bounds=e.bounds,can_shoot=e.ranged)
@@ -83,7 +84,7 @@ class HospitalBlackoutTests(unittest.TestCase):
         enemies=self.actors()
         update_world(0,self.p,enemies,self.s)
         self.take('A');self.at((880,96))
-        self.p.light=PortableLight(1120,120,self.s.light_regions[1])
+        self.p.light=PortableLight(1000,120,self.s.light_regions[1])
         for _ in range(481):update_world(1/120,self.p,enemies,self.s)
         self.assertFalse(enemies[2].alive)
         self.assertTrue(enemies[3].alive)
@@ -148,12 +149,12 @@ class HospitalBlackoutTests(unittest.TestCase):
         self.assertTrue(all(p.warning_duration==1 for p in self.s.respawns.points))
 
     def test_b_return_cover_blocks_bolts_and_is_reachable_with_basic_jump(self):
-        m=Motion(2496,96)
+        m=Motion(1792,96)
         m.jump()
-        for _ in range(80):m.step(1/120,1 if m.x<2560 else 0,self.s.solids,self.s.width)
+        for _ in range(80):m.step(1/120,1 if m.x<1856 else 0,self.s.solids,self.s.width)
         self.assertEqual(m.feet_y,144)
-        self.at((2464,96))
-        bolt=ShadowBolt.aimed((2688,140),(2464,140))
+        self.at((1776,96))
+        bolt=ShadowBolt.aimed((1952,140),(1776,140))
         bolt.update(1,self.s.solids,self.p)
         self.assertFalse(bolt.consume_hit())
         self.assertFalse(bolt.active)

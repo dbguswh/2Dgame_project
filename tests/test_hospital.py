@@ -28,19 +28,23 @@ class HospitalTests(unittest.TestCase):
         self.at(*position)
         return self.s.interact(self.p)
 
+    def take(self,key):
+        # 이 파일은 분리 이후 설비/지형 검사. 실제 교전 잠금은 test_hospital_flow에서 검증한다.
+        self.s.room_cleared[key]=True;self.s.circuit=key
+        x,y=self.s.part_positions[key];self.interact((x,y-16))
+
     def test_initial_circuit_lights_corridor_but_not_part_rooms(self):
         self.assertEqual(len(self.s.enemy_placements), 8)
         self.assertTrue(self.s.doors['A'].is_open)
         self.assertFalse(self.s.doors['B'].is_open)
-        for x, lit in ((192, False), (1200, True), (1920, True), (2600, False), (3712, False)):
+        for x, lit in ((192, False), (1200, True), (1472, True), (1900, False), (2752, False)):
             self.at(x)
             self.assertEqual(self.s.is_temporarily_lit(self.p.get_bb()), lit)
 
     def test_switch_uses_sliding_door_collision_and_return_latch_persists(self):
         self.interact(self.s.latch_positions['A'])
         self.assertFalse(self.s.return_open['A'])
-        self.at(192,288)
-        self.s.collect_pickups(self.p)
+        self.take('A')
         self.s.update(.55)
         self.assertFalse(self.s.doors['A'].is_open)
         self.interact(self.s.latch_positions['A'])
@@ -57,12 +61,12 @@ class HospitalTests(unittest.TestCase):
     def test_final_exit_is_back_wall_door_and_never_blocks_b_corridor(self):
         self.assertNotIn(self.s.doors['exit'].solid, self.s.solids)
         self.assertFalse(self.s.doors['exit'].is_open)
-        m = Motion(2032, 96)
-        self.walk(m, 2280)
+        m = Motion(1500, 96)
+        self.walk(m, 1780)
         self.assertFalse(self.s.completed)
 
     def test_global_restoration_fades_dark_rooms_and_hub_absorbs_shadow_bolts(self):
-        self.at(1920)
+        self.at(1472)
         self.s.fixture_powered = True
         start = build_field(self.s, self.p, 0).sample(192, 200)
         self.s.update(.6)
@@ -71,8 +75,8 @@ class HospitalTests(unittest.TestCase):
         self.assertGreater(start, halfway)
         self.assertEqual(build_field(self.s, self.p, 0).sample(192, 200), 0)
         self.s.fixture_powered = False
-        self.at(1680)
-        bolt = ShadowBolt.aimed((1640, 140), (1680, 140))
+        self.at(1360)
+        bolt = ShadowBolt.aimed((1310, 140), (1360, 140))
         bolt.update(.3, self.s.solids, self.p, fixed_light=self.s.is_temporarily_lit)
         self.assertTrue(bolt.absorbed)
         self.assertFalse(bolt.consume_hit())
@@ -82,16 +86,15 @@ class HospitalTests(unittest.TestCase):
             self.s = HospitalStage()
             self.p.fragments = 0
             for i, key in enumerate(order):
-                x, y = self.s.part_positions[key]
-                self.at(x, y-16)
-                self.s.collect_pickups(self.p)
+                self.take(key)
+                self.at(*self.s.start);self.s.collect_pickups(self.p)
                 self.assertEqual(self.s.part_count, i+1)
                 self.interact(self.s.fixture_position)
                 self.assertEqual(self.s.fixture_powered, i == 1)
             self.s.apply_rewards(self.p)
             self.assertEqual(self.p.fragments, 2)
             self.assertFalse(self.s.completed)
-            self.interact((2088, 96))
+            self.interact(self.s.exit_position)
             self.assertFalse(self.s.completed)
             self.s.update(.55)
             self.interact(self.s.exit_position)
@@ -116,7 +119,7 @@ class HospitalTests(unittest.TestCase):
         self.s.parts['B'] = True
         self.s.interact(self.p)
         self.assertTrue(shield.opened)
-        self.at(1760)
+        self.at(1360)
         self.s.collect_pickups(self.p)
         self.assertFalse(self.s.battery_pack_collected)
         self.p.battery = 20
@@ -192,7 +195,7 @@ class HospitalTests(unittest.TestCase):
             self.hop(m, x, y)
         self.walk(m, 192)
         self.at(m.x, m.feet_y)
-        self.s.collect_pickups(self.p)
+        self.take('A')
         self.assertTrue(self.s.parts['A'])
         self.walk(m, 460)
         self.hop(m, 528, 336)
@@ -205,21 +208,21 @@ class HospitalTests(unittest.TestCase):
         self.assertEqual(m.feet_y, 96)
 
     def test_b_room_covers_are_jumpable_and_closed_door_cannot_be_bypassed(self):
-        m = Motion(2820, 96)
+        m = Motion(1970, 96)
         m.jump()
         for _ in range(100):
             m.step(1/120, 1, self.s.solids, self.s.width, speed=RUN_SPEED*1.3)
         self.assertLessEqual(m.x, self.s.doors['B'].solid.left-12)
         self.interact(self.s.terminal_position)
         self.s.update(.55)
-        m = Motion(2992, 96)
-        self.walk(m, 3072)
-        self.hop(m, 3136, 144)
-        self.walk(m, 3392)
-        self.hop(m, 3456, 144)
-        self.walk(m, 3712)
+        m = Motion(2128, 96)
+        self.walk(m, 2208)
+        self.hop(m, 2272, 144)
+        self.walk(m, 2512)
+        self.hop(m, 2576, 144)
+        self.walk(m, 2752)
         self.at(m.x, m.feet_y)
-        self.s.collect_pickups(self.p)
+        self.take('B')
         self.assertTrue(self.s.parts['B'])
 
 
