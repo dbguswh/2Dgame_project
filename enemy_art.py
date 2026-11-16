@@ -28,7 +28,7 @@ def draw_halo(x,y,angle=0,size=36):
 
 def draw_enemy(enemy,kind,frame,camera_x=0):
     image,data=load(kind);f=data['frames'][frame]
-    l,t,r,b=f['bounds'];ax,ay=f['anchor'];s=(94 if kind=='wraith' else 116)/data['reference_height']
+    l,t,r,b=f['bounds'];ax,ay=f['anchor'];s=(112 if kind=='wraith' else 116)/data['reference_height']
     opacity=max(0,1-enemy.state_time/.8) if not enemy.alive else 1
     image.opacify(opacity)
     x=enemy.x-camera_x; y=enemy.feet_y+(24 if kind=='wraith' else 0)

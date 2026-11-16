@@ -65,7 +65,7 @@ class EnemyVariantTests(unittest.TestCase):
         self.assertEqual(w.state,'DIVE_WINDUP')
         target=w.dive_target
         self.p.x=700
-        for _ in range(91):w.update(1/120,self.p,self.s)
+        for _ in range(109):w.update(1/120,self.p,self.s)
         self.assertEqual(w.dive_target,target)
         for _ in range(61):w.update(1/120,self.p,self.s)
         self.assertEqual(w.state,'RECOVER')
@@ -112,3 +112,11 @@ class EnemyVariantTests(unittest.TestCase):
         self.assertEqual(w.hit_pause.remaining,0)
         self.assertEqual(w.state,'RETREAT')
         self.assertNotEqual((w.x,w.feet_y),before[:2])
+
+    def test_wraith_does_not_dive_at_lower_floor_or_climbing_player(self):
+        w=Wraith(500,288,combat_bounds=(200,800));w.dive_cooldown=0
+        for _ in range(240):w.update(1/120,self.p,self.s)
+        self.assertNotIn(w.state,('DIVE','DIVE_WINDUP'))
+        self.p.feet_y=288;self.p.motion.on_ground=False
+        for _ in range(100):w.update(1/120,self.p,self.s)
+        self.assertNotIn(w.state,('DIVE','DIVE_WINDUP'))

@@ -6,6 +6,10 @@ from physics import Motion
 from combat import overlaps
 from light_bomb import blocked_segment
 
+WINDUP_TIME=.9
+DIVE_TIME=.5
+RECOVERY_TIME=1.2
+
 
 class Wraith(Shade):
     kind='wraith'
@@ -102,18 +106,18 @@ class Wraith(Shade):
         if self.state in ('STUNNED','RETREAT'):
             self._enter('FLY_PATROL');self.dive_cooldown=1.0
         if self.state=='DIVE_WINDUP':
-            if self.state_time>=.75:
+            if self.state_time>=WINDUP_TIME:
                 self._enter('DIVE');self.dive_hit=False
             return
         if self.state=='DIVE':
-            if (self.state_time>=.5 or self.dive_target is None
+            if (self.state_time>=DIVE_TIME or self.dive_target is None
                     or not self._fly(self.dive_target,460,dt)):
                 self._enter('RECOVER')
                 return
             self.attack_event=self.get_attack_box()
             return
         if self.state=='RECOVER':
-            if self.state_time>=1:
+            if self.state_time>=RECOVERY_TIME:
                 self._enter('FLY_PATROL');self.dive_cooldown=1.6
             return
         # 빛을 가로질러 플레이어에게 진입하지 않는다.
@@ -123,7 +127,9 @@ class Wraith(Shade):
         path_lit=(light is not None and light.active and
                   light.illuminates((min(self.x,player.x)-24,min(self.feet_y,player.feet_y),
                                      max(self.x,player.x)+24,max(self.feet_y+48,player.feet_y+88))))
-        if (left<=player.x<=right and abs(player.x-self.x)<384 and clear and not path_lit
+        same_floor=abs(player.feet_y-self.spawn_position[1])<=48
+        grounded=getattr(getattr(player,'motion',None),'on_ground',True)
+        if (same_floor and grounded and left<=player.x<=right and abs(player.x-self.x)<384 and clear and not path_lit
                 and self.dive_cooldown<=0 and self.feet_y>player.feet_y+50):
             self.face_dir=1 if player.x>self.x else -1
             self.dive_target=target;self._enter('DIVE_WINDUP');return
@@ -138,7 +144,7 @@ class Wraith(Shade):
     def draw(self,camera_x=0,signals=True):
         if self.state=='DEAD':return
         from enemy_art import draw_enemy
-        frame=5 if not self.alive or self.hurt_time>0 else 4 if self.state=='DIVE' else 3 if self.state=='DIVE_WINDUP' else int(self.clock*7)%3
+        frame=5 if not self.alive or self.hurt_time>0 or self.state=='RECOVER' else 4 if self.state=='DIVE' else 3 if self.state=='DIVE_WINDUP' else int(self.clock*7)%3
         draw_enemy(self,'wraith',frame,camera_x)
         if signals:self.draw_signals(camera_x)
 
@@ -154,9 +160,18 @@ class Wraith(Shade):
         if self.state=='DIVE_WINDUP' and self.dive_target:
             tx,ty=self.dive_target
             with blended():
+                glow(self.x-camera_x,self.feet_y+24,12,(245,82,200),alpha=140)
                 for i in range(0,20,2):
                     a,b=i/20,(i+1)/20
                     pico2d.draw_line(self.x-camera_x+(tx-self.x)*a,self.feet_y+24+(ty-self.feet_y)*a,
                                       self.x-camera_x+(tx-self.x)*b,self.feet_y+24+(ty-self.feet_y)*b,
                                       232,121,248,a=170)
                 glow(tx-camera_x,ty,18,(207,91,240),alpha=95)
+                # 고정된 목표와 남은 준비 시간을 어둠 위에서도 읽게 한다.
+                progress=min(1,self.state_time/WINDUP_TIME)
+                pico2d.draw_circle(tx-camera_x,ty,19-progress*9,248,117,206,a=210)
+                pico2d.draw_rectangle(self.x-camera_x-18,self.feet_y+86,
+                                      self.x-camera_x+18,self.feet_y+90,53,30,58,filled=True)
+                pico2d.draw_rectangle(self.x-camera_x-18,self.feet_y+86,
+                                      self.x-camera_x-18+36*progress,self.feet_y+90,
+                                      245,125,209,filled=True)
