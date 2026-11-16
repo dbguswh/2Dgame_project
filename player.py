@@ -412,7 +412,7 @@ class Player:
         self.air_attack_used = True
         self.combo_window = 0.0
 
-    def _begin_attack(self, stage, elapsed=0.0):
+    def _begin_attack(self, stage, elapsed=0.0, *, direction=None):
         self.attack_kind = 'ground'
         self.attack_stage = stage
         self.attack_elapsed = elapsed
@@ -425,7 +425,7 @@ class Player:
             self.combo_direction = self.face_dir
         else:
             self.combo_window = 0.0
-            self.face_dir = self.combo_direction
+            self.face_dir = self.combo_direction if direction is None else direction
 
     def _advance_attack(self, delta_time):
         self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
@@ -468,7 +468,7 @@ class Player:
         if pico2d.SDLK_UP in self.pressed_keys:
             if (not self.is_attacking and self.attack_cooldown <= 0
                     and (self.motion.on_ground or not self.air_attack_used)):
-                self._begin_attack(2)
+                self._begin_attack(2,direction=self.face_dir)
                 self.attack_kind='upper'
                 self.combo_window=0
                 if not self.motion.on_ground:self.air_attack_used=True
@@ -581,6 +581,11 @@ class Player:
         self.solids = solids
         combo_open = self.combo_window > 0
         self._advance_attack(delta_time)
+        # 새 공격의 방향은 이번 입력을 먼저 반영한다. 진행 중인 공격은 방향을 유지한다.
+        if (self.attack_requested and not self.flash_requested and not self.light_requested
+                and not self.is_attacking and self.bomb_aim is None and self.halo_aim is None and self.light_cast <= 0):
+            facing=int(pico2d.SDLK_RIGHT in self.pressed_keys)-int(pico2d.SDLK_LEFT in self.pressed_keys)
+            if facing:self.face_dir=facing
         if self.halo is not None and not self.halo.active:
             self.halo=None
         if self.weapon_change_requested:

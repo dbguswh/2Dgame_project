@@ -108,6 +108,23 @@ class AirAttackTests(unittest.TestCase):
         self.assertEqual(self.player.face_dir, 1)
         self.assertTrue(self.player.is_attacking)
 
+    def test_uppercut_uses_current_facing_instead_of_previous_combo(self):
+        for grounded in (True,False):
+            for facing in (-1,1):
+                p=Player(400,96);p.face_dir=facing;p.combo_direction=-facing
+                if not grounded:p.motion.jump();p.update(.05,960)
+                key(p,pico2d.SDLK_UP);tap(p)
+                p.update(0,960);p.update(.16,960)
+                self.assertEqual((p.attack_kind,p.face_dir),('upper',facing))
+                box=p.get_attack_box();self.assertIsNotNone(box)
+                self.assertTrue(box[2]<=p.x if facing<0 else box[0]>=p.x)
+
+    def test_new_left_input_and_air_attack_in_same_frame_face_left(self):
+        self.jump();key(self.player,pico2d.SDLK_LEFT);tap(self.player)
+        self.player.update(0,960)
+        self.assertEqual(self.player.face_dir,-1)
+        self.assertEqual(self.player.attack_kind,'air')
+
     def test_pause_input_clear_does_not_rearm_and_return_resets_attack(self):
         self.start_air_attack()
         self.player.clear_input()
