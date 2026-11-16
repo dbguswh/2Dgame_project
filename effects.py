@@ -23,6 +23,8 @@ def clear_resources():
     clear_cases()
     from title_view import clear_resources as clear_title
     clear_title()
+    from enemy_art import clear_resources as clear_new_actors
+    clear_new_actors()
     if _glow_texture is not None and _glow_renderer is canvas.renderer:
         sdl2.SDL_DestroyTexture(_glow_texture)
     _glow_texture = None

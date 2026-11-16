@@ -47,6 +47,16 @@ def update_world(delta_time, player, enemies, stage, records=None):
     life_before = player.respawn_count
     for enemy in enemies:
         enemy.update(delta_time, player, stage, player.light)
+    if player.halo is not None:
+        ring=player.halo
+        ring.update(delta_time,player,stage.solids)
+        candidates=ring.candidates([(e.identity,e.get_bb()) for e in enemies if e.alive],stage.solids)
+        for enemy in enemies:
+            if enemy.alive and enemy.identity in candidates:
+                direction,point=candidates[enemy.identity]
+                if enemy.receive_weapon(direction,point,'ring'):
+                    ring.hits.add(enemy.identity)
+                    player.notice,player.notice_time='광륜 명중',.8
     for bomb in player.bombs:
         bomb.update(delta_time, stage.solids)
         targets = bomb.consume_targets([(e.identity, e.get_bb()) for e in enemies if e.alive], stage.solids)
@@ -75,7 +85,9 @@ def update_world(delta_time, player, enemies, stage, records=None):
             point = ((max(attack[0], body[0]) + min(attack[2], body[2])) / 2,
                      (max(attack[1], body[1]) + min(attack[3], body[3])) / 2)
             style='air' if player.attack_kind=='air' else 'rising' if heavy else 'horizontal'
-            enemy.take_damage(direction=player.face_dir, heavy=heavy, point=point, sword_style=style)
+            if not enemy.receive_weapon(player.face_dir,point,style,heavy):
+                player.notice,player.notice_time='정면 방어 · 뒤쪽이나 공격 후 빈틈을 노리세요',1.0
+                continue
             player.hit_pause.trigger(enemy.impact.hitstop)
             if heavy:
                 enemy.apply_knockback(player.face_dir)

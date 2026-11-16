@@ -25,6 +25,8 @@ class ProgressSnapshot:
     core_upgrades: tuple = ()
     fragment_cache_state: tuple = ()
     stage_state: tuple = ()
+    ring_unlocked: bool = False
+    weapon: str = 'sword'
 
     @classmethod
     def capture(cls, player, stage):
@@ -37,7 +39,7 @@ class ProgressSnapshot:
                    getattr(stage, 'return_battery_collected', False),
                    tuple(box.snapshot() for box in getattr(stage, 'supply_boxes', ())),
                    player.inventory.snapshot(), tuple(sorted(player.core_upgrades)),
-                   cache.snapshot() if cache is not None else (), stage.capture_state())
+                   cache.snapshot() if cache is not None else (), stage.capture_state(),player.ring_unlocked,player.weapon)
 
 
 class ProgressRecords:
@@ -53,6 +55,8 @@ class ProgressRecords:
         player.battery = snapshot.battery
         player.max_battery = snapshot.max_battery
         player.core_upgrades = set(snapshot.core_upgrades)
+        player.ring_unlocked=snapshot.ring_unlocked
+        player.weapon=snapshot.weapon
         player.checkpoint_position = snapshot.checkpoint
         stage.fixture_powered = snapshot.fixture_powered
         stage.fuse_state = snapshot.fuse_state

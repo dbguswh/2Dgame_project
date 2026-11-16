@@ -9,7 +9,7 @@ from light_sword import SWORD_REACH, sword_box
 
 
 def stroke_state(player):
-    if not player.is_attacking or player.attack_kind not in ('ground', 'air'):
+    if not player.is_attacking or player.attack_kind not in ('ground', 'air', 'upper'):
         return None
     air = player.attack_kind == 'air'
     rising = not air and player.attack_stage == 2
@@ -19,7 +19,8 @@ def stroke_state(player):
         return None
     progress = min(1, (elapsed-start)/(end-start))
     opacity = max(0, 1-(max(0, elapsed-end)/linger))
-    bounds = sword_box(player.x, player.feet_y, player.face_dir, air, player.solids, rising)
+    bounds = (player.get_attack_box() if player.attack_kind=='upper'
+              else sword_box(player.x, player.feet_y, player.face_dir, air, player.solids, rising))
     return bounds, air, rising, progress, opacity
 
 
@@ -36,6 +37,11 @@ def draw_sword_stroke(player, camera_x=0):
     minimum,maximum=(-65,0) if air else (-23,57) if rising else (-22,22)
     angle_start,angle_end=max(minimum,angle_start),min(maximum,angle_end)
     radius = SWORD_REACH
+    if player.attack_kind=='upper':
+        y=player.feet_y+44
+        radius=112
+        angle=20+75*progress
+        angle_start,angle_end=angle-24,angle
     with blended((left-camera_x,bottom,right-camera_x,top)):
         for index in range(32):
             t0,t1=index/32,(index+1)/32

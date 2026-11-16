@@ -43,10 +43,10 @@ class GameSession:
         self.stage = self.stage_factory()
         self.player = Player(*self.stage.start)
         self.player.face_dir = getattr(self.stage, 'start_direction', 1)
+        if self.stage.stage_id in ('hospital','substation'):self.player.unlock_ring()
         self.completed_stage_ids.clear()
         if self.stage.enemy_placements:
-            self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds,
-                                  can_shoot=e.ranged)
+            self.enemies = [Shade(e.x,e.feet_y,identity=e.identity,combat_bounds=e.bounds,can_shoot=e.ranged)
                             for e in self.stage.enemy_placements]
         else:
             self.enemies = [Shade(*self.stage.enemy_spawn, combat_bounds=self.stage.combat_bounds)]
@@ -95,8 +95,8 @@ class GameSession:
         p.notice = ('운하 병원 · 부품 분리 시 정전, 수동 개방 후 중앙 복귀'
                     if self.stage.stage_id == 'hospital' else '중앙 변전소 · 하부 차단기로 승강기 전원을 공급하세요')
         p.notice_time = 3.5
-        self.enemies = [Shade(e.x, e.feet_y, identity=e.identity, combat_bounds=e.bounds,
-                              can_shoot=e.ranged) for e in self.stage.enemy_placements]
+        self.enemies = [Shade(e.x,e.feet_y,identity=e.identity,combat_bounds=e.bounds,can_shoot=e.ranged)
+                        for e in self.stage.enemy_placements]
         restore_enemies(self.enemies, self.stage)
         self.records = ProgressRecords(p, self.stage)
         self.management_visit = None
@@ -119,6 +119,8 @@ class GameSession:
         self.state = 'MANAGEMENT'
         self.selection = len(SUPPLY_OFFERS) if self.management_visit.completed else 0
         self.player.clear_input()
+        if self.stage.stage_id=='residential' and self.player.unlock_ring():
+            self.records.remember(self.player,self.stage)
         return True
 
     def return_to_title(self):

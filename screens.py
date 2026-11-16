@@ -48,6 +48,7 @@ def draw_game(game, font):
     draw_buffs(player, camera_x)
     for bomb in player.bombs:
         bomb.draw(camera_x)
+    if player.halo is not None and player.halo.active:player.halo.draw(camera_x)
     for enemy in game.enemies:
         enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
@@ -95,6 +96,9 @@ def draw_game(game, font):
     item_controls = ('충전 1초 · 다른 행동이나 슬롯 선택으로 취소' if player.bomb_aim is not None
                      else 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴')
     font.draw(20, 18, item_controls, (177, 191, 207))
+    weapon_label='광륜' if player.weapon=='ring' else '광검'
+    weapon_hint=('복귀 중' if player.halo is not None and player.halo.active else 'A 전환') if player.ring_unlocked else '↑+W 올려 베기'
+    font.draw(20,112,f'무기: {weapon_label} · {weapon_hint}',(225,205,158))
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
         x = 616 + slot * 82
         selected = player.inventory.selected == slot

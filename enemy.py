@@ -206,6 +206,10 @@ class Shade:
             self._enter('DYING')
         return True
 
+    def receive_weapon(self,direction,point,kind='sword',heavy=False):
+        return self.take_damage(direction=direction,heavy=heavy,point=point,
+                                sword_style=None if kind=='ring' else kind)
+
     def receive_flash(self, direction, point=None):
         if not self.take_damage(direction=direction, heavy=True, point=point):
             return False
