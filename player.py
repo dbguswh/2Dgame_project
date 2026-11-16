@@ -13,7 +13,7 @@ from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_effects import ItemEffects
 from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb, BombAim
-from halo import Halo
+from halo import Halo,HaloAim
 from light_sword import sword_box
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
@@ -133,6 +133,10 @@ class Player:
         self.weapon = 'sword'
         self.halo = None
         self.weapon_change_requested = False
+        self.halo_aim = None
+        self.halo_release_requested = False
+        self.halo_air_direction = 0
+        self.halo_air_speed = MOVE_SPEED
 
     @property
     def x(self):
@@ -184,6 +188,8 @@ class Player:
                 self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 선택 · {hint}', 1.0
             self.pressed_keys.add(event.key)
         elif event.type == pico2d.SDL_KEYUP:
+            if event.key==pico2d.SDLK_w and (self.halo_aim is not None or self.attack_requested):
+                self.halo_release_requested=True
             if event.key == pico2d.SDLK_f and (self.bomb_aim is not None or self.bomb_start_requested):
                 self.bomb_release_requested = True
             self.pressed_keys.discard(event.key)
@@ -199,13 +205,39 @@ class Player:
         self.requested_item = None
         self.cancel_bomb_aim()
         self.weapon_change_requested = False
+        self.cancel_halo_aim()
 
     def unlock_ring(self):
         if self.ring_unlocked:
             return False
         self.ring_unlocked = True
-        self.notice, self.notice_time = '광륜 해금 · A 무기 전환 · W 투척 · ↑+W 위쪽 투척', 3.0
+        self.notice, self.notice_time = '새 무기 획득: 광륜 · A로 선택', 3.0
         return True
+
+    def cancel_halo_aim(self):
+        self.halo_aim=None
+        self.halo_release_requested=False
+
+    @property
+    def halo_origin(self):
+        return (self.x+self.face_dir*24,min(508,self.feet_y+48))
+
+    def _update_halo_aim(self,dt):
+        aim=self.halo_aim
+        if aim is None:
+            self.halo_release_requested=False
+            return
+        direction=int(pico2d.SDLK_RIGHT in self.pressed_keys)-int(pico2d.SDLK_LEFT in self.pressed_keys)
+        elevation=int(pico2d.SDLK_UP in self.pressed_keys)-int(pico2d.SDLK_DOWN in self.pressed_keys)
+        aim.update(0 if self.halo_release_requested else dt,direction,elevation)
+        self.face_dir=aim.direction
+        if self.halo_release_requested:
+            angle=aim.angle
+            self.cancel_halo_aim()
+            self._begin_attack(1)
+            self.attack_kind='ring';self.combo_window=0
+            self.halo=Halo(*self.halo_origin,self.face_dir,angle=angle)
+            self.notice,self.notice_time=f'광륜 투척 · {angle:.0f}°',.8
 
     def cancel_bomb_aim(self):
         self.bomb_aim = None
@@ -266,6 +298,7 @@ class Player:
         return self.begin_bomb_aim()
 
     def begin_bomb_aim(self):
+        self.cancel_halo_aim()
         if self.is_attacking or self.light_cast > 0:
             self.notice, self.notice_time = '현재 동작을 마친 뒤 투척하세요', 1.0
             return False
@@ -355,7 +388,7 @@ class Player:
     @property
     def attack_lean(self):
         """발 기준으로 준비 때 뒤로, 타격 때 앞으로 힘을 싣는 시각 회전이다."""
-        if not self.is_attacking or self.attack_kind in ('flash', 'bomb'):
+        if not self.is_attacking or self.attack_kind in ('flash', 'bomb', 'ring'):
             return 0.0
         ends = self._attack_frame_ends()
         angles = ((0.04, 0.10, -0.15, -0.11, -0.04, 0.0) if self.attack_kind == 'air'
@@ -413,14 +446,14 @@ class Player:
         if self.is_attacking and self.attack_kind == 'bomb':
             return
         if self.weapon == 'ring':
-            if not self.is_attacking and self.bomb_aim is None:
+            if not self.is_attacking and self.bomb_aim is None and self.halo_aim is None:
                 if self.halo is not None and self.halo.active:
                     self.notice,self.notice_time='광륜이 돌아온 뒤 다시 던지세요',.7
                 else:
-                    self._begin_attack(1)
-                    self.attack_kind='ring'
+                    self.halo_aim=HaloAim(self.face_dir,45 if pico2d.SDLK_UP in self.pressed_keys else 0)
+                    self.halo_air_direction=int(pico2d.SDLK_RIGHT in self.pressed_keys)-int(pico2d.SDLK_LEFT in self.pressed_keys)
+                    self.halo_air_speed=(RUN_SPEED if self.run_held else MOVE_SPEED)*self.item_effects.speed_multiplier
                     self.combo_window=0
-                    self.halo=Halo(self.x,self.feet_y+44,self.face_dir,pico2d.SDLK_UP in self.pressed_keys)
             return
         if pico2d.SDLK_UP in self.pressed_keys:
             if (not self.is_attacking and self.attack_cooldown <= 0
@@ -444,6 +477,7 @@ class Player:
 
     @property
     def animation_state(self):
+        if self.halo_aim is not None:return 'bomb_aim'
         if self.bomb_aim is not None:
             return 'bomb_aim'
         if self.is_attacking:
@@ -539,6 +573,7 @@ class Player:
         if self.halo is not None and not self.halo.active:
             self.halo=None
         if self.weapon_change_requested:
+            if self.halo_aim is not None:self.cancel_halo_aim()
             if not self.ring_unlocked:
                 self.notice,self.notice_time='첫 관리소에서 광륜을 해금하세요',1.1
             elif self.is_attacking or self.bomb_aim is not None or self.light_cast > 0:
@@ -550,6 +585,9 @@ class Player:
                 self.notice,self.notice_time=f'{"광륜" if self.weapon=="ring" else "광검"} 장착',.9
             self.weapon_change_requested=False
         higher_priority_action = self.light_requested or self.flash_requested
+        if (self.halo_aim is not None and (higher_priority_action or self.jump_requested
+                or self.interaction_requested or self.use_medkit_requested or self.bomb_start_requested)):
+            self.cancel_halo_aim()
         if (self.bomb_aim is not None and (higher_priority_action or self.attack_requested
                                          or self.jump_requested or self.interaction_requested)):
             self.cancel_bomb_aim()
@@ -580,6 +618,7 @@ class Player:
             self.use_medkit_requested = False
             self.requested_item = None
         self._request_attack(combo_open)
+        self._update_halo_aim(delta_time)
         self.attack_requested = False
         if self.jump_requested and not self.is_attacking and self.light_cast <= 0:
             self.motion.jump()
@@ -589,11 +628,13 @@ class Player:
         )
         if self.bomb_aim is not None:
             direction = 0 if self.motion.on_ground else self.bomb_air_direction
+        if self.halo_aim is not None:
+            direction=0 if self.motion.on_ground else self.halo_air_direction
         if (self.is_attacking and (self.attack_kind == 'ground'
                                   or (self.attack_kind in ('flash', 'bomb', 'ring', 'upper') and self.motion.on_ground))) or self.light_cast > 0:
             direction = 0
         previous_direction = self.face_dir
-        if direction and not self.is_attacking and self.bomb_aim is None:
+        if direction and not self.is_attacking and self.bomb_aim is None and self.halo_aim is None:
             self.face_dir = direction
         previous_x = self.x
 
@@ -611,6 +652,8 @@ class Player:
         speed = (RUN_SPEED if self.run_held else MOVE_SPEED) * max(speed_factor, self.item_effects.speed_multiplier)
         if self.bomb_aim is not None and not self.motion.on_ground:
             speed = self.bomb_air_speed
+        if self.halo_aim is not None and not self.motion.on_ground:
+            speed=self.halo_air_speed
         self.motion.step(delta_time, direction, solids, area_width, margin, speed=speed)
         if self.motion.on_ground:
             self.air_attack_used = False
@@ -770,6 +813,7 @@ class Player:
         self.health -= 1
         self.hit_pause.reset()
         self.cancel_bomb_aim()
+        self.cancel_halo_aim()
         self.attack_elapsed = None
         self.attack_requested = False
         self.flash_pending = False

@@ -20,9 +20,9 @@ def load(name):
     return _assets[name]
 
 
-def draw_halo(x,y,angle=0):
+def draw_halo(x,y,angle=0,size=36):
     image,data=load('halo')
-    l,t,r,b=data['bounds'];w,h=r-l,b-t;s=36/max(w,h)
+    l,t,r,b=data['bounds'];w,h=r-l,b-t;s=size/max(w,h)
     image.clip_composite_draw(l,data['source_size'][1]-b,w,h,angle,'',x,y,w*s,h*s)
 
 

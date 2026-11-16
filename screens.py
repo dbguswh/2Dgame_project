@@ -15,6 +15,7 @@ from buff_visuals import draw_buffs, draw_buff_timers
 from management_view import draw_city_map, draw_management
 from sword_visuals import draw_sword_stroke
 from title_view import draw_title
+from halo_view import draw_halo_aim
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -46,10 +47,6 @@ def draw_game(game, font):
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)
-    if (player.weapon=='ring' and player.ring_unlocked and not player.is_attacking
-            and player.halo is None and player.bomb_aim is None and player.light_cast<=0):
-        from enemy_art import draw_halo
-        draw_halo(player.x-camera_x+player.face_dir*20,player.feet_y+49)
     draw_sword_stroke(player,camera_x)
     draw_buffs(player, camera_x)
     for bomb in player.bombs:
@@ -61,6 +58,7 @@ def draw_game(game, font):
     if director is not None:
         director.draw_signals(camera_x, font, SCREEN_WIDTH)
     draw_bomb_aim(player, stage.solids, font, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
+    draw_halo_aim(player,stage,font,camera_x)
     if reveal is not None and reveal.active:
         reveal.draw(font,SCREEN_WIDTH,SCREEN_HEIGHT)
         return
@@ -99,7 +97,8 @@ def draw_game(game, font):
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
     controls = ('←/→ 방향  ↑/↓ 각도  F 놓아 투척' if player.bomb_aim is not None
-                else f'방향키 이동  Shift 달리기  Space 점프  W {"광륜" if player.weapon=="ring" else "광검"}')
+                else 'W 놓아 투척  ↑/↓ 각도  ←/→ 방향' if player.halo_aim is not None
+                else f'방향키 이동  Shift 달리기  Space 점프  W {"광륜 조준" if player.weapon=="ring" else "광검"}')
     font.draw(20, 44, controls,
               (210, 219, 230))
     item_controls = ('충전 1초 · 다른 행동이나 슬롯 선택으로 취소' if player.bomb_aim is not None
@@ -107,7 +106,7 @@ def draw_game(game, font):
     font.draw(20, 18, item_controls, (177, 191, 207))
     weapon_label='광륜' if player.weapon=='ring' else '광검'
     weapon_hint=('복귀 중' if player.halo is not None and player.halo.active else
-                 'A 전환 · ↑+W 대각 투척' if player.weapon=='ring' else 'A 전환 · ↑+W 올려 베기') if player.ring_unlocked else '↑+W 올려 베기'
+                 'A 전환 · W 유지/놓아 투척' if player.weapon=='ring' else 'A 전환 · ↑+W 올려 베기') if player.ring_unlocked else '↑+W 올려 베기'
     font.draw(20,112,f'무기: {weapon_label} · {weapon_hint}',(225,205,158))
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
         x = 616 + slot * 82
