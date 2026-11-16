@@ -28,6 +28,9 @@ class ResidentialProgressTests(unittest.TestCase):
         self.records = ProgressRecords(self.player, self.stage)
 
     def collect_fuse(self):
+        # 회수 이후의 저장/복구 검증을 위한 완료된 교전 상태.
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
         self.player.x = self.stage.fuse_position[0]
         self.player.feet_y = self.stage.WORKSHOP_Y
         self.player.motion.on_ground = True

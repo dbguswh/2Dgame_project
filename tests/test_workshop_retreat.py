@@ -16,6 +16,9 @@ class WorkshopRetreatTests(unittest.TestCase):
         loader.start()
         self.addCleanup(loader.stop)
         self.stage = ResidentialStage()
+        # 정비실 진입 전 연결로 교전은 이미 완료한 상태다.
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
         self.player = Player(2240, 304)
 
     def enemy(self, x=1904):

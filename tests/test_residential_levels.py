@@ -24,6 +24,9 @@ class ResidentialLevelsTests(unittest.TestCase):
             self.assertFalse(self.stage.battery_pack_collected)
 
     def test_required_route_rises_through_ledges_and_crosses_upper_enemy_zone(self):
+        # 전투 이후의 지형 검증. 봉쇄 조건은 test_combat_seals에서 검증한다.
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
         body = Motion(*self.stage.start)
         heights, crossed_enemy_zone = set(), False
         for _ in range(2200):

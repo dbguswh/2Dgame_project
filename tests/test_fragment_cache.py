@@ -139,7 +139,7 @@ class FragmentCacheTests(unittest.TestCase):
     def test_lower_detour_can_return_to_ascent_with_basic_movement(self):
         body = Motion(800, 96)
         for direction, target in ((1, self.cache.x), (-1, 800)):
-            for _ in range(600):
+            for _ in range(1200):
                 if abs(body.x - target) < 1.1:
                     break
                 body.step(1 / 120, direction, self.s.solids, self.s.width)

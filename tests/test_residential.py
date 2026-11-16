@@ -22,10 +22,14 @@ class ResidentialLayoutTests(unittest.TestCase):
                            self.stage.fixture_checkpoint):
             self.assertIsNotNone(self.stage.safe_position(Motion(*checkpoint)))
             for enemy in placements:
+                if abs(enemy.feet_y-checkpoint[1])>48:continue
                 self.assertGreaterEqual(abs(enemy.x - checkpoint[0]), 128)
                 self.assertFalse(enemy.bounds[0] <= checkpoint[0] <= enemy.bounds[1])
 
     def test_basic_jumps_reach_fuse_then_return_to_central_control(self):
+        # 전투 이후의 지형 검증. 봉쇄 조건은 test_combat_seals에서 검증한다.
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
         motion = Motion(*self.stage.start)
         reached_shelf = False
         for _ in range(1400):

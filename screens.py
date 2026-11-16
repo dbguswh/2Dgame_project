@@ -58,6 +58,7 @@ def draw_game(game, font, show_hud=True):
     for enemy in game.enemies:
         enemy.draw_signals(camera_x, show_health=enemy_is_visible(stage, player, enemy))
         enemy.draw_effects(camera_x)
+    if hasattr(stage,'draw_combat_targets'):stage.draw_combat_targets(game.enemies,camera_x)
     if director is not None:
         director.draw_signals(camera_x, font, SCREEN_WIDTH)
     draw_bomb_aim(player, stage.solids, font, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)

@@ -96,6 +96,9 @@ def update_world(delta_time, player, enemies, stage, records=None):
                 enemy.apply_knockback(player.face_dir)
             player.notice = '침입자 처치' if not enemy.alive else '침입자 명중'
             player.notice_time = 1.0
+    if hasattr(stage,'update_combat_seals'):
+        stage.update_combat_seals(enemies)
+        if records is not None:records.remember(player,stage)
     for enemy in enemies:
         enemy.launch_pending_shot()
         attack = enemy.consume_attack()
@@ -114,6 +117,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
                 stage.restore_after_death()
             restore_enemies(enemies, stage)
             break
+    if hasattr(stage,'update_combat_seals'):stage.update_combat_seals(enemies)
     safe_position = stage.safe_position(player.motion)
     if safe_position is not None:
         player.last_safe_position = safe_position

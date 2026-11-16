@@ -11,6 +11,7 @@ from respawn import RespawnDirector
 from supplies import SupplyBox, draw_battery_pack
 from fragment_cache import FragmentCache
 from inventory import ITEM_NAMES, LIGHT_BOMB, SPEED, SHIELD
+from combat_seals import CombatSeal
 
 
 class ResidentialStage(Stage):
@@ -44,9 +45,9 @@ class ResidentialStage(Stage):
         self.supply_boxes = (SupplyBox('ascent-medkit', 832, 144),
                              SupplyBox('workshop-medkit', 1648, GROUND_Y),
                              SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
-                             SupplyBox('lower-detour-speed', 1040, GROUND_Y, item=SPEED),
+                             SupplyBox('lower-detour-speed', 1360, GROUND_Y, item=SPEED),
                              SupplyBox('connector-shield', 1848, 256, item=SHIELD))
-        self.fragment_cache = FragmentCache('lower-power-cache', 1200, GROUND_Y)
+        self.fragment_cache = FragmentCache('lower-power-cache', 1488, GROUND_Y)
         self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -88,19 +89,55 @@ class ResidentialStage(Stage):
             for index, (x, y, bounds, ranged,kind) in enumerate([
                 (560, GROUND_Y, (448, 752), False,'shade'), (704, GROUND_Y, (448, 752), True,'shade'),
                 (1328, self.UPPER_FLOOR_Y, (1280, 1712), False,'shade'),
-                (1360, GROUND_Y, (1280, 1632), False,'shade'),
+                (1040, GROUND_Y, (960, 1280), False,'shade'),
                 (1600, self.UPPER_FLOOR_Y, (1280, 1712), False,'wraith'),
                 (1904, self.WORKSHOP_Y, (1872, 2064), False,'shade'),
-                (1520, GROUND_Y, (1280, 1632), True,'shade'),
+                (1168, GROUND_Y, (960, 1280), True,'shade'),
                 (2032, self.WORKSHOP_Y, (1872, 2064), True,'shade'),
             ]))
         self.respawns = RespawnDirector(self.enemy_placements)
+        self.combat_seals=[CombatSeal('residential-shade-0',Solid(748,96,756,320)),
+                           CombatSeal('residential-shade-2',Solid(1804,96,1812,416)),
+                           CombatSeal('residential-shade-7',None)]
+        self.sync_combat_seals()
         # 정비실이 전부 점등되면 연결 발판을 거쳐 옥상으로 후퇴할 수 있다.
         # 처음부터 순찰 범위를 넓히지 않고 빛 탈출이 막힌 개체에만 적용한다.
         self.light_retreat_bounds = {
             e.identity: (1280, 2064) for e in self.enemy_placements
             if e.feet_y == self.WORKSHOP_Y
         }
+
+    def sync_combat_seals(self):
+        for seal in self.combat_seals:
+            if seal.barrier is None:continue
+            if seal.opened and seal.barrier in self.solids:self.solids.remove(seal.barrier)
+            elif not seal.opened and seal.barrier not in self.solids:self.solids.append(seal.barrier)
+
+    def update_combat_seals(self,enemies):
+        actors={e.identity:e for e in enemies}
+        for seal in self.combat_seals:
+            actor=actors.get(seal.target)
+            if not seal.opened and actor is not None and not actor.alive and actor.death_by_hit:
+                seal.opened=True;seal.elapsed=0
+        self.sync_combat_seals()
+
+    def capture_state(self):
+        return tuple(s.opened for s in self.combat_seals)
+
+    def restore_state(self,state):
+        if len(state)==len(self.combat_seals):
+            for seal,opened in zip(self.combat_seals,state):seal.opened=opened;seal.elapsed=.5 if opened else 0
+        self.sync_combat_seals()
+
+    def draw_combat_targets(self,enemies,camera_x):
+        from combat_seals import draw_target_mark
+        targets={s.target for s in self.combat_seals if not s.opened}
+        for e in enemies:
+            if e.alive and e.identity in targets:draw_target_mark(e,camera_x)
+
+    @property
+    def fuse_unlocked(self):
+        return all(seal.opened for seal in self.combat_seals)
 
     def collect_pickups(self, player):
         for box in self.supply_boxes:
@@ -112,7 +149,7 @@ class ResidentialStage(Stage):
                 and abs(player.feet_y - self.fixture_position[1]) <= 8):
             self.fixture_seen = True
         x, y = self.fuse_position
-        if self.fuse_state == 'WORLD' and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12)):
+        if self.fuse_unlocked and self.fuse_state == 'WORLD' and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12)):
             self.fuse_state = 'CARRIED'
             player.checkpoint_position = self.fuse_checkpoint
             player.notice = '퓨즈 획득 · 왼쪽 중앙 제어함으로 돌아가세요'
@@ -183,6 +220,10 @@ class ResidentialStage(Stage):
 
     def update(self, delta_time):
         self.visual_time += max(0, delta_time)
+        for seal in self.combat_seals:
+            if self.fixture_powered:seal.opened=True
+            if seal.opened:seal.elapsed=min(.5,seal.elapsed+max(0,delta_time))
+        self.sync_combat_seals()
         for box in self.supply_boxes:
             box.update(delta_time)
         self.fragment_cache.update(delta_time)
@@ -237,11 +278,17 @@ class ResidentialStage(Stage):
             return '운하 주택가 · 다리를 건너 출구로 이동하세요'
         if self.fuse_state == 'CARRIED':
             return '운하 주택가 · 왼쪽 중앙 제어함으로 돌아가 퓨즈를 설치하세요'
+        if not self.combat_seals[0].opened:return '운하 주택가 · 표식 침입자를 처치해 입구 봉쇄를 해제하세요'
+        if self.fixture_seen and not self.combat_seals[1].opened:return '운하 주택가 · 옥상 표식 침입자를 처치해 연결로를 여세요'
+        if self.combat_seals[1].opened and not self.combat_seals[2].opened:return '운하 주택가 · 정비실 표식 침입자를 처치해 퓨즈를 확보하세요'
         if self.fixture_seen:
             return '운하 주택가 · 오른쪽 정비실에서 퓨즈를 회수하세요'
         return '운하 주택가 · 발판을 올라 중앙 제어함을 찾으세요'
 
     def interaction_prompt(self, player):
+        if (self.fuse_state=='WORLD' and not self.fuse_unlocked
+                and abs(player.x-self.fuse_position[0])<60 and abs(player.feet_y-self.WORKSHOP_Y)<10):
+            return (*self.fuse_position,'표식 침입자 처치 후 개방')
         if self.near_exit(player):
             return (*self.exit_position, 'E: 출구 이동' if self.bridge_ready else '다리 복구 필요')
         if self.can_interact(player):
@@ -262,6 +309,7 @@ class ResidentialStage(Stage):
         self.fragment_cache.draw(camera_x)
         self.draw_fixture(camera_x)
         self.draw_bridge(camera_x)
+        for seal in self.combat_seals:seal.draw(camera_x)
         x, y = self.exit_position
         x -= camera_x
         color = (162, 146, 102) if self.bridge_ready else (74, 84, 94)
@@ -280,39 +328,25 @@ class ResidentialStage(Stage):
                 pico2d.draw_rectangle(x - 7, cap_y, x + 7, cap_y + 4,
                                       199, 173, 115, filled=True)
             pico2d.draw_line(x, y - 6, x, y + 6, 245, 218, 146)
+            if not self.fuse_unlocked:
+                pico2d.draw_rectangle(x-17,y-16,x+17,y+28,149,83,152)
+                for dx in (-9,0,9):pico2d.draw_line(x+dx,y-15,x+dx,y+27,164,100,178)
         for position, collected in ((self.battery_pack_position, self.battery_pack_collected),
                                      (self.return_battery_position, self.return_battery_collected)):
             if not collected:
                 draw_battery_pack(position[0] - camera_x, position[1])
 
     def draw_labels(self, font, camera_x):
-        cache = self.fragment_cache
-        label = '보급고 · 회수 완료' if cache.opened else '선택 보급고'
-        color = (116, 128, 133) if cache.opened else (191, 173, 126)
-        font.draw(cache.x - camera_x - 55, cache.feet_y + 164, label, color)
-        for x, y, label in ((133, GROUND_Y + 188, '대피소'),
-                            (1300, 208, '아래 골목 · 보급'),
-                            (1690, 208, '연결로 ↑'),
-                            (1048, 384, '중앙 제어함'),
-                            (2152, 408, '정비실 · 퓨즈'),
-                            (2782, self.BRIDGE_Y + 140, '병원')):
-            font.draw(x - camera_x, y, label, (192, 178, 146))
-        x, y = 2854 - camera_x, self.BRIDGE_Y + 140
-        pico2d.draw_line(x - 12, y, x, y, 192, 178, 146)
-        pico2d.draw_line(x - 5, y + 5, x, y, 192, 178, 146)
-        pico2d.draw_line(x - 5, y - 5, x, y, 192, 178, 146)
-        if not self.battery_pack_collected:
-            x, y = self.battery_pack_position
-            font.draw(x - camera_x - 40, y - 42, '배터리 +50', (157, 197, 208))
-        if not self.return_battery_collected:
-            x, y = self.return_battery_position
-            font.draw(x - camera_x - 40, y - 42, '배터리 +50', (157, 197, 208))
-        if self.fuse_state == 'CARRIED' and not self.fixture_powered:
-            for wx in (1540, 1984):
-                sx, sy = wx - camera_x, 388
-                pico2d.draw_line(sx + 20, sy, sx, sy, 242, 204, 125)
-                pico2d.draw_line(sx + 6, sy + 5, sx, sy, 242, 204, 125)
-                pico2d.draw_line(sx + 6, sy - 5, sx, sy, 242, 204, 125)
+        from controls_view import fonts
+        small,_=fonts()
+        # 목적지 이름만 고정 폭 명패로 표시한다. 보급/이동 화살표는 HUD와 중복하지 않는다.
+        for wx,y,label,w in ((160,284,'대피소',72),(1184,382,'중앙 제어함',112),
+                              (2112,408,'정비실',78),(2800,364,'병원',64)):
+            x=wx-camera_x
+            if not -w/2 < x < 960+w/2:continue
+            pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,22,31,filled=True)
+            pico2d.draw_line(x-w/2,y-13,x+w/2,y-13,105,115,119)
+            small.draw(x-w/2+10,y,label,(202,201,183))
 
     def draw_bridge(self, camera_x):
         from bridge_visuals import draw_bridge

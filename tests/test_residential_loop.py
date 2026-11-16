@@ -16,6 +16,8 @@ class ResidentialLoopTests(unittest.TestCase):
         self.stage, self.player = self.game.stage, self.game.player
 
     def test_console_discovery_objectives_and_checkpoint_are_restored(self):
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
         self.assertIn('중앙 제어함', self.stage.objective)
         self.player.x, self.player.feet_y = self.stage.fixture_position
         update_world(0, self.player, [], self.stage, self.game.records)
@@ -42,9 +44,12 @@ class ResidentialLoopTests(unittest.TestCase):
         self.assertEqual(self.stage.fuse_state, 'INSTALLED')
 
     def test_walking_retrieval_loop_allows_killed_roof_guard_to_reappear_on_return(self):
+        self.stage.combat_seals[0].opened=True
+        self.stage.combat_seals[2].opened=True
         guard = self.game.enemies[2]
         guard.take_damage()
         guard.take_damage()
+        self.stage.update_combat_seals(self.game.enemies)
         self.player.motion = Motion(guard.x, self.stage.UPPER_FLOOR_Y)
         director = self.stage.respawns
         point = director.points[2]
