@@ -22,12 +22,15 @@ def carried_halo_pose(player):
     return player.x+dx*player.face_dir,player.feet_y+hand_y-10
 
 
-def draw_carried_halo(player,camera_x):
+def draw_carried_halo(player,camera_x,draw_hand=None):
     pose=carried_halo_pose(player)
     if pose is None:return
     x,y=pose
     # 회전/독립 흔들림 없이 잡고 있는 자세. 실제 비행과 구분한다.
     draw_halo(x-camera_x,y,size=27)
+    if draw_hand is not None:
+        # 몸통 앞의 광륜은 보이게 하면서 손가락만 칼날 윗부분을 덮는다.
+        with blended((x-camera_x-5,y+6,x-camera_x+5,y+15)):draw_hand()
 
 
 def draw_halo_aim(player,stage,font,camera_x):

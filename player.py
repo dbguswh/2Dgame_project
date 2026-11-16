@@ -582,7 +582,8 @@ class Player:
         combo_open = self.combo_window > 0
         self._advance_attack(delta_time)
         # 새 공격의 방향은 이번 입력을 먼저 반영한다. 진행 중인 공격은 방향을 유지한다.
-        if (self.attack_requested and not self.flash_requested and not self.light_requested
+        if ((not self.motion.on_ground or pico2d.SDLK_UP in self.pressed_keys)
+                and self.attack_requested and not self.flash_requested and not self.light_requested
                 and not self.is_attacking and self.bomb_aim is None and self.halo_aim is None and self.light_cast <= 0):
             facing=int(pico2d.SDLK_RIGHT in self.pressed_keys)-int(pico2d.SDLK_LEFT in self.pressed_keys)
             if facing:self.face_dir=facing
@@ -706,8 +707,6 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
-        from halo_view import draw_carried_halo
-        draw_carried_halo(self,camera_x)
         from sword_carry import carried_frame
         carried=carried_frame(self,state)
         if carried is not None:
@@ -762,13 +761,16 @@ class Player:
         angle = self.attack_lean
         dx, dy = center_offset * self.face_dir, (height / 2 - feet_y) * scale
         # 셀 중심이 아니라 발을 회전축으로 삼아 기울어져도 바닥이 흔들리지 않는다.
-        image.clip_composite_draw(
+        body_draw_args=(
             left, bottom, width, height,
             angle, "h" if self.face_dir < 0 else "",
             self.x - camera_x + dx * cos(angle) - dy * sin(angle),
             self.feet_y + dx * sin(angle) + dy * cos(angle),
             width * scale, height * scale,
         )
+        image.clip_composite_draw(*body_draw_args)
+        from halo_view import draw_carried_halo
+        draw_carried_halo(self,camera_x,lambda:image.clip_composite_draw(*body_draw_args))
         for piece in frame.get('pieces', ()) if state in ('attack', 'air_attack', 'flash', 'bomb_aim') else ():
             left, bottom, width, height = piece['rect']
             feet_x, feet_y = piece['feet']
