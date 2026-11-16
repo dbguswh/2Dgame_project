@@ -1,7 +1,7 @@
 """한 번만 개봉하고 미수령 소모품을 남기는 보급함."""
 
 from dataclasses import dataclass
-from inventory import MEDKIT, LIGHT_BOMB, SHIELD
+from inventory import MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_art import draw_item
 
 
@@ -50,6 +50,12 @@ class SupplyBox:
         x, y = self.x - camera_x, self.feet_y
         pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 42, 57, 60, filled=True)
         pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 134, 145, 132)
+        pico2d.draw_line(x-21,y+1,x+21,y+1,21,31,36)
+        pico2d.draw_line(x-20,y+19,x+20,y+19,78,97,102)
+        for xx in (-22,18):
+            for yy in (1,16):
+                pico2d.draw_rectangle(x+xx,y+yy,x+xx+4,y+yy+5,129,112,76,filled=True)
+                pico2d.draw_line(x+xx+1,y+yy+2,x+xx+3,y+yy+2,39,46,46)
         pico2d.draw_line(x - 15, y + 21, x + 15, y + 21, *SUPPLY_COLORS[self.item])
         for side in (-19, 15):
             pico2d.draw_rectangle(x + side, y + 2, x + side + 4, y + 20, 105, 113, 103, filled=True)
@@ -61,13 +67,16 @@ class SupplyBox:
             pico2d.draw_circle(x, y + 11, 4, 178, 128, 53, filled=True)
             pico2d.draw_circle(x, y + 11, 2, 255, 234, 173, filled=True)
         else:
-            draw_item(self.item, x, y + 11, 16)
+            draw_item(self.item, x, y + 11, 18)
         progress = min(1, self.opening_elapsed / OPEN_TIME)
         angle = progress * pi * .48
         hinge = (x - 23, y + 22)
         end = (hinge[0] + cos(angle) * 46, hinge[1] + sin(angle) * 46)
         polygon((hinge, end, (end[0], end[1] + 4), (hinge[0], hinge[1] + 4)), (90, 106, 100))
         segment(hinge, end, (180, 178, 145), width=2)
+        for ratio in (.18,.82):
+            px,py=hinge[0]+(end[0]-hinge[0])*ratio,hinge[1]+(end[1]-hinge[1])*ratio
+            segment((px,py),(px,py+4),(47,61,67),width=3)
         if not self.opened:
             with blended():
                 glow(x, y + 16, 21, (173, 198, 135), alpha=48)
@@ -76,7 +85,7 @@ class SupplyBox:
             with blended():
                 color = (132, 219, 244) if self.item == SHIELD else (175, 222, 162)
                 glow(px - camera_x, py, 19, color, alpha=75)
-            draw_item(self.item, px - camera_x, py, 22)
+            draw_item(self.item, px - camera_x, py, 27 if self.item in (SPEED,SHIELD) else 22)
 
 
 def draw_medkit_icon(x, y, size=18):
