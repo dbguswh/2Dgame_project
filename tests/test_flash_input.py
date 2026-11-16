@@ -78,6 +78,21 @@ class FlashInputTests(unittest.TestCase):
             ('wall', (474, 96, 498, 184)), ('above', (420, 288, 444, 376)),
             ('behind', (360, 96, 384, 184))]))
 
+    def test_five_tile_reach_hits_distant_target_but_not_beyond_endpoint(self):
+        # 몸 앞 12px에서 160px. 이전 96px 사거리 밖이던 적도 제압한다.
+        tap(self.player);self.player.update(0,960)
+        self.assertEqual(self.player.consume_flash_target([('outside',(573,96,597,184)),('distant',(550,96,574,184))]),'distant')
+        self.assertEqual(self.player.battery,80)
+
+    def test_focus_extends_reach_to_200_without_changing_cost_or_multi_hit(self):
+        from upgrades import FOCUS
+        self.player.core_upgrades.add(FOCUS)
+        tap(self.player);self.player.update(0,960)
+        self.assertEqual(self.player.flash_range,200)
+        self.assertEqual(self.player.consume_flash_target([('far',(602,96,626,184))]),'far')
+        self.assertIsNone(self.player.consume_flash_target([('second',(550,96,574,184))]))
+        self.assertEqual(self.player.battery,80)
+
     def test_simultaneous_priority_is_r_then_q_then_w(self):
         for codes, battery, kind in (((pico2d.SDLK_r, pico2d.SDLK_q, pico2d.SDLK_w), 50, None),
                                       ((pico2d.SDLK_q, pico2d.SDLK_w), 80, 'flash')):
