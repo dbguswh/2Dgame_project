@@ -52,6 +52,26 @@ class UITextRenderTests(unittest.TestCase):
         enlarged_width, _ = self.render_sample()
         self.assertAlmostEqual(enlarged_width / 1.5, native_width, delta=6)
 
+    def test_fractional_window_sizes_preserve_native_glyph_pixels(self):
+        text='주택가 전력 복구 123'
+        for width,height in ((1280,720),(1388,800),(800,450)):
+            with self.subTest(size=(width,height)):
+                sdl2.SDL_SetWindowSize(canvas.window,width,height)
+                self.render_sample()
+                surface=sdlttf.TTF_RenderUTF8_Blended(self.font._font,text.encode(),sdl2.SDL_Color(255,255,255,255))
+                rgba=sdl2.SDL_ConvertSurfaceFormat(surface,sdl2.SDL_PIXELFORMAT_RGBA32,0)
+                try:
+                    src=rgba.contents
+                    raw=ctypes.string_at(src.pixels,src.pitch*src.h)
+                    source_count=sum(raw[y*src.pitch+x*4+3]>30 for y in range(src.h) for x in range(src.w))
+                finally:
+                    sdl2.SDL_FreeSurface(rgba);sdl2.SDL_FreeSurface(surface)
+                pixels=(ctypes.c_uint8*(width*height*4))()
+                self.assertEqual(sdl2.SDL_RenderReadPixels(canvas.renderer,None,sdl2.SDL_PIXELFORMAT_RGBA32,pixels,width*4),0)
+                actual_count=sum(pixels[i]>30 for i in range(0,len(pixels),4))
+                self.assertAlmostEqual(actual_count,source_count,delta=2,
+                                       msg='글자를 다시 확대/축소하지 않고 원래 래스터 픽셀을 표시해야 함')
+
 
 if __name__ == '__main__':
     unittest.main()
