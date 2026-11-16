@@ -91,6 +91,12 @@ class ResidentialStage(Stage):
                 (2032, self.WORKSHOP_Y, (1872, 2064), True),
             ]))
         self.respawns = RespawnDirector(self.enemy_placements)
+        # 정비실이 전부 점등되면 연결 발판을 거쳐 옥상으로 후퇴할 수 있다.
+        # 처음부터 순찰 범위를 넓히지 않고 빛 탈출이 막힌 개체에만 적용한다.
+        self.light_retreat_bounds = {
+            e.identity: (1280, 2064) for e in self.enemy_placements
+            if e.feet_y == self.WORKSHOP_Y
+        }
 
     def collect_pickups(self, player):
         for box in self.supply_boxes:

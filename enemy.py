@@ -47,6 +47,8 @@ class Shade:
         self.health = 2
         self.spawn_position = (x, feet_y)
         self.combat_bounds = combat_bounds
+        self.escape_bounds = None
+        self.escape_route = None
         self.patrol_bounds = (combat_bounds[0] + BODY_WIDTH / 2 + 4,
                               combat_bounds[1] - BODY_WIDTH / 2 - 4)
         self.state = 'PATROL'
@@ -97,6 +99,10 @@ class Shade:
         return self.health > 0
 
     @property
+    def movement_bounds(self):
+        return self.escape_bounds or self.combat_bounds
+
+    @property
     def animation_frame(self):
         if self.state in ('DYING', 'DEAD'):
             return self.death_pose
@@ -130,7 +136,7 @@ class Shade:
         return None
 
     def can_see(self, player):
-        if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+        if not self.movement_bounds[0] <= player.x <= self.movement_bounds[1]:
             return False
         if abs(player.x - self.x) > (384 if self.can_shoot else 192) or abs(player.feet_y - self.feet_y) > 48:
             return False
@@ -225,6 +231,9 @@ class Shade:
         return True
 
     def reset(self):
+        self.escape_bounds = None
+        self.patrol_bounds = (self.combat_bounds[0] + BODY_WIDTH / 2 + 4,
+                              self.combat_bounds[1] - BODY_WIDTH / 2 - 4)
         self.stun_remaining = 0.0
         self.repelled_light = None
         self.light_push_remaining = 0.0
@@ -294,20 +303,50 @@ class Shade:
         return moved > 0
 
     def _can_move_to(self, x, direction):
-        if not (self.combat_bounds[0] + BODY_WIDTH / 2 <= x
-                <= self.combat_bounds[1] - BODY_WIDTH / 2):
+        if not (self.movement_bounds[0] + BODY_WIDTH / 2 <= x
+                <= self.movement_bounds[1] - BODY_WIDTH / 2):
             return False
         box = (x - BODY_WIDTH / 2, self.feet_y, x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
         if any(overlaps(box, (s.left, s.bottom, s.right, s.top)) for s in self.solids):
             return False
         probe = x + direction * (BODY_WIDTH / 2 + 2)
-        return any(s.left <= probe <= s.right and abs(s.top - self.feet_y) < EPSILON
-                   for s in self.solids)
+        if any(s.left <= probe <= s.right and abs(s.top - self.feet_y) < EPSILON
+               for s in self.solids):
+            return True
+        # 지정된 연결 구간에서만 낮은 발판으로 내려간다. 깊은 낭떠러지는 허용하지 않는다.
+        return self.escape_bounds is not None and any(
+            s.left <= probe <= s.right and 0 < self.feet_y - s.top <= 64
+            for s in self.solids)
 
-    def _choose_retreat_direction(self, light):
+    def _step_onto_connector(self, x, direction):
+        """연결 통로의 작은 턱은 밟고, 48px 턱은 뛰어오른다. 벽·천장은 통과하지 않는다."""
+        if self.escape_bounds is None or not self.motion.on_ground:
+            return False
+        original_y = self.feet_y
+        for solid in sorted(self.solids, key=lambda s: s.top):
+            if not 0 < solid.top-original_y <= 48:
+                continue
+            probe = x + direction*(BODY_WIDTH/2+2)
+            if ((x+BODY_WIDTH/2 <= solid.left or x-BODY_WIDTH/2 >= solid.right)
+                    and not solid.left <= probe <= solid.right):
+                continue
+            self.motion.feet_y = solid.top
+            landing_x = (min(x,solid.right+BODY_WIDTH/2-1) if direction < 0
+                         else max(x,solid.left-BODY_WIDTH/2+1))
+            if (abs(landing_x-x) <= 4 and self._can_move_to(landing_x, direction)
+                    and not self._light_blocks_move(landing_x)):
+                if solid.top-original_y > 32:
+                    self.motion.feet_y = original_y
+                    return self.motion.jump()
+                self.motion.x = landing_x
+                return True
+            self.motion.feet_y = original_y
+        return False
+
+    def _choose_retreat_direction(self, light, allow_connection=True):
         candidates = []
         for direction in (-1, 1):
-            for distance in range(4, int(self.combat_bounds[1] - self.combat_bounds[0]) + 4, 4):
+            for distance in range(4, int(self.movement_bounds[1] - self.movement_bounds[0]) + 4, 4):
                 x = self.x + direction * distance
                 if not self._can_move_to(x, direction):
                     break
@@ -318,6 +357,11 @@ class Shade:
                     break
         if candidates:
             return min(candidates, key=lambda item: item[0])[1]
+        if allow_connection and self.escape_bounds is None and self.escape_route is not None:
+            self.escape_bounds = self.escape_route
+            self.patrol_bounds = (self.escape_bounds[0]+BODY_WIDTH/2+4,
+                                  self.escape_bounds[1]-BODY_WIDTH/2-4)
+            return self._choose_retreat_direction(light, allow_connection=False)
         return 1 if self.x >= light.x else -1
 
     def _update_light_response(self, delta_time, player, stage, light):
@@ -365,6 +409,8 @@ class Shade:
                         budget -= step
                         moved = True
                     self.is_moving = False
+                    # 설치 파동으로 발판 끝을 벗어난 경우에도 낙하·착지를 갱신한다.
+                    self.motion.step(delta_time, 0, self.solids, stage.width, edge_margin=BODY_WIDTH/2)
                 else:
                     moved = self._move(delta_time, self.retreat_direction, 100, stage)
                 if not moved:
@@ -410,7 +456,8 @@ class Shade:
         if direction and self._light_blocks_move(next_x):
             return False
         if direction and not self._can_move_to(next_x, direction):
-            direction = 0
+            if not self._step_onto_connector(next_x, direction):
+                direction = 0
         self.motion.step(delta_time, direction, self.solids, stage.width,
                          edge_margin=BODY_WIDTH / 2, speed=speed)
         distance = abs(self.x - old_x)
@@ -434,6 +481,7 @@ class Shade:
     def update(self, delta_time, player, stage, light=None):
         self.solids = stage.solids
         self.active_light = light
+        self.escape_route = getattr(stage, 'light_retreat_bounds', {}).get(self.identity)
         self.attack_event = None
         self.shot_event = None
         was_stunned = self.stun_remaining > 0
@@ -469,8 +517,12 @@ class Shade:
             return
         if self._update_light_response(delta_time, player, stage, light):
             return
+        if not self.motion.on_ground:
+            # 연결 발판으로 내려가는 도중에는 공중에 멈춰 공격하지 않는다.
+            self._move(delta_time, self.face_dir, 80, stage)
+            return
         if self.state in ('LUNGE_WINDUP', 'LUNGE'):
-            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+            if not self.movement_bounds[0] <= player.x <= self.movement_bounds[1]:
                 self._enter('PATROL')
             elif self.state == 'LUNGE_WINDUP':
                 if self.state_time >= LUNGE_WINDUP:
@@ -486,7 +538,7 @@ class Shade:
             return
         if self.state in ('RANGED_WINDUP', 'RANGED_RELEASE'):
             self.is_moving = False
-            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+            if not self.movement_bounds[0] <= player.x <= self.movement_bounds[1]:
                 self._enter('PATROL')
             elif (self.state == 'RANGED_WINDUP' and self.state_time < RANGED_WINDUP - 0.2
                   and self.can_see(player) and 60 < abs(player.x - self.x) <= LUNGE_RANGE):
@@ -502,7 +554,7 @@ class Shade:
             return
         if self.state in ('WINDUP', 'STRIKE', 'RECOVER'):
             self.is_moving = False
-            if not self.combat_bounds[0] <= player.x <= self.combat_bounds[1]:
+            if not self.movement_bounds[0] <= player.x <= self.movement_bounds[1]:
                 self._enter('PATROL')
             elif self.state == 'WINDUP' and self.state_time >= WINDUP_TIME:
                 if overlaps(self._reach_box(), player.get_bb()):
