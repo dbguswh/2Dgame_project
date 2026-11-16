@@ -51,6 +51,9 @@ class HospitalTransitionTests(unittest.TestCase):
         g.update(5, focused=False)
         self.assertEqual(g.transition_elapsed, .2)
         g.update(.5)
+        self.assertEqual(g.state,'TRANSITION')
+        self.assertEqual(g.stage.stage_id,'residential')
+        g.update(1.3)
         self.assertIsInstance(g.stage, HospitalStage)
         self.assertEqual(g.state, 'PLAY')
         self.assertEqual(g.play_time, old_time)
@@ -62,7 +65,7 @@ class HospitalTransitionTests(unittest.TestCase):
         p.health, p.battery = 1, 0
         p.add_item(LIGHT_BOMB)
         p.item_effects.speed_remaining = 3
-        g.update(.7)
+        g.update(2)
         self.assertIs(p, g.player)
         self.assertEqual((p.health, p.battery, p.max_battery), (3, 140, 140))
         self.assertEqual(p.core_upgrades, {CAPACITY})
@@ -93,7 +96,7 @@ class HospitalTransitionTests(unittest.TestCase):
     def test_hospital_completion_allows_second_upgrade_and_substation_departure(self):
         g = self.g
         self.depart()
-        g.update(.7)
+        g.update(2)
         g.stage.fixture_powered = g.stage.completed = True
         g.update(0)
         self.assertEqual(g.completed_stage_ids, {'residential', 'hospital'})
@@ -107,7 +110,7 @@ class HospitalTransitionTests(unittest.TestCase):
         self.assertTrue(g.management_visit.completed)
         self.assertTrue(g.can_depart)
         self.assertTrue(g.depart())
-        g.update(.7)
+        g.update(2)
         self.assertEqual(g.stage.stage_id, 'substation')
         self.assertEqual(g.player.core_upgrades, {CAPACITY,'focus'})
         self.assertEqual(g.completed_stage_ids, {'residential','hospital'})

@@ -15,6 +15,7 @@ from upgrades import ManagementVisit, CORE_UPGRADES, SUPPLY_OFFERS
 
 
 class GameSession:
+    TRANSITION_TIME=2.0
     NEXT_STAGES = {'hospital': HospitalStage, 'substation': SubstationStage}
     PAUSE_ITEMS = ('계속하기', '스테이지 재시작', '타이틀로', '나가기')
     CLEAR_ITEMS = ('도시 지도', '주택가 다시하기', '타이틀로')
@@ -254,11 +255,11 @@ class GameSession:
             self.title_time += max(0.0,min(delta_time,.1))
             return
         if self.state == 'TRANSITION':
-            self.transition_elapsed = min(.7, self.transition_elapsed + max(0, delta_time))
-            if self.transition_elapsed >= .35 and not self.transition_swapped:
+            self.transition_elapsed = min(self.TRANSITION_TIME, self.transition_elapsed + max(0, delta_time))
+            if self.transition_elapsed >= self.TRANSITION_TIME/2 and not self.transition_swapped:
                 self._enter_next_stage()
                 self.transition_swapped = True
-            if self.transition_elapsed >= .7:
+            if self.transition_elapsed >= self.TRANSITION_TIME:
                 self.state = 'PLAY'
             return
         if self.state == 'PLAY':

@@ -63,3 +63,13 @@ class HaloAimTests(unittest.TestCase):
         self.assertIsNone(p.halo_aim)
         event(p,pico2d.SDLK_w);p.update(0,1000);p.take_damage()
         self.assertIsNone(p.halo_aim);self.assertIsNone(p.halo)
+
+    @patch('pico2d.load_image',return_value=Mock())
+    def test_long_hold_never_auto_fires_and_slot_change_cancels(self,_):
+        p=Player(400,96);p.unlock_ring();p.weapon='ring'
+        event(p,pico2d.SDLK_w);p.update(5,1000)
+        self.assertIsNotNone(p.halo_aim);self.assertIsNone(p.halo)
+        event(p,pico2d.SDLK_2);p.update(0,1000)
+        self.assertIsNone(p.halo_aim)
+        event(p,pico2d.SDLK_w,False);p.update(0,1000)
+        self.assertIsNone(p.halo)

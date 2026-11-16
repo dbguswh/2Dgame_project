@@ -183,6 +183,7 @@ class Player:
                 slot = event.key - pico2d.SDLK_1
                 if slot != self.inventory.selected:
                     self.cancel_bomb_aim()
+                    self.cancel_halo_aim()
                 self.inventory.select(slot)
                 hint = 'F 유지·놓아 투척' if slot == LIGHT_BOMB else 'F로 사용'
                 self.notice, self.notice_time = f'{ITEM_NAMES[slot]} 선택 · {hint}', 1.0

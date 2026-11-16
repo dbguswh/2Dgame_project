@@ -152,6 +152,9 @@ class Wraith(Shade):
         if not self.alive:return
         import pico2d
         from effects import blended,glow
+        with blended():
+            # 몸통 전체를 밝히지 않고 눈에 띄는 핵만 남겨 공중 위협을 읽게 한다.
+            glow(self.x-camera_x,self.feet_y+24,5,(234,75,186),alpha=105)
         if show_health:
             for i in range(2):
                 pico2d.draw_rectangle(self.x-camera_x-14+i*16,self.feet_y+78,
@@ -169,7 +172,7 @@ class Wraith(Shade):
                 glow(tx-camera_x,ty,18,(207,91,240),alpha=95)
                 # 고정된 목표와 남은 준비 시간을 어둠 위에서도 읽게 한다.
                 progress=min(1,self.state_time/WINDUP_TIME)
-                pico2d.draw_circle(tx-camera_x,ty,19-progress*9,248,117,206,a=210)
+                pico2d.draw_circle(tx-camera_x,ty,round(19-progress*9),248,117,206,a=210)
                 pico2d.draw_rectangle(self.x-camera_x-18,self.feet_y+86,
                                       self.x-camera_x+18,self.feet_y+90,53,30,58,filled=True)
                 pico2d.draw_rectangle(self.x-camera_x-18,self.feet_y+86,
