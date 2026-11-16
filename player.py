@@ -13,7 +13,7 @@ from inventory import Inventory, ITEM_NAMES, MEDKIT, SPEED, LIGHT_BOMB, SHIELD
 from item_effects import ItemEffects
 from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb, BombAim
-from halo import Halo,HaloAim
+from halo import Halo,HaloAim,HALO_COST,HALO_COOLDOWN
 from light_sword import sword_box
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
@@ -132,6 +132,7 @@ class Player:
         self.ring_unlocked = False
         self.weapon = 'sword'
         self.halo = None
+        self.halo_cooldown = 0.0
         self.weapon_change_requested = False
         self.halo_aim = None
         self.halo_release_requested = False
@@ -235,10 +236,14 @@ class Player:
         if self.halo_release_requested:
             angle=aim.angle
             self.cancel_halo_aim()
+            if self.battery<HALO_COST:
+                self.notice,self.notice_time='배터리 부족 · 광륜 투척에는 10이 필요합니다',1.1
+                return
+            self.battery-=HALO_COST
             self._begin_attack(1)
             self.attack_kind='ring';self.combo_window=0
             self.halo=Halo(*self.halo_origin,self.face_dir,angle=angle)
-            self.notice,self.notice_time=f'광륜 투척 · {angle:.0f}°',.8
+            self.notice,self.notice_time=f'광륜 투척 · 배터리 -10 · {angle:.0f}°',.8
 
     def cancel_bomb_aim(self):
         self.bomb_aim = None
@@ -450,6 +455,10 @@ class Player:
             if not self.is_attacking and self.bomb_aim is None and self.halo_aim is None:
                 if self.halo is not None and self.halo.active:
                     self.notice,self.notice_time='광륜이 돌아온 뒤 다시 던지세요',.7
+                elif self.halo_cooldown>0:
+                    self.notice,self.notice_time='광륜 재사용 대기 중',.7
+                elif self.battery<HALO_COST:
+                    self.notice,self.notice_time='배터리 부족 · 광륜 투척에는 10이 필요합니다',1.1
                 else:
                     self.halo_aim=HaloAim(self.face_dir,45 if pico2d.SDLK_UP in self.pressed_keys else 0)
                     self.halo_air_direction=int(pico2d.SDLK_RIGHT in self.pressed_keys)-int(pico2d.SDLK_LEFT in self.pressed_keys)
@@ -548,6 +557,7 @@ class Player:
         return min(candidates, key=lambda target: abs((target[1][0] + target[1][2]) / 2 - self.x))[0]
 
     def update(self, delta_time, area_width, solids=None, light_regions=None):
+        self.halo_cooldown=max(0,self.halo_cooldown-max(0,delta_time))
         speed_factor = self.item_effects.update(delta_time)
         self.heal_effect = max(0.0, self.heal_effect - delta_time)
         self.invulnerability = max(0.0, self.invulnerability - delta_time)
@@ -841,6 +851,8 @@ class Player:
         self.reset_actions_after_return()
 
     def reset_actions_after_return(self, invulnerability=1.0, clear_consumable_effects=True):
+        cooling=self.halo is not None or self.halo_cooldown>0
+        self.halo_cooldown=HALO_COOLDOWN if invulnerability>0 and cooling else 0
         self.hit_pause.reset()
         self.motion.velocity_y = 0
         self.motion.on_ground = True

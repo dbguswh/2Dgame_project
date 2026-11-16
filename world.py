@@ -1,6 +1,7 @@
 """한 구간의 이동·전투·상태 복원을 갱신한다."""
 
 from combat import overlaps
+from halo import HALO_COOLDOWN
 
 
 def restore_enemies(enemies, stage):
@@ -50,6 +51,8 @@ def update_world(delta_time, player, enemies, stage, records=None):
     if player.halo is not None:
         ring=player.halo
         ring.update(delta_time,player,stage.solids)
+        if not ring.active:
+            player.halo_cooldown=max(player.halo_cooldown,HALO_COOLDOWN)
         candidates=ring.candidates([(e.identity,e.get_bb()) for e in enemies if e.alive],stage.solids)
         for enemy in enemies:
             if enemy.alive and enemy.identity in candidates:

@@ -72,10 +72,10 @@ class HaloControlsTests(unittest.TestCase):
         self.g.restart_stage()
         self.assertFalse(self.p.ring_unlocked)
 
-    def test_switch_and_one_throw_without_battery_or_auto_repeat(self):
+    def test_switch_and_one_throw_pays_once_without_auto_repeat(self):
         self.p.unlock_ring();tap(self.p,pico2d.SDLK_a);self.g.update(0)
         self.assertEqual(self.p.weapon,'ring')
-        self.p.battery=0
+        self.p.battery=10
         tap(self.p,pico2d.SDLK_w);self.g.update(0)
         h=self.p.halo
         self.assertIsNotNone(h)

@@ -38,7 +38,7 @@ class HaloAimTests(unittest.TestCase):
 
     @patch('pico2d.load_image',return_value=Mock())
     def test_hold_adjust_release_and_no_auto_repeat(self,_):
-        p=Player(400,96);p.unlock_ring();p.weapon='ring';p.battery=0
+        p=Player(400,96);p.unlock_ring();p.weapon='ring';p.battery=10
         event(p,pico2d.SDLK_w);p.update(0,1000)
         event(p,pico2d.SDLK_UP);p.update(.5,1000)
         self.assertIsNone(p.halo);self.assertEqual(p.halo_aim.angle,45)
