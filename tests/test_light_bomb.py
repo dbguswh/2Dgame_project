@@ -1,10 +1,11 @@
 import unittest
+from math import sqrt
 from unittest.mock import Mock, patch
 
 import pico2d
 
 from inventory import LIGHT_BOMB
-from light_bomb import LightBomb
+from light_bomb import LightBomb, BombAim, GRAVITY, predict_throw
 from physics import Solid
 from projectiles import ShadowBolt
 from session import GameSession
@@ -19,23 +20,55 @@ def tap(player, code):
 
 
 class BombGeometryTests(unittest.TestCase):
-    def test_half_second_forward_arc_and_direction(self):
+    def test_charge_controls_range_at_launch_height_without_airburst(self):
         for direction in (-1, 1):
-            bomb = LightBomb(200, 140, direction)
-            bomb.update(.25, [])
-            self.assertFalse(bomb.exploded)
-            self.assertAlmostEqual(bomb.x, 200 + 48 * direction)
-            self.assertAlmostEqual(bomb.y, 156)
-            bomb.update(.25, [])
-            self.assertTrue(bomb.exploded)
-            self.assertAlmostEqual(bomb.x, 200 + 96 * direction)
-            self.assertAlmostEqual(bomb.y, 140)
+            for charge, distance in ((0, 96), (1, 300)):
+                bomb = LightBomb(400, 300, direction, charge=charge)
+                duration = sqrt(2 * distance / GRAVITY)
+                bomb.update(duration, [])
+                self.assertFalse(bomb.exploded)
+                self.assertAlmostEqual(bomb.x, 400 + distance * direction)
+                self.assertAlmostEqual(bomb.y, 300)
 
-    def test_large_delta_stops_at_fuse_instead_of_overtravelling(self):
+    def test_falling_without_floor_expires_without_damage_or_airburst(self):
         bomb = LightBomb(200, 140, 1)
-        bomb.update(2, [])
-        self.assertAlmostEqual(bomb.x, 296)
+        bomb.update(10, [])
+        self.assertFalse(bomb.active)
+        self.assertFalse(bomb.exploded or bomb.blast_pending)
+
+    def test_charge_and_angle_clamp_and_direction_are_independent(self):
+        aim = BombAim(1)
+        aim.update(.5, -1, 1)
+        self.assertEqual((aim.charge, aim.angle, aim.direction), (.5, 75, -1))
+        aim.update(10, 0, -1)
+        self.assertEqual((aim.charge, aim.angle), (1, 15))
+
+    def test_prediction_matches_collision_for_angles_charge_and_direction(self):
+        solids = [Solid(0, 0, 1200, 96), Solid(680, 96, 684, 400),
+                  Solid(250, 220, 600, 228, one_way=True)]
+        for angle in (15, 45, 75):
+            for charge in (0, .5, 1):
+                for direction in (-1, 1):
+                    with self.subTest(angle=angle, charge=charge, direction=direction):
+                        points, impact = predict_throw(460, 140, direction, charge, angle, solids)
+                        bomb = LightBomb(460, 140, direction, charge=charge, angle=angle)
+                        while bomb.active and not bomb.exploded:
+                            bomb.update(1 / 37, solids)
+                        self.assertTrue(bomb.exploded)
+                        self.assertIsNotNone(impact)
+                        self.assertLess(abs(impact[0] - bomb.x), 3)
+                        self.assertLess(abs(impact[1] - bomb.y), 3)
+
+    def test_preview_has_no_blast_circle_without_landing_surface(self):
+        points, impact = predict_throw(200, 140, 1, 1, 45, [])
+        self.assertIsNone(impact)
+        self.assertLess(points[-1][1], -64)
+
+    def test_ceiling_contact_and_large_step_cannot_tunnel(self):
+        bomb = LightBomb(200, 140, 1, charge=1, angle=75)
+        bomb.update(2, [Solid(0, 172, 1000, 176)])
         self.assertTrue(bomb.exploded)
+        self.assertLess(bomb.y, 172)
 
     def test_wall_contact_explodes_before_wall_without_tunnelling(self):
         bomb = LightBomb(100, 150, 1)
@@ -66,7 +99,7 @@ class BombGeometryTests(unittest.TestCase):
         ledge = Solid(0, 145, 500, 150, one_way=True)
         bomb.update(.25, [ledge])
         self.assertFalse(bomb.exploded)
-        bomb.update(.25, [ledge])
+        bomb.update(.5, [ledge])
         self.assertTrue(bomb.exploded)
         self.assertGreater(bomb.y, 150)
 
@@ -157,7 +190,9 @@ class BombWorldTests(unittest.TestCase):
                 e.attack_event = player.get_bb()
                 e.shot_event = ((e.x, 140), (player.x, 140))
             enemy.update = prepare
-        self.p.bombs.append(LightBomb(496, 140, 1, age=.5))
+        bomb = LightBomb(496, 140, 1)
+        bomb.explode()
+        self.p.bombs.append(bomb)
         update_world(0, self.p, enemies, self.stage, self.game.records)
         self.assertEqual([e.health for e in enemies], [1, 1])
         self.assertEqual(self.p.health, 3)

@@ -1,15 +1,38 @@
-"""0.5초 동안 96px를 날아가 반경 48px에 한 번 타격하는 광탄."""
+"""충전·각도로 던지고 지형 접촉 시 폭발하는 광탄과 동일 계산의 조준 예측."""
 
 from dataclasses import dataclass, field
-from math import ceil, cos, hypot, pi, sin
+from math import ceil, cos, hypot, pi, radians, sin, sqrt
 
 from combat import overlaps
 
 
-FUSE_TIME = 0.5
-THROW_SPEED = 96 / FUSE_TIME
+CHARGE_TIME = 1.0
+MIN_RANGE, MAX_RANGE = 96.0, 300.0
+DEFAULT_ANGLE = 45.0
+MIN_ANGLE, MAX_ANGLE = 15.0, 75.0
+AIM_SPEED = 60.0
+GRAVITY = 512.0
+MAX_FLIGHT_TIME = 4.0
 BLAST_RADIUS = 48
 EXPLOSION_TIME = 0.32
+
+
+@dataclass
+class BombAim:
+    direction: int
+    elapsed: float = 0.0
+    angle: float = DEFAULT_ANGLE
+
+    @property
+    def charge(self):
+        return min(1.0, max(0.0, self.elapsed / CHARGE_TIME))
+
+    def update(self, dt, direction=0, elevation=0):
+        dt = max(0.0, dt)
+        self.elapsed = min(CHARGE_TIME, self.elapsed + dt)
+        self.angle = max(MIN_ANGLE, min(MAX_ANGLE, self.angle + elevation * AIM_SPEED * dt))
+        if direction:
+            self.direction = 1 if direction > 0 else -1
 
 
 def blocked_segment(start, end, solids):
@@ -29,32 +52,46 @@ class LightBomb:
     y: float
     direction: int
     age: float = 0.0
-    velocity_y: float = 128.0
+    charge: float = 0.0
+    angle: float = DEFAULT_ANGLE
+    velocity_x: float = field(init=False)
+    velocity_y: float = field(init=False)
     exploded: bool = False
+    expired: bool = False
     blast_pending: bool = False
     fade: float = EXPLOSION_TIME
     trail: list = field(default_factory=list)
 
+    def __post_init__(self):
+        self.direction = 1 if self.direction >= 0 else -1
+        self.charge = max(0.0, min(1.0, self.charge))
+        self.angle = max(MIN_ANGLE, min(MAX_ANGLE, self.angle))
+        speed = sqrt((MIN_RANGE + (MAX_RANGE - MIN_RANGE) * self.charge) * GRAVITY)
+        self.velocity_x = self.direction * cos(radians(self.angle)) * speed
+        self.velocity_y = sin(radians(self.angle)) * speed
+
     @property
     def active(self):
-        return not self.exploded or self.fade > 0
+        return not self.expired and (not self.exploded or self.fade > 0)
 
     def explode(self):
-        if not self.exploded:
+        if not self.exploded and not self.expired:
             self.exploded = True
             self.blast_pending = True
 
     def update(self, delta_time, solids):
         dt = max(0, delta_time)
+        if self.expired:
+            return
         if self.exploded:
             self.fade = max(0, self.fade - dt)
             return
-        travel = min(dt, max(0, FUSE_TIME - self.age))
-        steps = max(1, ceil(travel * (THROW_SPEED + abs(self.velocity_y) + 512 * travel) / 2))
+        travel = min(dt, max(0, MAX_FLIGHT_TIME - self.age))
+        steps = max(1, ceil(travel * (abs(self.velocity_x) + abs(self.velocity_y) + GRAVITY * travel) / 2))
         step = travel / steps
         for _ in range(steps):
-            nx = self.x + self.direction * THROW_SPEED * step
-            ny = self.y + self.velocity_y * step - 256 * step * step
+            nx = self.x + self.velocity_x * step
+            ny = self.y + self.velocity_y * step - GRAVITY / 2 * step * step
             body = (nx - 4, ny - 4, nx + 4, ny + 4)
             def collides(s):
                 if s.one_way:
@@ -65,12 +102,15 @@ class LightBomb:
                 self.explode()
                 break
             self.x, self.y = nx, ny
-            self.velocity_y -= 512 * step
+            self.velocity_y -= GRAVITY * step
             self.age += step
+            if self.y < -64:
+                self.expired = True
+                break
         self.trail.append((self.x, self.y))
         self.trail[:] = self.trail[-6:]
-        if self.age >= FUSE_TIME - 1e-9:
-            self.explode()
+        if not self.exploded and self.age >= MAX_FLIGHT_TIME - 1e-9:
+            self.expired = True
 
     def consume_targets(self, targets, solids):
         if not self.blast_pending:
@@ -112,3 +152,16 @@ class LightBomb:
                 pico2d.draw_line(x + dx * radius, y + dy * radius,
                                   x + dx * (radius + 7), y + dy * (radius + 7),
                                   255, 237, 185, a=alpha)
+
+
+def predict_throw(x, y, direction, charge, angle, solids):
+    """현재 지형을 대상으로 실제 비행과 같은 갱신 처리로 접촉점을 예측한다."""
+    bomb = LightBomb(x, y, direction, charge=charge, angle=angle)
+    points = [(x, y)]
+    for index in range(int(MAX_FLIGHT_TIME * 120) + 1):
+        bomb.update(1 / 120, solids)
+        if index % 4 == 0 or bomb.exploded or not bomb.active:
+            points.append((bomb.x, bomb.y))
+        if bomb.exploded or not bomb.active:
+            break
+    return points, (bomb.x, bomb.y) if bomb.exploded else None
