@@ -31,6 +31,8 @@ def clear_resources():
     clear_menu()
     from sword_carry import clear_resources as clear_sword_carry
     clear_sword_carry()
+    from street_details import clear_resources as clear_street_details
+    clear_street_details()
     if _glow_texture is not None and _glow_renderer is canvas.renderer:
         sdl2.SDL_DestroyTexture(_glow_texture)
     _glow_texture = None

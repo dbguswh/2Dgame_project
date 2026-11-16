@@ -47,7 +47,10 @@ class ResidentialScene:
         self.facades.opacify(1)
         self.draw_water(stage, camera_x)
         self.draw_workshop_interior(stage, camera_x, width)
+        from street_details import draw_details
+        draw_details(camera_x,width)
         for solid in stage.solids:
+            if any(solid is seal.barrier for seal in stage.combat_seals):continue
             if solid in (stage.bridge_solid, stage.bridge_gate):
                 continue
             if solid.right < camera_x or solid.left > camera_x + width:

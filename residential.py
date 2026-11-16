@@ -343,7 +343,7 @@ class ResidentialStage(Stage):
         for wx,y,label,w in ((160,284,'대피소',72),(1184,382,'중앙 제어함',112),
                               (2112,408,'정비실',78),(2800,364,'병원',64)):
             x=wx-camera_x
-            if not -w/2 < x < 960+w/2:continue
+            if not 18+w/2 <= x <= 942-w/2:continue
             pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,22,31,filled=True)
             pico2d.draw_line(x-w/2,y-13,x+w/2,y-13,105,115,119)
             small.draw(x-w/2+10,y,label,(202,201,183))

@@ -1,0 +1,64 @@
+{
+  "image": "street_details.png",
+  "sheet_size": [
+    1536,
+    1024
+  ],
+  "alpha_threshold_for_bounds": 64,
+  "frames": [
+    {
+      "name": "pipe_valve",
+      "clip": [
+        28,
+        548,
+        431,
+        439
+      ]
+    },
+    {
+      "name": "drain_arch",
+      "clip": [
+        530,
+        562,
+        475,
+        400
+      ]
+    },
+    {
+      "name": "cable_box",
+      "clip": [
+        1116,
+        561,
+        362,
+        418
+      ]
+    },
+    {
+      "name": "shutter",
+      "clip": [
+        43,
+        65,
+        422,
+        387
+      ]
+    },
+    {
+      "name": "power_plaque",
+      "clip": [
+        590,
+        35,
+        317,
+        459
+      ]
+    },
+    {
+      "name": "ivy_masonry",
+      "clip": [
+        1078,
+        36,
+        418,
+        458
+      ]
+    }
+  ]
+}
