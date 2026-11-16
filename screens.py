@@ -9,7 +9,8 @@ from physics import camera_offset
 from window import SCREEN_WIDTH, SCREEN_HEIGHT, clear_frame
 from visibility import draw_darkness, draw_navigation, enemy_is_visible
 from item_art import draw_item
-from inventory import ITEM_NAMES
+from inventory import ITEM_NAMES, LIGHT_BOMB
+from bomb_aim_view import draw_bomb_aim
 from buff_visuals import draw_buffs, draw_buff_timers
 from management_view import draw_city_map, draw_management
 from sword_visuals import draw_sword_stroke
@@ -51,6 +52,7 @@ def draw_game(game, font):
         enemy.draw_effects(camera_x)
     if director is not None:
         director.draw_signals(camera_x, font, SCREEN_WIDTH)
+    draw_bomb_aim(player, stage.solids, font, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
     if game.show_debug:
         stage.draw_debug(camera_x)
         player.draw_debug(camera_x)
@@ -85,9 +87,13 @@ def draw_game(game, font):
         x, y, label = prompt
         prompt_x = max(20, min(SCREEN_WIDTH - 220, x - camera_x - 55))
         font.draw(prompt_x, min(y + 132, 430), label, (255, 223, 137))
-    font.draw(20, 44, '방향키 이동  Shift 달리기  Space 점프  W 광검',
+    controls = ('←/→ 방향  ↑/↓ 각도  F 놓아 투척' if player.bomb_aim is not None
+                else '방향키 이동  Shift 달리기  Space 점프  W 광검')
+    font.draw(20, 44, controls,
               (210, 219, 230))
-    font.draw(20, 18, 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴', (177, 191, 207))
+    item_controls = ('충전 1초 · 다른 행동이나 슬롯 선택으로 취소' if player.bomb_aim is not None
+                     else 'Q 섬광  R 투광기  E 조작  1~4 선택  F 사용  Esc 메뉴')
+    font.draw(20, 18, item_controls, (177, 191, 207))
     for slot, label in enumerate(('치료제', '속도', '광탄', '보호막')):
         x = 616 + slot * 82
         selected = player.inventory.selected == slot
@@ -97,7 +103,8 @@ def draw_game(game, font):
         draw_item(slot, x + 23, 22, 28)
         font.draw(x + 43, 22, f'{player.inventory.counts[slot]}/2', (220, 228, 228))
     selected_name = ITEM_NAMES[player.inventory.selected]
-    font.draw(616, 78, f'선택: {selected_name} · F 사용', (241, 211, 150))
+    item_hint = 'F 유지 / 놓아 투척' if player.inventory.selected == LIGHT_BOMB else 'F 사용'
+    font.draw(616, 78, f'선택: {selected_name} · {item_hint}', (241, 211, 150))
     with blended():
         draw_buff_timers(font, player.item_effects)
     if player.notice_time > 0:
