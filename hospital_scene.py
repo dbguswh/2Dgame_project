@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 import pico2d
 from effects import blended, glow, segment
-from supplies import draw_battery_pack, SUPPLY_COLORS
+from supplies import draw_battery_pack
+import hospital_equipment as equipment
 
 
 DATA_PATH = Path(__file__).resolve().parent / 'assets/images/environments/hospital_interiors.json'
@@ -42,21 +43,13 @@ class HospitalScene:
             if -40 <= x-camera_x <= width+40:
                 lit = stage.is_temporarily_lit((x-1,96,x+1,100))
                 self.draw_wall_lamp(x-camera_x, 390, lit)
-        for box in stage.supply_boxes:
-            if -48 < box.x-camera_x < width+48:
-                self.draw_wall_panel(box.x-camera_x, box.feet_y, SUPPLY_COLORS[box.item])
-                box.draw(camera_x)
-        stage.fragment_cache.draw(camera_x)
         for key, door in stage.doors.items():
-            if -48 < door.x-camera_x < width+48:
-                self.draw_door(door, camera_x, stage.door_should_open(key))
-        self.draw_terminal(stage, camera_x)
-        self.draw_repair_device(stage, camera_x)
-        for key, position in stage.latch_positions.items():
-            x, y = position[0]-camera_x, position[1]
-            self.draw_wall_panel(x, y, (116, 182, 160) if stage.return_open[key] else (161, 123, 88))
-            pico2d.draw_rectangle(x-7, y+26, x+7, y+44, 31, 46, 52, filled=True)
-            segment((x-4, y+33), (x+5, y+37), (213, 188, 126), width=3)
+            if -60 < door.x-camera_x < width+60:
+                equipment.draw_door(door,camera_x,stage.door_should_open(key))
+        equipment.draw_terminal(stage,camera_x)
+        equipment.draw_repair_device(stage,camera_x)
+        for key, (wx,y) in stage.latch_positions.items():
+            equipment.draw_switch(wx-camera_x,y,stage.return_open[key])
         for key, (wx, y) in stage.part_positions.items():
             x = wx-camera_x
             pico2d.draw_rectangle(x-23,y-16,x+23,y+29,31,50,58,filled=True)
@@ -77,6 +70,11 @@ class HospitalScene:
                         segment((x+dx,y-14),(x+dx,y+18),(148,92,174),2)
         if not stage.battery_pack_collected:
             draw_battery_pack(stage.battery_pack_position[0]-camera_x, stage.battery_pack_position[1])
+        for box in stage.supply_boxes:
+            if -60 < box.x-camera_x < width+60:
+                equipment.draw_supply_dock(box,camera_x)
+                box.draw(camera_x)
+        stage.fragment_cache.draw(camera_x)
 
     @staticmethod
     def draw_floor(camera_x, width):
@@ -103,14 +101,8 @@ class HospitalScene:
             pico2d.draw_rectangle(x, y-5, x+2, y-1, 217, 190, 119, filled=True)
 
     @staticmethod
-    def draw_trolley(solid, camera_x):
-        a, b, y, bottom = solid.left-camera_x, solid.right-camera_x, solid.top, solid.bottom
-        pico2d.draw_rectangle(a, bottom+5, b, y-5, 53, 76, 82, filled=True)
-        pico2d.draw_rectangle(a-1, y-6, b+1, y, 166, 178, 164, filled=True)
-        pico2d.draw_rectangle(a+5, bottom+13, b-5, y-12, 32, 51, 58, filled=True)
-        for x in (a+9, b-9):
-            pico2d.draw_circle(x, bottom+4, 4, 116, 132, 135, filled=True)
-        segment((a+8, bottom+24), (b-8, bottom+24), (96, 121, 123), 2)
+    def draw_trolley(solid,camera_x):
+        equipment.draw_trolley(solid,camera_x)
 
     @staticmethod
     def draw_wall_lamp(x, y, lit):
@@ -120,52 +112,6 @@ class HospitalScene:
         if lit:
             with blended():
                 glow(x, y, 52, (201, 224, 171), alpha=45, squash=.45)
-
-    @staticmethod
-    def draw_wall_panel(x, y, accent):
-        pico2d.draw_rectangle(x-25, y+2, x+25, y+61, 33, 49, 57, filled=True)
-        pico2d.draw_rectangle(x-25, y+2, x+25, y+61, 90, 115, 120)
-        pico2d.draw_rectangle(x-15, y+54, x-4, y+56, *accent, filled=True)
-
-    @staticmethod
-    def draw_door(door, camera_x, lit):
-        x, y = door.x-camera_x, door.feet_y
-        top = y+door.height
-        pico2d.draw_rectangle(x-34, y, x+34, top, 19, 31, 39, filled=True)
-        for offset in (-35, 30):
-            pico2d.draw_rectangle(x+offset, y, x+offset+5, top+3, 92, 117, 122, filled=True)
-        bottom = y+door.height*door.progress
-        if bottom < top:
-            pico2d.draw_rectangle(x-24, bottom, x+24, top, 62, 83, 88, filled=True)
-            for yy in range(int(bottom)+5, int(top)+1, 16):
-                pico2d.draw_line(x-22, yy, x+22, yy, 109, 132, 129)
-        color = (224, 216, 142) if lit else (162, 89, 88)
-        pico2d.draw_rectangle(x-32, top+1, x+32, top+8, *color, filled=True)
-        if bottom < y+112:
-            pico2d.draw_rectangle(x-7, y+112, x+7, y+116, *color, filled=True)
-
-    @staticmethod
-    def draw_terminal(stage, camera_x):
-        x, y = stage.terminal_position[0]-camera_x, stage.terminal_position[1]
-        HospitalScene.draw_wall_panel(x, y, (181, 202, 138))
-        pico2d.draw_rectangle(x-18, y+29, x+18, y+53, 12, 30, 36, filled=True)
-        for index, key in enumerate(('A', 'B')):
-            color = (238, 210, 127) if stage.circuit == key or stage.fixture_powered else (57, 81, 89)
-            pico2d.draw_rectangle(x-13+index*16, y+34, x-3+index*16, y+47, *color, filled=True)
-        segment((x-5, y+9), (x+8, y+18), (193, 180, 132), 3)
-
-    @staticmethod
-    def draw_repair_device(stage, camera_x):
-        x, y = stage.fixture_position[0]-camera_x, stage.fixture_position[1]
-        pico2d.draw_rectangle(x-25, y, x+25, y+83, 38, 60, 66, filled=True)
-        pico2d.draw_rectangle(x-25, y, x+25, y+83, 142, 160, 143)
-        for index, key in enumerate(('A', 'B')):
-            color = (229, 209, 139) if stage.parts[key] else (56, 80, 84)
-            pico2d.draw_rectangle(x-17+index*19, y+12, x-4+index*19, y+34, *color, filled=True)
-        pico2d.draw_rectangle(x-17, y+47, x+17, y+70, 16, 34, 39, filled=True)
-        color = (194, 226, 179) if stage.fixture_powered else (184, 139, 89)
-        for yy in (53, 59, 65):
-            pico2d.draw_line(x-12, y+yy, x+11, y+yy, *color)
 
     @staticmethod
     def draw_part(key, x, y):
