@@ -42,7 +42,8 @@ class Brute(Shade):
         if signals:self.draw_signals(camera_x)
 
     def draw_signals(self,camera_x=0,show_health=True):
-        super().draw_signals(camera_x,show_health)
+        # 공격 예고·제압은 공유하고 체력은 갑각형 전용 세 칸만 표시한다.
+        super().draw_signals(camera_x,show_health=False)
         if not self.alive:return
         import pico2d
         from effects import blended,glow

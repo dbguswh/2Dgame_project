@@ -65,7 +65,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
                 direction = 1 if enemy.x >= bomb.x else -1
                 enemy.receive_bomb(direction, (enemy.x, max(enemy.feet_y + 8, min(bomb.y, enemy.feet_y + 80))))
         if targets:
-            player.notice, player.notice_time = f'광탄 명중 · Shade {len(targets)}명', 1.2
+            player.notice, player.notice_time = f'광탄 명중 · 침입자 {len(targets)}명', 1.2
     player.bombs[:] = [bomb for bomb in player.bombs if bomb.active]
     flash_target = player.consume_flash_target(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive])
@@ -73,7 +73,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
         if enemy.alive and enemy.identity == flash_target:
             point = (enemy.x, max(enemy.feet_y + 20, min(player.feet_y + 44, enemy.feet_y + 72)))
             enemy.receive_flash(player.face_dir, point)
-            player.notice = '섬광 · Shade 처치' if not enemy.alive else '섬광 명중 · Shade 제압'
+            player.notice = '섬광 · 침입자 처치' if not enemy.alive else '섬광 명중 · 침입자 제압'
             player.notice_time = 1.0
     target = player.get_attack_target(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive]
@@ -91,7 +91,7 @@ def update_world(delta_time, player, enemies, stage, records=None):
             player.hit_pause.trigger(enemy.impact.hitstop)
             if heavy:
                 enemy.apply_knockback(player.face_dir)
-            player.notice = 'Shade 처치' if not enemy.alive else 'Shade 명중'
+            player.notice = '침입자 처치' if not enemy.alive else '침입자 명중'
             player.notice_time = 1.0
     for enemy in enemies:
         enemy.launch_pending_shot()

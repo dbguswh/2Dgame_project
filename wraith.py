@@ -68,13 +68,18 @@ class Wraith(Shade):
     def update(self,dt,player,stage,light=None):
         self.solids=stage.solids;self.active_light=light
         self.attack_event=self.shot_event=None
+        if self.impact is not None:
+            self.impact.update(dt)
+            if not self.impact.active:self.impact=None
+        if self.alive and light is not None and light.illuminates(self.get_bb()):
+            self.hit_pause.reset()
+        was_frozen=self.hit_pause.remaining>0
+        dt=self.hit_pause.consume(dt)
+        if was_frozen and dt<=0:return
         self.clock+=max(0,dt)
         self.state_time+=max(0,dt)
         self.hurt_time=max(0,self.hurt_time-dt)
         self.dive_cooldown=max(0,self.dive_cooldown-dt)
-        if self.impact is not None:
-            self.impact.update(dt)
-            if not self.impact.active:self.impact=None
         if not self.alive:
             if self.state_time>=.8:self.state='DEAD'
             return

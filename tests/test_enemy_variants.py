@@ -99,3 +99,16 @@ class EnemyVariantTests(unittest.TestCase):
         self.assertIsNone(w.consume_attack())
         w.reset()
         self.assertEqual((w.state,w.health,w.feet_y),('FLY_PATROL',2,208))
+
+    def test_wraith_weapon_hit_pause_freezes_motion_but_light_has_priority(self):
+        w=Wraith(500,96,combat_bounds=(200,800))
+        w.receive_weapon(1,(500,230),'ring')
+        before=(w.x,w.feet_y,w.state_time)
+        w.update(.01,self.p,self.s)
+        self.assertEqual((w.x,w.feet_y,w.state_time),before)
+        self.assertGreater(w.hit_pause.remaining,0)
+        light=PortableLight(500,120,LightRegion(0,96,1000,540))
+        w.update(.01,self.p,self.s,light)
+        self.assertEqual(w.hit_pause.remaining,0)
+        self.assertEqual(w.state,'RETREAT')
+        self.assertNotEqual((w.x,w.feet_y),before[:2])
