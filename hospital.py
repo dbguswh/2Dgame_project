@@ -284,16 +284,18 @@ class HospitalStage(Stage):
             return '운하 병원 · 중앙 정비 통로로 이동하세요'
         pending = self.returning_key
         if pending:
-            return (f'{pending} 정전 · 안쪽 스위치로 문을 수동 개방하세요' if not self.return_open[pending]
-                    else f'{pending} 정전 · 어두운 복도를 지나 중앙으로 복귀하세요')
+            direction='오른쪽' if pending=='A' else '왼쪽'
+            return (f'{pending} 정전 · {direction} 방 입구 스위치 E로 문을 여세요' if not self.return_open[pending]
+                    else f'{pending} 귀환 · {direction} 어두운 복도를 지나 중앙으로 돌아가세요')
         if self.part_count == 2:
             return '운하 병원 · 중앙에서 두 부품을 함께 설치하세요'
         if self.parts[self.circuit]:
             other = 'B' if self.circuit == 'A' else 'A'
             return f'운하 병원 · 중앙 단말기에서 {other} 회로로 전환하세요'
         key=self.circuit
-        if not self.room_cleared[key]:return f'{key} 부품 방 · 금색 표식 침입자를 처치하세요'
-        return f'{key} 부품 방 · 부품 앞 E로 분리하세요 (회수 시 복도 정전)'
+        destination='왼쪽 A 창고' if key=='A' else '오른쪽 B 정비실'
+        if not self.room_cleared[key]:return f'{destination} · 금색 표식 침입자를 처치하세요'
+        return f'{destination} · 부품 앞 E로 분리하세요 (회수 시 복도 정전)'
 
     def capture_state(self):
         return (self.circuit, tuple(self.parts.values()), tuple(self.return_open.values()),

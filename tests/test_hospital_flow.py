@@ -53,7 +53,8 @@ class HospitalFlowTests(unittest.TestCase):
 
     def test_real_q_kills_unlock_both_orders_and_exit_after_dark_returns(self):
         for order in (('A','B'),('B','A')):
-            self.setUp()
+            self.g=GameSession(HospitalStage);self.g.start_game();self.g.update(0)
+            self.s,self.p=self.g.stage,self.g.player
             for key in order:
                 self.s.circuit=key;self.s.update(.6)
                 target=self.g.enemies[0 if key=='A' else 6]

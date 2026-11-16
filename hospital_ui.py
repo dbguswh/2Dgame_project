@@ -19,8 +19,9 @@ def draw_labels(stage,font,camera_x):
         font.draw(center-220,394,'비상 배전 · 두 부품을 모아 중앙에 설치',(223,216,179))
         for key,y in (('A',365),('B',339)):
             color=(237,207,133) if stage.powered_circuit==key else (167,195,203)
-            small.draw(center-218,y,key+'  '+circuit_status(stage,key),color)
-        small.draw(center-218,315,'회로 선택 → 방 교전 → 부품 E 분리 → 귀환',(162,180,192))
+            route='← A 창고' if key=='A' else '→ B 정비실'
+            small.draw(center-218,y,route+'  '+circuit_status(stage,key),color)
+        small.draw(center-218,315,'회로 E 선택 → 방 교전 → 부품 E 분리 → 귀환',(162,180,192))
     # 목적지 명패. 가까운 E 안내와 겹치지 않는 위치에만 표시한다.
     for wx,y,text,w in ((760,286,'A 창고',86),(1408,244,'회로 선택',102),
                          (1536,278,'부품 설치',102),(2576,268,'B 정비실',102)):
