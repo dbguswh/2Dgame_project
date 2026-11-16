@@ -706,6 +706,8 @@ class Player:
         if self.invulnerability > 0 and int(self.invulnerability * 12) % 2:
             return
         state = self.animation_state
+        from halo_view import draw_carried_halo
+        draw_carried_halo(self,camera_x)
         from sword_carry import carried_frame
         carried=carried_frame(self,state)
         if carried is not None:

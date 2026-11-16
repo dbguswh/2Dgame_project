@@ -1,9 +1,33 @@
-"""수납된 무기는 숨기고 조준 중 전개와 실제 도달 경로를 보여준다."""
+"""손 위치를 따라 휴대한 광륜과 조준·실제 도달 경로를 보여준다."""
 
 import pico2d
 from halo import preview_path
 from effects import blended,glow
 from enemy_art import draw_halo
+
+
+def carried_halo_pose(player):
+    if (player.weapon!='ring' or player.is_attacking or player.light_cast>0
+            or player.halo_aim is not None or player.bomb_aim is not None
+            or player.halo is not None and player.halo.active):return None
+    # 원본 동작의 빈손 위치를 발 기준으로 추적한다. 손이 원의 윗부분을 덮는다.
+    state=player.animation_state
+    if state=='run':
+        dx,hand_y=((-25,48),(4,54),(6,57),(1,48),(3,57),(-21,50))[player.walk_frame]
+    elif state=='walk':
+        dx,hand_y=((-23,42),(-15,41),(-10,41),(-4,43),(0,42),(-2,42))[player.walk_frame]
+    elif state.startswith('jump_'):
+        dx,hand_y=((-26,51),(-29,39),(-28,50))[('jump_rise','jump_apex','jump_fall').index(state)]
+    else:dx,hand_y=-24,42
+    return player.x+dx*player.face_dir,player.feet_y+hand_y-10
+
+
+def draw_carried_halo(player,camera_x):
+    pose=carried_halo_pose(player)
+    if pose is None:return
+    x,y=pose
+    # 회전/독립 흔들림 없이 잡고 있는 자세. 실제 비행과 구분한다.
+    draw_halo(x-camera_x,y,size=27)
 
 
 def draw_halo_aim(player,stage,font,camera_x):
