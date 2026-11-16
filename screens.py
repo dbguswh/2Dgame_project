@@ -14,6 +14,7 @@ from bomb_aim_view import draw_bomb_aim
 from buff_visuals import draw_buffs, draw_buff_timers
 from management_view import draw_city_map, draw_management
 from sword_visuals import draw_sword_stroke
+from title_view import draw_title
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -114,9 +115,7 @@ def draw_game(game, font):
 def draw_session(game, font, menu_font, title_font):
     clear_frame()
     if game.state == 'TITLE':
-        title_font.draw(350, 365, 'Blackout', (242, 225, 191))
-        draw_choices(menu_font, ('시작', '나가기'), game.selection)
-        font.draw(320, 105, '위/아래 선택    E 확인    Esc 종료', (164, 175, 192))
+        draw_title(game,font,menu_font,title_font,SCREEN_WIDTH,SCREEN_HEIGHT)
     elif game.state == 'CITY_MAP':
         draw_city_map(game, font, menu_font)
     elif game.state == 'MANAGEMENT':

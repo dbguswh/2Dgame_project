@@ -27,6 +27,7 @@ class GameSession:
         self.enemies = []
         self.show_debug = False
         self.play_time = 0.0
+        self.title_time = 0.0
         self.records = None
         self.management_visit = None
         self.completed_stage_ids = set()
@@ -230,6 +231,9 @@ class GameSession:
         if not focused:
             self.clear_input()
             return
+        if self.state == 'TITLE':
+            self.title_time += max(0.0,min(delta_time,.1))
+            return
         if self.state == 'TRANSITION':
             self.transition_elapsed = min(.7, self.transition_elapsed + max(0, delta_time))
             if self.transition_elapsed >= .35 and not self.transition_swapped:
@@ -248,6 +252,7 @@ class GameSession:
                 self.player.clear_input()
 
     def close_world(self):
+        self.title_time = 0.0
         self.player = None
         self.enemies.clear()
         self.stage = None

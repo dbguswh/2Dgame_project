@@ -24,9 +24,9 @@ def font_path():
 class UIFont:
     CACHE_LIMIT = 256
 
-    def __init__(self, size):
+    def __init__(self, size, path=None):
         self.size = size
-        self.path = font_path()
+        self.path = Path(path) if path is not None else font_path()
         self._font = None
         self._renderer = None
         self._scale = None

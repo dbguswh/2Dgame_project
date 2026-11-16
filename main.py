@@ -10,6 +10,7 @@ from window import has_input_focus, open_game_window
 from world import update_world
 from effects import clear_resources
 from ui_text import UIFont
+from title_view import title_font_path
 
 
 def main():
@@ -19,7 +20,7 @@ def main():
     try:
         font = UIFont(18)
         menu_font = UIFont(26)
-        title_font = UIFont(64)
+        title_font = UIFont(82, title_font_path())
         previous_time = perf_counter()
         while game.running:
             now = perf_counter()
