@@ -8,6 +8,7 @@ import pico2d
 
 from effects import blended, glow
 from ui_text import font_path
+from menu_ui import footer
 
 
 ROOT = Path(__file__).resolve().parent / 'assets/images'
@@ -77,5 +78,4 @@ def draw_title(game, font, menu_font, title_font, width, height):
         pico2d.draw_line(94,y-28,442,y-28,57,64,70)
         if selected:
             font.draw(405,y,'E',gold)
-    font.draw(80,77,'↑/↓ 선택    E 확인    Esc 종료',(165,177,188))
-    pico2d.draw_line(80,43,width-80,43,51,62,71)
+    footer(((80,'↑ ↓','선택'),(300,'E','확인'),(520,'ESC','종료')))

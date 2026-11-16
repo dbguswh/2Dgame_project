@@ -18,6 +18,7 @@ from title_view import draw_title
 from halo_view import draw_halo_aim
 from stage_notice_view import draw_weapon_acquired,draw_stage_transition
 from controls_view import draw_controls,fonts as control_fonts
+from menu_ui import choice_overlay
 
 
 def draw_choices(font, items, selection, start_y=270):
@@ -28,7 +29,7 @@ def draw_choices(font, items, selection, start_y=270):
         font.draw(410, start_y - index * 44, text, color)
 
 
-def draw_game(game, font):
+def draw_game(game, font, show_hud=True):
     player, stage = game.player, game.stage
     camera_x = camera_offset(player.x, stage.width, SCREEN_WIDTH)
     shake = sum(enemy.impact.shake_x for enemy in game.enemies if enemy.impact is not None)
@@ -69,6 +70,7 @@ def draw_game(game, font):
         player.draw_debug(camera_x)
         for enemy in game.enemies:
             enemy.draw_debug(camera_x)
+    if not show_hud:return
     with blended():
         for y in range(SCREEN_HEIGHT - 112, SCREEN_HEIGHT, 4):
             alpha = min(210, (y - SCREEN_HEIGHT + 112) * 3)
@@ -129,21 +131,11 @@ def draw_session(game, font, menu_font, title_font):
     elif game.state=='TRANSITION':
         draw_stage_transition(game,font,menu_font)
     elif game.state in ('PLAY', 'PAUSED', 'STAGE_CLEAR', 'TRANSITION'):
-        draw_game(game, font)
+        draw_game(game, font, show_hud=game.state=='PLAY')
         if game.state == 'PAUSED':
-            pico2d.draw_rectangle(250, 90, 710, 440, 15, 21, 32, filled=True)
-            pico2d.draw_rectangle(250, 90, 710, 440, 120, 108, 83)
-            menu_font.draw(410, 405, '일시정지', (242, 225, 191))
-            draw_choices(menu_font, game.PAUSE_ITEMS, game.selection, start_y=320)
-            if game.PAUSE_ITEMS[game.selection] == '스테이지 재시작':
-                font.draw(290, 150, '구간의 진행과 자원을 모두 되돌립니다', (220, 180, 125))
-            font.draw(345, 115, 'E 확인    Esc 계속하기', (164, 175, 192))
+            warning='구간 진행과 자원을 초기화합니다.' if game.selection==1 else ''
+            choice_overlay(menu_font,'일시정지',game.PAUSE_ITEMS,game.selection,
+                           '플레이 시간과 모든 효과가 멈춰 있습니다.',warning)
         elif game.state == 'STAGE_CLEAR':
-            with blended():
-                pico2d.draw_rectangle(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1,
-                                      6, 11, 20, a=165, filled=True)
-            pico2d.draw_rectangle(220, 140, 740, 420, 15, 21, 32, filled=True)
-            pico2d.draw_rectangle(220, 140, 740, 420, 120, 108, 83)
-            menu_font.draw(350, 377, f'{game.stage.name} 복구 완료', (242, 225, 191))
-            draw_choices(menu_font, game.clear_items, game.selection, start_y=290)
-            font.draw(330, 157, '위/아래 선택    E 확인', (164, 175, 192))
+            choice_overlay(menu_font,f'{game.stage.name} 복구 완료',game.clear_items,
+                           game.selection,'지도·관리소에서 다음 구역을 준비하세요.',escape_label='타이틀')

@@ -28,7 +28,7 @@ def draw_city_map(game,font,heading):
     p=game.player;body=body_font()
     header(heading,'도시 지도',f'{game.stage.name} 복구 완료',p.fragments)
     done=game.completed_stage_ids
-    for left,right,lit in ((165,480,'hospital' in done),(480,795,'substation' in done)):
+    for left,right,lit in ((165,480,'residential' in done),(480,795,'hospital' in done)):
         segment((left,317),(right,317),GOLD if lit else EDGE,width=2)
     for x,stage_id,label in ((165,'residential','주택가'),(480,'hospital','병원'),(795,'substation','변전소')):
         completed=stage_id in done;next_stage=stage_id==game.stage.next_stage_id
@@ -87,9 +87,8 @@ def draw_management(game, font, heading):
     body=body_font()
     body.draw(52,393,'코어 강화 선택',TEXT)
     body.draw(676,393,'이번 방문에서 1개 선택',MUTED)
-    descriptions=(('공유 배터리 용량 증가','광륜 · 섬광 · 투광기'),
-                  ('섬광 사거리 증가','멀리 있는 적 제압'),
-                  ('투광기 범위 증가','더 넓은 공간 확보'))
+    descriptions=('광륜 · 섬광 · 투광기',
+                  '멀리 있는 적 제압','더 넓은 공간 확보')
     for index,upgrade in enumerate(CORE_UPGRADES):
         x=52+index*288;selected=index==game.selection;owned=upgrade.key in p.core_upgrades
         panel(x,176,x+270,367,selected)
@@ -97,9 +96,9 @@ def draw_management(game, font, heading):
         draw_upgrade_icon(index,x+220,320)
         body.draw(x+20,302,upgrade.before,MUTED)
         heading.draw(x+20,269,upgrade.after,GOLD)
-        for y,line in zip((228,206),descriptions[index]):body.draw(x+20,y,line,MUTED)
+        body.draw(x+20,228,descriptions[index],MUTED)
         label='적용 완료' if owned else '전력 조각 2개'
-        body.draw(x+20,187,label,GREEN if owned else GOLD)
+        body.draw(x+20,194,label,GREEN if owned else GOLD)
     body.draw(52,136,visit.notice,GOLD)
     body.draw(52,106,f'배터리 {p.battery}/{p.max_battery}   구매 시 현재 잔량은 유지됩니다.',MUTED)
     footer(((52,'← →','강화 선택'),(300,'E','구매'),(548,'ESC','도시 지도')))
