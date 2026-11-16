@@ -182,18 +182,13 @@ class ResidentialScene:
             if x < -64 or x > width + 64:
                 continue
             accent = SUPPLY_COLORS[box.item]
-            pico2d.draw_rectangle(x - 31, y + 2, x + 31, y + 55, 30, 40, 48, filled=True)
-            pico2d.draw_rectangle(x - 31, y + 2, x + 31, y + 55, 77, 89, 96)
-            for side in (-27, 25):
-                pico2d.draw_rectangle(x + side, y + 7, x + side + 2, y + 48,
-                                      94, 102, 102, filled=True)
-            for row in (36, 41):
-                pico2d.draw_line(x - 19, y + row, x + 15, y + row, 58, 73, 82)
-            pico2d.draw_rectangle(x - 20, y + 49, x - 8, y + 51,
-                                  *(accent if not box.opened else (76, 86, 88)), filled=True)
-            pico2d.draw_line(x - 34, y + 1, x + 34, y + 1, 104, 114, 114)
-            for side in (-32, 28):
-                pico2d.draw_line(x + side, y + 1, x + side + 4, y + 5, *accent)
+            # 큰 사각형 배경판 대신 낮은 고정 레일만 두어 상자 자체가 보이게 한다.
+            pico2d.draw_rectangle(x-33,y,x+33,y+4,42,53,62,filled=True)
+            pico2d.draw_line(x-33,y+4,x+33,y+4,111,119,119)
+            for side in (-32,27):
+                pico2d.draw_rectangle(x+side,y+2,x+side+5,y+12,84,84,70,filled=True)
+            indicator = accent if not box.opened else (58,69,74)
+            pico2d.draw_line(x-18,y+2,x-8,y+2,*indicator)
         # 정비실 끝의 충전 선반과 퓨즈 소켓을 서로 떨어뜨려 배치한다.
         for position in (stage.return_battery_position, stage.fuse_position):
             x, pickup_y = position

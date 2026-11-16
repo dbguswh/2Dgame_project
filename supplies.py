@@ -45,41 +45,24 @@ class SupplyBox:
 
     def draw(self, camera_x=0):
         import pico2d
-        from math import cos, sin, pi
-        from effects import polygon, segment, blended, glow
+        from effects import blended, glow
+        from supply_art import draw_supply_case
         x, y = self.x - camera_x, self.feet_y
-        pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 42, 57, 60, filled=True)
-        pico2d.draw_rectangle(x - 23, y, x + 23, y + 22, 134, 145, 132)
-        pico2d.draw_line(x-21,y+1,x+21,y+1,21,31,36)
-        pico2d.draw_line(x-20,y+19,x+20,y+19,78,97,102)
-        for xx in (-22,18):
-            for yy in (1,16):
-                pico2d.draw_rectangle(x+xx,y+yy,x+xx+4,y+yy+5,129,112,76,filled=True)
-                pico2d.draw_line(x+xx+1,y+yy+2,x+xx+3,y+yy+2,39,46,46)
-        pico2d.draw_line(x - 15, y + 21, x + 15, y + 21, *SUPPLY_COLORS[self.item])
-        for side in (-19, 15):
-            pico2d.draw_rectangle(x + side, y + 2, x + side + 4, y + 20, 105, 113, 103, filled=True)
-        pico2d.draw_rectangle(x - 6, y + 5, x + 6, y + 17, 204, 204, 178, filled=True)
-        if self.item == MEDKIT:
-            pico2d.draw_rectangle(x - 1, y + 7, x + 1, y + 15, 152, 65, 61, filled=True)
-            pico2d.draw_rectangle(x - 4, y + 10, x + 4, y + 12, 152, 65, 61, filled=True)
-        elif self.item == LIGHT_BOMB:
-            pico2d.draw_circle(x, y + 11, 4, 178, 128, 53, filled=True)
-            pico2d.draw_circle(x, y + 11, 2, 255, 234, 173, filled=True)
-        else:
-            draw_item(self.item, x, y + 11, 18)
         progress = min(1, self.opening_elapsed / OPEN_TIME)
-        angle = progress * pi * .48
-        hinge = (x - 23, y + 22)
-        end = (hinge[0] + cos(angle) * 46, hinge[1] + sin(angle) * 46)
-        polygon((hinge, end, (end[0], end[1] + 4), (hinge[0], hinge[1] + 4)), (90, 106, 100))
-        segment(hinge, end, (180, 178, 145), width=2)
-        for ratio in (.18,.82):
-            px,py=hinge[0]+(end[0]-hinge[0])*ratio,hinge[1]+(end[1]-hinge[1])*ratio
-            segment((px,py),(px,py+4),(47,61,67),width=3)
+        draw_supply_case(x,y,progress)
+        # 같은 상자를 쓰되 전면 표식으로 내용물 종류를 구분한다.
+        marker_x,marker_y=x-2,y+10
+        if self.item == MEDKIT:
+            pico2d.draw_rectangle(marker_x-1,marker_y-4,marker_x+1,marker_y+4,190,79,69,filled=True)
+            pico2d.draw_rectangle(marker_x-4,marker_y-1,marker_x+4,marker_y+1,190,79,69,filled=True)
+        elif self.item == LIGHT_BOMB:
+            pico2d.draw_circle(round(marker_x),round(marker_y),4,206,160,71,filled=True)
+            pico2d.draw_circle(round(marker_x),round(marker_y),2,255,237,179,filled=True)
+        else:
+            draw_item(self.item,marker_x,marker_y,12)
         if not self.opened:
             with blended():
-                glow(x, y + 16, 21, (173, 198, 135), alpha=48)
+                glow(x,y+22,23,SUPPLY_COLORS[self.item],alpha=35)
         if self.pickup_ready:
             px, py = self.pickup_position
             with blended():
