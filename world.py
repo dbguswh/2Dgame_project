@@ -78,23 +78,25 @@ def update_world(delta_time, player, enemies, stage, records=None):
             enemy.receive_flash(player.face_dir, point)
             player.notice = '섬광 · 침입자 처치' if not enemy.alive else '섬광 명중 · 침입자 제압'
             player.notice_time = 1.0
-    target = player.get_attack_target(
+    targets = player.get_attack_targets(
         [(enemy.identity, enemy.get_bb()) for enemy in enemies if enemy.alive]
     )
     for enemy in enemies:
-        if enemy.alive and enemy.identity == target:
-            heavy = player.attack_kind == 'ground' and player.attack_stage == 2
+        if enemy.alive and enemy.identity in targets:
+            spin=player.attack_kind=='ground' and player.attack_stage==3
+            heavy = player.attack_kind == 'ground' and player.attack_stage in (2,3)
+            direction=(1 if enemy.x>=player.x else -1) if spin else player.face_dir
             attack, body = player.get_attack_box(), enemy.get_bb()
             point = ((max(attack[0], body[0]) + min(attack[2], body[2])) / 2,
                      (max(attack[1], body[1]) + min(attack[3], body[3])) / 2)
-            style='air' if player.attack_kind=='air' else 'rising' if heavy else 'horizontal'
-            if not enemy.receive_weapon(player.face_dir,point,style,heavy):
+            style='spin' if spin else 'air' if player.attack_kind=='air' else 'rising' if heavy else 'horizontal'
+            if not enemy.receive_weapon(direction,point,style,heavy):
                 player.notice,player.notice_time='정면 방어 · 뒤쪽이나 공격 후 빈틈을 노리세요',1.0
                 continue
             player.hit_pause.trigger(enemy.impact.hitstop)
             if heavy:
-                enemy.apply_knockback(player.face_dir)
-            player.notice = '침입자 처치' if not enemy.alive else '침입자 명중'
+                enemy.apply_knockback(direction)
+            player.notice = '회전 베기 명중' if spin else '침입자 처치' if not enemy.alive else '침입자 명중'
             player.notice_time = 1.0
     if hasattr(stage,'update_combat_seals'):
         stage.update_combat_seals(enemies)

@@ -86,7 +86,7 @@ class GroundComboTests(unittest.TestCase):
         self.assertEqual(self.player.attack_stage, 1)
         self.assertEqual(self.player.attack_id, 2)
 
-    def test_second_cannot_chain_into_third_and_has_half_second_recovery(self):
+    def test_third_input_before_second_windup_is_ignored_and_recovery_remains(self):
         self.second()
         tap(self.player)
         self.player.update(0, 960)

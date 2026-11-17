@@ -25,7 +25,7 @@ def fonts():
 
 def weapon_status(player):
     if player.bomb_aim is not None:return '광탄 조준 중',(227,207,150)
-    if player.weapon!='ring':return '↑ W  올려 베기',(159,178,193)
+    if player.weapon!='ring':return 'W 3연격 · ↑ W 올려 베기',(159,178,193)
     if player.halo is not None and player.halo.active:
         return '비행 중 · 복귀 후 1초 대기',(220,189,123)
     if player.halo_cooldown>0:

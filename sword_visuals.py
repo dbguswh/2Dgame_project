@@ -5,12 +5,17 @@ from math import cos, sin, pi
 import pico2d
 
 from effects import blended, glow, polygon
-from light_sword import SWORD_REACH, sword_box
+from light_sword import SWORD_REACH, SPIN_REACH, sword_box,spin_box
 
 
 def stroke_state(player):
     if not player.is_attacking or player.attack_kind not in ('ground', 'air', 'upper'):
         return None
+    if player.attack_kind=='ground' and player.attack_stage==3:
+        elapsed=player.attack_elapsed
+        if not .16<=elapsed<.43:return None
+        return (spin_box(player.x,player.feet_y,player.solids),False,False,
+                min(1,(elapsed-.16)/.18),max(0,1-max(0,elapsed-.34)/.09))
     air = player.attack_kind == 'air'
     rising = not air and player.attack_stage == 2
     start, end, linger = (.1, .22, .06) if air else (.12, .24, .10) if rising else (.1, .2, .08)
@@ -29,6 +34,9 @@ def draw_sword_stroke(player, camera_x=0):
     if state is None or state[0] is None:
         return
     bounds, air, rising, progress, opacity = state
+    if player.attack_kind=='ground' and player.attack_stage==3:
+        draw_spin_stroke(player,camera_x,bounds,progress,opacity)
+        return
     left, bottom, right, top = bounds
     x = player.x-camera_x+player.face_dir*12
     y = player.feet_y+(40 if air else 44 if rising else 45)
@@ -60,3 +68,24 @@ def draw_sword_stroke(player, camera_x=0):
         tip=angle*pi/180
         glow(x+player.face_dir*cos(tip)*(radius-4),y+sin(tip)*(radius-4),
              13 if rising else 10,(255,222,148),alpha=140*opacity)
+
+
+def draw_spin_stroke(player,camera_x,bounds,progress,opacity):
+    left,bottom,right,top=bounds
+    x,y=player.x-camera_x,player.feet_y+48
+    angle=pi+2*pi*progress
+    # 낮고 넓은 궤적이 허리 주위를 한 바퀴 돌고 바로 사라진다.
+    with blended((left-camera_x,bottom,right-camera_x,top)):
+        for i in range(40):
+            t0,t1=i/40,(i+1)/40
+            a=angle-(1-t0)*pi*.85;b=angle-(1-t1)*pi*.85
+            for width,alpha,color in ((12,75,(234,150,53)),(6,160,(255,212,118)),(2,225,(255,247,209))):
+                r=SPIN_REACH
+                taper=sin(pi*(t0+t1)/2)**.6
+                points=((x+player.face_dir*cos(a)*(r-width*taper),y+sin(a)*(r-width*taper)*.42),
+                        (x+player.face_dir*cos(a)*r,y+sin(a)*r*.42),
+                        (x+player.face_dir*cos(b)*r,y+sin(b)*r*.42),
+                        (x+player.face_dir*cos(b)*(r-width*taper),y+sin(b)*(r-width*taper)*.42))
+                polygon(points,color,alpha*opacity*(.2+.8*taper))
+        glow(x+player.face_dir*cos(angle)*SPIN_REACH,y+sin(angle)*SPIN_REACH*.42,
+             14,(255,222,155),alpha=135*opacity)

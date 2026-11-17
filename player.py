@@ -14,7 +14,7 @@ from item_effects import ItemEffects
 from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb, BombAim
 from halo import Halo,HaloAim,HALO_COST,HALO_COOLDOWN
-from light_sword import sword_box
+from light_sword import sword_box,spin_box
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, constrain_region, load_deploy_image)
@@ -27,6 +27,7 @@ ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_attack.json")
 SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_second.json")
 AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_air.json")
+SPIN_ATTACK_DATA_PATH = IMAGE_PATH.with_name('player_sword_spin.json')
 FLASH_DATA_PATH = IMAGE_PATH.with_name("player_flash.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
@@ -47,6 +48,8 @@ SECOND_ATTACK_FRAME_ENDS = (0.08, 0.12, 0.155, 0.24, 0.34, 0.44)
 COMBO_WINDOW = 0.4
 COMBO_RECOVERY = 0.5
 AIR_ATTACK_FRAME_ENDS = (0.07, 0.10, 0.135, 0.22, 0.28, 0.34)
+SPIN_ATTACK_FRAME_ENDS = (.09,.16,.23,.31,.42,.60)
+SPIN_RECOVERY = .65
 
 
 class Player:
@@ -76,6 +79,8 @@ class Player:
         self.air_attack_image = pico2d.load_image(
             str(AIR_ATTACK_DATA_PATH.with_name(self.air_attack_data['image']))
         )
+        self.spin_attack_data=json.loads(SPIN_ATTACK_DATA_PATH.read_text(encoding='utf-8'))
+        self.spin_attack_image=pico2d.load_image(str(SPIN_ATTACK_DATA_PATH.with_name(self.spin_attack_data['image'])))
         self.light_deploy_image = load_deploy_image()
         self.flash_data = json.loads(FLASH_DATA_PATH.read_text(encoding='utf-8'))
         self.flash_image = pico2d.load_image(str(FLASH_DATA_PATH.with_name(self.flash_data['image'])))
@@ -389,6 +394,7 @@ class Player:
             return FLASH_FRAME_ENDS
         if self.attack_kind == 'air':
             return AIR_ATTACK_FRAME_ENDS
+        if self.attack_kind=='ground' and self.attack_stage==3:return SPIN_ATTACK_FRAME_ENDS
         return SECOND_ATTACK_FRAME_ENDS if self.attack_stage == 2 else ATTACK_FRAME_ENDS
 
     @property
@@ -398,6 +404,7 @@ class Player:
             return 0.0
         ends = self._attack_frame_ends()
         angles = ((0.04, 0.10, -0.15, -0.11, -0.04, 0.0) if self.attack_kind == 'air'
+                  else (.03,.05,-.06,-.07,-.02,0) if self.attack_stage==3
                   else (0.04, 0.08, -0.10, -0.06, -0.02, 0.0) if self.attack_stage == 2
                   else (0.04, 0.08, -0.09, -0.06, -0.02, 0.0))
         frame = self.attack_frame
@@ -424,7 +431,7 @@ class Player:
             self.combo_window = COMBO_WINDOW
             self.combo_direction = self.face_dir
         else:
-            self.combo_window = 0.0
+            self.combo_window = SECOND_ATTACK_FRAME_ENDS[-1]+.1 if stage==2 else 0.0
             self.face_dir = self.combo_direction if direction is None else direction
 
     def _advance_attack(self, delta_time):
@@ -436,15 +443,15 @@ class Player:
         duration = self._attack_frame_ends()[-1]
         if self.attack_elapsed < duration:
             return
-        if self.attack_kind == 'ground' and self.attack_stage == 1 and self.combo_queued and self.motion.on_ground:
-            self._begin_attack(2, self.attack_elapsed - duration)
+        if self.attack_kind == 'ground' and self.attack_stage in (1,2) and self.combo_queued and self.motion.on_ground:
+            self._begin_attack(self.attack_stage+1, self.attack_elapsed - duration)
         else:
             self.attack_elapsed = None
             self.combo_queued = False
             if self.attack_kind in ('air', 'flash', 'bomb'):
                 self.attack_cooldown = 0.0
             else:
-                self.attack_cooldown = COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
+                self.attack_cooldown = SPIN_RECOVERY if self.attack_stage==3 else COMBO_RECOVERY if self.attack_stage == 2 else ATTACK_RECOVERY
 
     def _request_attack(self, combo_open):
         if not self.attack_requested or self.light_cast > 0:
@@ -477,7 +484,11 @@ class Player:
             if not self.air_attack_used and not self.is_attacking and self.attack_cooldown <= 0:
                 self._begin_air_attack()
             return
-        if self.attack_stage == 1 and combo_open:
+        if (self.attack_kind=='ground' and self.attack_stage==2 and combo_open
+                and (not self.is_attacking or self.attack_elapsed>=.12)):
+            if self.is_attacking:self.combo_queued=True
+            else:self._begin_attack(3)
+        elif self.attack_stage == 1 and combo_open:
             if self.is_attacking:
                 self.combo_queued = True
             else:
@@ -719,6 +730,8 @@ class Player:
                 data, image = self.flash_data, self.flash_image
             elif state == 'air_attack':
                 data, image = self.air_attack_data, self.air_attack_image
+            elif self.attack_stage==3:
+                data,image=self.spin_attack_data,self.spin_attack_image
             elif self.attack_stage == 2:
                 data, image = self.second_attack_data, self.second_attack_image
             else:
@@ -789,6 +802,9 @@ class Player:
         """광검 타격 프레임. 전방 80px이며 올려 베기는 위쪽, 공중은 아래쪽을 포함한다."""
         if self.attack_kind in ('flash', 'bomb', 'ring'):
             return None
+        if self.attack_kind=='ground' and self.attack_stage==3:
+            if not self.is_attacking or not .16<=self.attack_elapsed<.34:return None
+            return spin_box(self.x,self.feet_y,self.solids)
         if self.attack_kind == 'upper':
             if not self.is_attacking or not .12 <= self.attack_elapsed < .24:return None
             box=front_box(self.x,self.face_dir,4,84,self.feet_y+44,self.feet_y+156,self.solids)
@@ -818,6 +834,16 @@ class Player:
         identity, _ = min(candidates, key=lambda item: abs((item[1][0] + item[1][2]) / 2 - self.x))
         self.attack_hits.add(identity)
         return identity
+
+    def get_attack_targets(self,targets):
+        if self.attack_kind!='ground' or self.attack_stage!=3:
+            identity=self.get_attack_target(targets)
+            return [] if identity is None else [identity]
+        area=self.get_attack_box()
+        hits=[identity for identity,box in targets if identity not in self.attack_hits
+              and abs(box[1]-self.feet_y)<=32 and overlaps(area,box)]
+        self.attack_hits.update(hits)
+        return hits
 
     def _return_after_fall(self):
         self.health -= 1
