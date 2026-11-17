@@ -12,6 +12,22 @@ class ResidentialLevelsTests(unittest.TestCase):
     def setUp(self):
         self.stage = ResidentialStage()
 
+    @patch('pico2d.load_image',return_value=Mock())
+    def test_fuse_requires_landing_on_peak_after_all_guard_locks(self,_):
+        p=Player(*self.stage.fuse_checkpoint)
+        self.stage.collect_pickups(p)
+        self.assertEqual(self.stage.fuse_state,'WORLD')
+        for seal in self.stage.combat_seals:seal.opened=True
+        self.stage.sync_combat_seals()
+        for y,ground in ((304,True),(336,False)):
+            p.feet_y=y;p.motion.on_ground=ground
+            self.stage.collect_pickups(p)
+            self.assertEqual(self.stage.fuse_state,'WORLD')
+        p.feet_y=336;p.motion.on_ground=True
+        self.stage.collect_pickups(p)
+        self.assertEqual(self.stage.fuse_state,'CARRIED')
+        self.assertEqual(p.checkpoint_position,self.stage.fuse_checkpoint)
+
     def test_ground_cannot_collect_upper_fuse_or_reward_battery(self):
         with patch('pico2d.load_image', return_value=Mock()):
             player = Player(self.stage.fuse_position[0], 96)
@@ -67,7 +83,7 @@ class ResidentialLevelsTests(unittest.TestCase):
         self.assertLess(self.stage.battery_pack_position[0], self.stage.fuse_position[0])
         for _ in range(60):
             body.step(1 / 120, 0, self.stage.solids, self.stage.width)
-        self.assertEqual(body.feet_y, self.stage.WORKSHOP_Y)
+        self.assertEqual(body.feet_y, self.stage.FUSE_PEAK_Y)
 
     def test_upper_enemies_stay_on_roof_and_lower_light_does_not_reach_them(self):
         with patch('pico2d.load_image', return_value=Mock()):

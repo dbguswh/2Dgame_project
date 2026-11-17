@@ -59,4 +59,4 @@ class ResidentialRecoveryTests(unittest.TestCase):
         for _ in range(300):
             body.step(1 / 120, -1, self.stage.solids, self.stage.width)
             peak = max(peak, body.feet_y)
-        self.assertLess(peak, self.stage.WORKSHOP_Y)
+        self.assertLess(peak, self.stage.FUSE_PEAK_Y)

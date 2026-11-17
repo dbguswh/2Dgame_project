@@ -71,8 +71,8 @@ class SupplyLayoutTests(unittest.TestCase):
         self.assertGreaterEqual(battery[0] - medkit.x, 64)
         self.assertGreaterEqual(fuse[0] - battery[0], 64)
         self.assertEqual(medkit.feet_y,96)
-        for x in (battery[0], fuse[0]):
-            self.assertTrue(any(s.top == self.stage.WORKSHOP_Y and s.left <= x - 24
+        for x,y in (battery,fuse):
+            self.assertTrue(any(s.top == y-16 and s.left <= x - 24
                                 and s.right >= x + 24 for s in self.stage.solids))
 
     def test_e_opens_closer_box_without_installing_carried_fuse(self):

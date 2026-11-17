@@ -21,7 +21,8 @@ class ResidentialStage(Stage):
     destination_name = '운하 병원'
     BRIDGE_TIME = 2.4
     UPPER_FLOOR_Y = 288
-    WORKSHOP_Y = 304
+    WORKSHOP_Y = 240
+    FUSE_PEAK_Y = 336
     BRIDGE_Y = 224
 
     def __init__(self):
@@ -38,9 +39,9 @@ class ResidentialStage(Stage):
         self.bridge_gate = Solid(self.canal[0] - 12, self.BRIDGE_Y,
                                  self.canal[0] + 4, self.BRIDGE_Y + 80)
         self.exit_position = (2800, self.BRIDGE_Y)
-        self.fuse_position = (2240, self.WORKSHOP_Y + 16)
+        self.fuse_position = (2288, self.FUSE_PEAK_Y + 16)
         self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
-        self.return_battery_position = (2104, self.WORKSHOP_Y + 16)
+        self.return_battery_position = (2112, 288)
         self.return_battery_collected = False
         self.supply_boxes = (SupplyBox('ascent-medkit', 832, 144),
                              SupplyBox('workshop-medkit', 1648, GROUND_Y),
@@ -48,7 +49,7 @@ class ResidentialStage(Stage):
                              SupplyBox('lower-detour-speed', 1456, 144, item=SPEED),
                              SupplyBox('connector-shield', 1848, 256, item=SHIELD))
         self.fragment_cache = FragmentCache('lower-power-cache', 2264, 144)
-        self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
+        self.fuse_checkpoint = (2288, self.FUSE_PEAK_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
         self.visual_time = 0.0
@@ -61,8 +62,11 @@ class ResidentialStage(Stage):
                                 Solid(896, 176, 992, 192, one_way=True),
                                 Solid(1024, 224, 1120, 240, one_way=True))
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y, one_way=True),
-                               Solid(1872, self.WORKSHOP_Y - 20, 2272, self.WORKSHOP_Y))
+                               Solid(1872, self.WORKSHOP_Y - 20, 2064, self.WORKSHOP_Y))
         self.workshop_ledges = (Solid(1808, 240, 1904, 256, one_way=True),)
+        self.fuse_ledges = (Solid(2064,256,2152,272,one_way=True),
+                            Solid(2160,288,2248,304,one_way=True),
+                            Solid(2240,320,2352,self.FUSE_PEAK_Y,one_way=True))
         self.supply_ledges = (Solid(1376, 128, 1520, 144, one_way=True),)
         # 아래 골목에서 옥상/정비실 연결로로 다시 올라가는 동쪽 계단식 발판.
         self.lower_walkways = (Solid(1664,128,1744,144,one_way=True),
@@ -82,6 +86,7 @@ class ResidentialStage(Stage):
             *self.upper_walkways,
             *self.workshop_ledges,
             *self.supply_ledges,
+            *self.fuse_ledges,
             *self.lower_walkways,
             *self.bridge_approaches,
             *self.return_ledges,
@@ -151,10 +156,12 @@ class ResidentialStage(Stage):
                 and abs(player.feet_y - self.fixture_position[1]) <= 8):
             self.fixture_seen = True
         x, y = self.fuse_position
-        if self.fuse_unlocked and self.fuse_state == 'WORLD' and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12)):
+        if (self.fuse_unlocked and self.fuse_state == 'WORLD' and player.motion.on_ground
+                and abs(player.feet_y-self.FUSE_PEAK_Y)<=8
+                and overlaps(player.get_bb(), (x - 10, y - 12, x + 10, y + 12))):
             self.fuse_state = 'CARRIED'
             player.checkpoint_position = self.fuse_checkpoint
-            player.notice = '퓨즈 획득 · 왼쪽 중앙 제어함으로 돌아가세요'
+            player.notice = '복구 퓨즈 확보 · 왼쪽 중앙 제어함으로 돌아가세요'
             player.notice_time = 2.5
         for position, flag in ((self.battery_pack_position, 'battery_pack_collected'),
                                (self.return_battery_position, 'return_battery_collected')):
@@ -289,7 +296,7 @@ class ResidentialStage(Stage):
 
     def interaction_prompt(self, player):
         if (self.fuse_state=='WORLD' and not self.fuse_unlocked
-                and abs(player.x-self.fuse_position[0])<60 and abs(player.feet_y-self.WORKSHOP_Y)<10):
+                and abs(player.x-self.fuse_position[0])<60 and abs(player.feet_y-self.FUSE_PEAK_Y)<10):
             return (*self.fuse_position,'표식 침입자 처치 후 개방')
         if self.near_exit(player):
             return (*self.exit_position, 'E: 출구 이동' if self.bridge_ready else '다리 복구 필요')
@@ -329,7 +336,7 @@ class ResidentialStage(Stage):
         small,_=fonts()
         # 목적지 이름만 고정 폭 명패로 표시한다. 보급/이동 화살표는 HUD와 중복하지 않는다.
         for wx,y,label,w in ((160,284,'대피소',72),
-                              (2112,408,'정비실',78),(2800,364,'병원',64)):
+                              (1968,324,'정비실',78),(2800,364,'병원',64)):
             x=wx-camera_x
             if not 18+w/2 <= x <= 942-w/2:continue
             pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,22,31,filled=True)

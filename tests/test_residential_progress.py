@@ -32,7 +32,7 @@ class ResidentialProgressTests(unittest.TestCase):
         for seal in self.stage.combat_seals:seal.opened=True
         self.stage.sync_combat_seals()
         self.player.x = self.stage.fuse_position[0]
-        self.player.feet_y = self.stage.WORKSHOP_Y
+        self.player.feet_y = self.stage.FUSE_PEAK_Y
         self.player.motion.on_ground = True
         update_world(0.01, self.player, [], self.stage, self.records)
 

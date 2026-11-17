@@ -311,7 +311,8 @@ class Shade:
                 <= self.movement_bounds[1] - BODY_WIDTH / 2):
             return False
         box = (x - BODY_WIDTH / 2, self.feet_y, x + BODY_WIDTH / 2, self.feet_y + BODY_HEIGHT)
-        if any(overlaps(box, (s.left, s.bottom, s.right, s.top)) for s in self.solids):
+        # 아래·옆으로 통과하는 발판은 Motion과 동일하게 수평 벽으로 취급하지 않는다.
+        if any(not s.one_way and overlaps(box, (s.left, s.bottom, s.right, s.top)) for s in self.solids):
             return False
         probe = x + direction * (BODY_WIDTH / 2 + 2)
         if any(s.left <= probe <= s.right and abs(s.top - self.feet_y) < EPSILON
@@ -459,6 +460,8 @@ class Shade:
         next_x = self.x + direction * speed * delta_time
         if direction and self._light_blocks_move(next_x):
             return False
+        if direction and self.escape_bounds is not None:
+            self._step_onto_connector(next_x,direction)
         if direction and not self._can_move_to(next_x, direction):
             if not self._step_onto_connector(next_x, direction):
                 direction = 0
@@ -495,7 +498,7 @@ class Shade:
             return False
         # 빛이 끝나면 멀리서 무작정 배회하지 않고 원래 교전 지점으로 돌아간다.
         self.state='PATROL'
-        self.face_dir=1 if self.x < left+BODY_WIDTH/2 else -1
+        self.face_dir=1 if self.x < (left+right)/2 else -1
         self._move(delta_time,self.face_dir,80,stage)
         return True
 

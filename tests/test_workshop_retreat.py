@@ -19,14 +19,14 @@ class WorkshopRetreatTests(unittest.TestCase):
         # 정비실 진입 전 연결로 교전은 이미 완료한 상태다.
         for seal in self.stage.combat_seals:seal.opened=True
         self.stage.sync_combat_seals()
-        self.player = Player(2240, 304)
+        self.player = Player(*self.stage.fuse_checkpoint)
 
     def enemy(self, x=1904):
-        return Shade(x, 304, identity='residential-shade-5', combat_bounds=(1872, 2064))
+        return Shade(x, self.stage.WORKSHOP_Y, identity='residential-shade-5', combat_bounds=(1872, 2064))
 
     def light(self, x):
-        region = constrain_region(self.stage.light_regions[0], x, 328, self.stage.solids)
-        return PortableLight(x, 328, region)
+        region = constrain_region(self.stage.light_regions[0], x, self.stage.WORKSHOP_Y+24, self.stage.solids)
+        return PortableLight(x, self.stage.WORKSHOP_Y+24, region)
 
     def test_left_of_workshop_light_uses_connected_platform_and_resumes_patrol(self):
         for fps in (30, 60, 120):
@@ -37,15 +37,15 @@ class WorkshopRetreatTests(unittest.TestCase):
                     for frame in range(8*fps):
                         enemy.update(1/fps, self.player, self.stage, light)
                         heights.append(enemy.feet_y)
-                        self.assertGreaterEqual(enemy.feet_y, 256-1e-5)
-                        self.assertFalse(any(overlaps(enemy.get_bb(), (s.left,s.bottom,s.right,s.top))
+                        self.assertGreaterEqual(enemy.feet_y, self.stage.WORKSHOP_Y-1e-5)
+                        self.assertFalse(any(not s.one_way and overlaps(enemy.get_bb(), (s.left,s.bottom,s.right,s.top))
                                              for s in self.stage.solids))
                         self.assertIsNone(enemy.consume_attack())
                         if frame >= 3*fps:
                             positions.append(enemy.x)
                     self.assertEqual(enemy.state, 'DARK_PATROL')
                     self.assertFalse(light.illuminates(enemy.get_bb()))
-                    self.assertLess(min(heights), 304)
+                    self.assertLess(min(heights), 288)
                     self.assertGreater(max(positions)-min(positions), 100)
 
     def test_no_light_does_not_expand_initial_patrol(self):
@@ -91,13 +91,13 @@ class WorkshopRetreatTests(unittest.TestCase):
         for _ in range(360):
             enemy.update(1/120,self.player,self.stage,light)
         light.remaining=0
-        self.player.x,self.player.feet_y=2020,304
+        self.player.x,self.player.feet_y=2020,self.stage.WORKSHOP_Y
         positions=[]
         for _ in range(1440):
             enemy.update(1/120,self.player,self.stage,light)
             positions.append(enemy.x)
         self.assertGreater(max(positions),1896)
-        self.assertGreaterEqual(enemy.feet_y,288)
+        self.assertGreaterEqual(enemy.feet_y,self.stage.WORKSHOP_Y)
 
     def test_unseen_enemy_returns_to_original_post_after_light_ends(self):
         enemy,light=self.enemy(),self.light(2020)
@@ -107,4 +107,4 @@ class WorkshopRetreatTests(unittest.TestCase):
         for _ in range(1440):enemy.update(1/120,self.player,self.stage,light)
         self.assertIsNone(enemy.escape_bounds)
         self.assertGreaterEqual(enemy.x,1896)
-        self.assertEqual(enemy.feet_y,304)
+        self.assertEqual(enemy.feet_y,self.stage.WORKSHOP_Y)

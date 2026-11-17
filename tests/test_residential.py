@@ -48,7 +48,10 @@ class ResidentialLayoutTests(unittest.TestCase):
             if motion.x >= self.stage.fuse_position[0]:
                 break
         self.assertTrue(reached_shelf)
-        self.assertEqual(motion.feet_y, self.stage.WORKSHOP_Y)
+        for _ in range(120):
+            if motion.on_ground:break
+            motion.step(1/120,0,self.stage.solids,self.stage.width)
+        self.assertEqual(motion.feet_y, self.stage.FUSE_PEAK_Y)
         for _ in range(1600):
             left, bottom, right, top = motion.get_bb()
             obstacle = any(bottom < s.top and top > s.bottom
