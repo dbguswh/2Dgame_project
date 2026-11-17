@@ -40,14 +40,14 @@ class ResidentialStage(Stage):
         self.exit_position = (2800, self.BRIDGE_Y)
         self.fuse_position = (2240, self.WORKSHOP_Y + 16)
         self.battery_pack_position = (1760, self.UPPER_FLOOR_Y + 16)
-        self.return_battery_position = (2176, self.WORKSHOP_Y + 16)
+        self.return_battery_position = (2104, self.WORKSHOP_Y + 16)
         self.return_battery_collected = False
         self.supply_boxes = (SupplyBox('ascent-medkit', 832, 144),
                              SupplyBox('workshop-medkit', 1648, GROUND_Y),
-                             SupplyBox('rooftop-light-bomb', 1248, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
-                             SupplyBox('lower-detour-speed', 1360, GROUND_Y, item=SPEED),
+                             SupplyBox('rooftop-light-bomb', 1408, self.UPPER_FLOOR_Y, item=LIGHT_BOMB),
+                             SupplyBox('lower-detour-speed', 1456, 144, item=SPEED),
                              SupplyBox('connector-shield', 1848, 256, item=SHIELD))
-        self.fragment_cache = FragmentCache('lower-power-cache', 1488, GROUND_Y)
+        self.fragment_cache = FragmentCache('lower-power-cache', 2264, 144)
         self.fuse_checkpoint = (2240, self.WORKSHOP_Y)
         self.fuse_state = 'WORLD'
         self.scene = ResidentialScene()
@@ -63,13 +63,14 @@ class ResidentialStage(Stage):
         self.upper_walkways = (Solid(1152, 268, 1808, self.UPPER_FLOOR_Y, one_way=True),
                                Solid(1872, self.WORKSHOP_Y - 20, 2272, self.WORKSHOP_Y))
         self.workshop_ledges = (Solid(1808, 240, 1904, 256, one_way=True),)
+        self.supply_ledges = (Solid(1376, 128, 1520, 144, one_way=True),)
         # 아래 골목에서 옥상/정비실 연결로로 다시 올라가는 동쪽 계단식 발판.
         self.lower_walkways = (Solid(1664,128,1744,144,one_way=True),
                                Solid(1736,176,1816,192,one_way=True),
                                Solid(1792,224,1856,240,one_way=True))
         self.bridge_approaches = (Solid(2208, 204, 2368, self.BRIDGE_Y, one_way=True),
                                   Solid(2752, 204, 2880, self.BRIDGE_Y, one_way=True))
-        self.return_ledges = (Solid(2240, 128, 2288, 144, one_way=True),
+        self.return_ledges = (Solid(2224, 128, 2312, 144, one_way=True),
                               Solid(2304, 176, 2352, 192, one_way=True),
                               Solid(2768, 128, 2816, 144, one_way=True),
                               Solid(2832, 176, 2880, 192, one_way=True))
@@ -80,6 +81,7 @@ class ResidentialStage(Stage):
             *self.approach_ledges,
             *self.upper_walkways,
             *self.workshop_ledges,
+            *self.supply_ledges,
             *self.lower_walkways,
             *self.bridge_approaches,
             *self.return_ledges,

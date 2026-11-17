@@ -59,7 +59,7 @@ class FragmentCacheTests(unittest.TestCase):
         self.stand_by_cache()
         for scenario in ('air', 'upper', 'attack'):
             self.p.motion.on_ground = scenario != 'air'
-            self.p.feet_y = 288 if scenario == 'upper' else 96
+            self.p.feet_y = 288 if scenario == 'upper' else self.cache.feet_y
             self.p.attack_elapsed = .1 if scenario == 'attack' else None
             self.assertIsNot(self.s.nearby_supply(self.p), self.cache)
         self.assertFalse(self.cache.opened)
@@ -99,7 +99,8 @@ class FragmentCacheTests(unittest.TestCase):
         self.stand_by_cache()
         self.p.health = 1
         enemy = Shade(560, 96, combat_bounds=(448, 752))
-        enemy.bolts.append(ShadowBolt.aimed((self.p.x, 140), (self.p.x + 1, 140)))
+        enemy.bolts.append(ShadowBolt.aimed((self.p.x, self.p.feet_y+44),
+                                           (self.p.x+1, self.p.feet_y+44)))
         self.game.enemies = [enemy]
         tap(self.game, pico2d.SDLK_e)
         self.game.update(0)
@@ -136,21 +137,20 @@ class FragmentCacheTests(unittest.TestCase):
         tap(self.game, pico2d.SDLK_e)
         self.assertEqual(self.game.state, 'CITY_MAP')
 
-    def test_lower_detour_can_return_to_ascent_with_basic_movement(self):
-        body = Motion(800, 96)
-        for direction, target in ((1, self.cache.x), (-1, 800)):
-            for _ in range(1200):
-                if abs(body.x - target) < 1.1:
-                    break
-                body.step(1 / 120, direction, self.s.solids, self.s.width)
-                self.assertEqual(body.feet_y, 96)
-            self.assertLess(abs(body.x - target), 1.1)
-        self.assertTrue(body.jump())
-        for _ in range(120):
-            body.step(1 / 120, 0, self.s.solids, self.s.width)
-            if body.on_ground:
-                break
-        self.assertEqual(body.feet_y, self.s.approach_ledges[0].top)
+    def test_optional_cache_reachable_then_return_to_bridge_with_basic_jumps(self):
+        # 전투 봉쇄 이후 동쪽 귀환 동선. 달리기·강화 없이 각 바닥에 실제 착지한다.
+        for seal in self.s.combat_seals:seal.opened=True
+        self.s.sync_combat_seals()
+        body=Motion(2200,96)
+        for target,y in ((self.cache.x,self.cache.feet_y),(2330,192),(2340,224)):
+            self.assertTrue(body.jump())
+            for _ in range(180):
+                direction=0 if abs(target-body.x)<1.1 else 1 if target>body.x else -1
+                body.step(1/120,direction,self.s.solids,self.s.width)
+                if body.on_ground:break
+            self.assertEqual(body.feet_y,y,(target,y,body))
+        self.assertLess(body.x,self.s.canal[0])
+        self.assertFalse(self.s.bridge_ready)
 
 
 if __name__ == '__main__':

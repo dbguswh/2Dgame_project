@@ -79,6 +79,20 @@ class ResidentialLayoutTests(unittest.TestCase):
                 if body.on_ground:break
             self.assertEqual(body.feet_y,y,(x,y,body))
 
+    def test_speed_supply_has_own_ledge_and_can_return_to_lower_alley(self):
+        from inventory import SPEED
+        box=next(b for b in self.stage.supply_boxes if b.item==SPEED)
+        body=Motion(box.x,96)
+        self.assertTrue(body.jump())
+        for _ in range(180):
+            body.step(1/120,0,self.stage.solids,self.stage.width)
+            if body.on_ground:break
+        self.assertEqual(body.feet_y,box.feet_y)
+        for _ in range(240):
+            body.step(1/120,1 if body.x<1600 else 0,self.stage.solids,self.stage.width)
+        self.assertEqual(body.feet_y,96)
+        self.assertAlmostEqual(body.x,1600,delta=2)
+
     @patch('pico2d.load_image',return_value=Mock())
     def test_rooftop_flyer_does_not_attack_lower_route(self,_):
         from enemy_factory import create_enemy

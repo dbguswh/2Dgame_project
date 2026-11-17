@@ -56,7 +56,8 @@ class ResidentialScene:
             if solid.right < camera_x or solid.left > camera_x + width:
                 continue
             if solid in (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
-                          *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges):
+                          *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges,
+                          *stage.supply_ledges):
                 self.draw_walkway(solid, camera_x)
             elif solid in stage.stair_solids:
                 self.draw_stone(solid, camera_x, width)
@@ -78,7 +79,8 @@ class ResidentialScene:
     @staticmethod
     def draw_workshop_interior(stage, camera_x, width):
         platforms = (*stage.approach_ledges, *stage.upper_walkways, *stage.lower_walkways,
-                      *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges)
+                      *stage.bridge_approaches, *stage.return_ledges, *stage.workshop_ledges,
+                      *stage.supply_ledges)
         for platform in platforms:
             if platform.left > camera_x + width or platform.right < camera_x:
                 continue
