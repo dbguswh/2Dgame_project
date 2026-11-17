@@ -15,6 +15,7 @@ from upgrades import CAPACITY, FOCUS, SPREAD, UPGRADE_KEYS
 from light_bomb import LightBomb, BombAim
 from halo import Halo,HaloAim,HALO_COST,HALO_COOLDOWN
 from light_sword import sword_box,spin_box
+from sword_motion import AcrobatStep
 from flash import FLASH_COST, FLASH_RANGE, FLASH_COOLDOWN, FLASH_FRAME_ENDS, FlashPulse
 from lighting import (LIGHT_COST, LIGHT_RADIUS, LIGHT_CAST_TIME, DEPLOY_DATA, LightRegion,
                       PortableLight, find_region, constrain_region, load_deploy_image)
@@ -27,7 +28,7 @@ ACTION_DATA_PATH = IMAGE_PATH.with_name("player_actions.json")
 ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_attack.json")
 SECOND_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_second.json")
 AIR_ATTACK_DATA_PATH = IMAGE_PATH.with_name("player_sword_air.json")
-SPIN_ATTACK_DATA_PATH = IMAGE_PATH.with_name('player_sword_spin.json')
+SPIN_ATTACK_DATA_PATH = IMAGE_PATH.with_name('player_sword_acrobat.json')
 FLASH_DATA_PATH = IMAGE_PATH.with_name("player_flash.json")
 
 # 확정 이미지(1312×1199)의 캐릭터 영역. 원본 파일을 수정하지 않고 잘라 그린다.
@@ -48,7 +49,7 @@ SECOND_ATTACK_FRAME_ENDS = (0.08, 0.12, 0.155, 0.24, 0.34, 0.44)
 COMBO_WINDOW = 0.4
 COMBO_RECOVERY = 0.5
 AIR_ATTACK_FRAME_ENDS = (0.07, 0.10, 0.135, 0.22, 0.28, 0.34)
-SPIN_ATTACK_FRAME_ENDS = (.09,.16,.23,.31,.42,.60)
+SPIN_ATTACK_FRAME_ENDS = (.10,.16,.22,.30,.39,.49,.62,.76)
 SPIN_RECOVERY = .65
 
 
@@ -104,6 +105,7 @@ class Player:
         self.attack_hits = set()
         self.attack_stage = 1
         self.attack_kind = 'ground'
+        self.finisher_motion=None
         self.air_attack_used = False
         self.hit_pause = HitPause()
         self.combo_window = 0.0
@@ -402,11 +404,12 @@ class Player:
         """발 기준으로 준비 때 뒤로, 타격 때 앞으로 힘을 싣는 시각 회전이다."""
         if not self.is_attacking or self.attack_kind in ('flash', 'bomb', 'ring'):
             return 0.0
+        if self.attack_kind=='ground' and self.attack_stage==3:return 0.0
         ends = self._attack_frame_ends()
         angles = ((0.04, 0.10, -0.15, -0.11, -0.04, 0.0) if self.attack_kind == 'air'
                   else (.03,.05,-.06,-.07,-.02,0) if self.attack_stage==3
-                  else (0.04, 0.08, -0.10, -0.06, -0.02, 0.0) if self.attack_stage == 2
-                  else (0.04, 0.08, -0.09, -0.06, -0.02, 0.0))
+                  else (.06,.13,-.22,-.14,-.05,0) if self.attack_stage == 2
+                  else (.07,.15,-.28,-.18,-.06,0))
         frame = self.attack_frame
         start = ends[frame - 1] if frame else 0
         previous = angles[frame - 1] if frame else 0
@@ -433,6 +436,7 @@ class Player:
         else:
             self.combo_window = SECOND_ATTACK_FRAME_ENDS[-1]+.1 if stage==2 else 0.0
             self.face_dir = self.combo_direction if direction is None else direction
+        self.finisher_motion=AcrobatStep(self.feet_y,self.face_dir) if stage==3 else None
 
     def _advance_attack(self, delta_time):
         self.attack_cooldown = max(0.0, self.attack_cooldown - delta_time)
@@ -447,6 +451,7 @@ class Player:
             self._begin_attack(self.attack_stage+1, self.attack_elapsed - duration)
         else:
             self.attack_elapsed = None
+            self.finisher_motion=None
             self.combo_queued = False
             if self.attack_kind in ('air', 'flash', 'bomb'):
                 self.attack_cooldown = 0.0
@@ -682,6 +687,10 @@ class Player:
             speed = self.bomb_air_speed
         if self.halo_aim is not None and not self.motion.on_ground:
             speed=self.halo_air_speed
+        if self.is_attacking and self.attack_kind=='ground' and self.attack_stage==3:
+            dx=self.finisher_motion.advance(self.motion,self.attack_elapsed,delta_time,solids)
+            direction=1 if dx>0 else -1 if dx<0 else 0
+            speed=abs(dx)/delta_time if delta_time>0 else 0
         self.motion.step(delta_time, direction, solids, area_width, margin, speed=speed)
         if self.motion.on_ground:
             self.air_attack_used = False
@@ -803,8 +812,9 @@ class Player:
         if self.attack_kind in ('flash', 'bomb', 'ring'):
             return None
         if self.attack_kind=='ground' and self.attack_stage==3:
-            if not self.is_attacking or not .16<=self.attack_elapsed<.34:return None
-            return spin_box(self.x,self.feet_y,self.solids)
+            if not self.is_attacking or not .20<=self.attack_elapsed<.46:return None
+            return spin_box(self.x,self.feet_y,self.solids,
+                            self.finisher_motion.floor_y if self.finisher_motion else self.feet_y)
         if self.attack_kind == 'upper':
             if not self.is_attacking or not .12 <= self.attack_elapsed < .24:return None
             box=front_box(self.x,self.face_dir,4,84,self.feet_y+44,self.feet_y+156,self.solids)
@@ -840,8 +850,9 @@ class Player:
             identity=self.get_attack_target(targets)
             return [] if identity is None else [identity]
         area=self.get_attack_box()
+        floor=self.finisher_motion.floor_y if self.finisher_motion else self.feet_y
         hits=[identity for identity,box in targets if identity not in self.attack_hits
-              and abs(box[1]-self.feet_y)<=32 and overlaps(area,box)]
+              and abs(box[1]-floor)<=32 and overlaps(area,box)]
         self.attack_hits.update(hits)
         return hits
 
@@ -868,6 +879,7 @@ class Player:
         self.cancel_bomb_aim()
         self.cancel_halo_aim()
         self.attack_elapsed = None
+        self.finisher_motion=None
         self.attack_requested = False
         self.flash_pending = False
         self.flash_requested = False
@@ -905,6 +917,7 @@ class Player:
         self.walk_frame = 0
         self.attack_elapsed = None
         self.attack_cooldown = 0.0
+        self.finisher_motion=None
         self.attack_hits.clear()
         self.attack_stage = 1
         self.attack_kind = 'ground'

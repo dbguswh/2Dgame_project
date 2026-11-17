@@ -13,9 +13,10 @@ def stroke_state(player):
         return None
     if player.attack_kind=='ground' and player.attack_stage==3:
         elapsed=player.attack_elapsed
-        if not .16<=elapsed<.43:return None
-        return (spin_box(player.x,player.feet_y,player.solids),False,False,
-                min(1,(elapsed-.16)/.18),max(0,1-max(0,elapsed-.34)/.09))
+        if not .20<=elapsed<.56:return None
+        floor=player.finisher_motion.floor_y if player.finisher_motion else player.feet_y
+        return (spin_box(player.x,player.feet_y,player.solids,floor),False,False,
+                min(1,(elapsed-.20)/.26),max(0,1-max(0,elapsed-.46)/.10))
     air = player.attack_kind == 'air'
     rising = not air and player.attack_stage == 2
     start, end, linger = (.1, .22, .06) if air else (.12, .24, .10) if rising else (.1, .2, .08)

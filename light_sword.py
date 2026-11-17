@@ -8,9 +8,9 @@ AIR_SWORD_DROP = 32
 SPIN_REACH = 96
 
 
-def spin_box(x,feet_y,solids):
+def spin_box(x,feet_y,solids,floor_y=None):
     """몸 양쪽의 낮은 회전 궤적. 벽 양면과 가장 낮은 천장에 제한한다."""
-    bottom,top=feet_y+12,feet_y+88
+    bottom,top=(feet_y if floor_y is None else min(feet_y,floor_y))+12,feet_y+88
     boxes=[front_box(x,d,0,SPIN_REACH,bottom,top,solids) for d in (-1,1)]
     boxes=[b for b in boxes if b is not None]
     if not boxes:return None
