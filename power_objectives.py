@@ -10,14 +10,16 @@ from effects import blended, glow, segment
 
 ROOT = Path(__file__).resolve().parent / 'assets/images/environments'
 _asset = None
+_fuse = None
 AMBER = (244, 191, 99)
 READY = (132, 215, 231)
 POWERED = (150, 232, 179)
 
 
 def clear_resources():
-    global _asset
+    global _asset,_fuse
     _asset = None
+    _fuse = None
 
 
 def sprite(name, x, bottom, height):
@@ -72,10 +74,19 @@ def draw_switchgear(stage, camera_x):
 
 
 def draw_fuse(x,y,color=READY):
-    pico2d.draw_rectangle(x-4,y-11,x+4,y+11,49,77,84,filled=True)
-    pico2d.draw_line(x,y-8,x,y+8,*color)
-    for sy in (y-12,y+9):
-        pico2d.draw_rectangle(x-6,sy,x+6,sy+3,214,182,114,filled=True)
+    draw_fuse_art(x,y,26)
+
+
+def draw_fuse_art(x,y,height=46,opacity=1):
+    global _fuse
+    if _fuse is None:
+        root=ROOT.parent/'items'
+        data=json.loads((root/'restoration_fuse.json').read_text(encoding='utf-8'))
+        _fuse=pico2d.load_image(str(root/data['image'])),data['clip']
+    image,(l,b,w,h)=_fuse
+    image.opacify(opacity)
+    try:image.clip_draw(l,b,w,h,x,y,height*w/h,height)
+    finally:image.opacify(1)
 
 
 def draw_workshop(stage,camera_x):
@@ -85,14 +96,7 @@ def draw_workshop(stage,camera_x):
         sprite('battery_rack',bx-camera_x,by-16,70)
     x=fx-camera_x
     if not -100 < x < 1060:return
-    sprite('fuse_cabinet',x,fy-16,108)
-    if stage.fuse_state == 'WORLD':
-        draw_fuse(x,fy+29,READY if stage.fuse_unlocked else AMBER)
-        # 봉쇄 중에는 금속 잠금쇠만 닫아 장치 전체를 가리지 않는다.
-        if not stage.fuse_unlocked:
-            for sy in (fy+13,fy+41):
-                segment((x-15,sy),(x+15,sy),(100,106,111),3)
-            pico2d.draw_rectangle(x-4,fy+22,x+4,fy+30,185,116,89,filled=True)
+    sprite('fuse_cabinet',x,fy-16,64)
 
 
 def draw_network(stage,camera_x,signals=False):
@@ -142,8 +146,18 @@ def draw_signals(stage,player,camera_x):
     if stage.fuse_state=='WORLD' and -60<fx-camera_x<1020:
         color=READY if stage.fuse_unlocked else AMBER
         with blended():
-            glow(fx-camera_x,fy+88,17,color,alpha=55)
-            pico2d.draw_circle(fx-camera_x,fy+88,2,*color,a=235,filled=True)
+            glow(fx-camera_x,fy+24,34,color,alpha=90 if stage.fuse_unlocked else 35)
+        draw_fuse_art(fx-camera_x,fy+24,46,1 if stage.fuse_unlocked else .55)
+        if not stage.fuse_unlocked:
+            for sy in (fy+10,fy+36):
+                segment((fx-camera_x-16,sy),(fx-camera_x+16,sy),(139,143,135),3)
+            pico2d.draw_rectangle(fx-camera_x-4,fy+20,fx-camera_x+4,fy+28,*AMBER,filled=True)
+        else:
+            with blended():
+                for side in (-1,1):
+                    sx=fx-camera_x+side*(24+2*sin(stage.visual_time*3))
+                    pico2d.draw_line(sx,fy+22,sx-side*5,fy+27,*READY,a=210)
+                    pico2d.draw_line(sx,fy+22,sx-side*5,fy+17,*READY,a=210)
     bx,by=stage.return_battery_position
     if not stage.return_battery_collected and -60<bx-camera_x<1020:
         with blended():glow(bx-camera_x+27,by+33,12,READY,alpha=38)
@@ -164,6 +178,10 @@ def draw_labels(stage,camera_x):
                'E 전력 복구 · 퓨즈 설치' if stage.fuse_state=='CARRIED' else '퓨즈를 확보해 전력 복구')
         tiny.draw(x-75,216,label,color)
     x=stage.fuse_position[0]-camera_x
-    if 66<x<894:
-        pico2d.draw_rectangle(x-59,414,x+59,433,12,24,30,filled=True)
-        tiny.draw(x-49,423,'퓨즈 보관함',READY if stage.fuse_unlocked else AMBER)
+    if stage.fuse_state=='WORLD' and -20<x<770:
+        color=READY if stage.fuse_unlocked else AMBER
+        pico2d.draw_rectangle(x+28,368,x+178,410,12,24,30,filled=True)
+        pico2d.draw_line(x+13,384,x+28,392,*color)
+        small.draw(x+40,398,'복구 퓨즈',color)
+        label='계단 정상에서 회수' if stage.fuse_unlocked else '표식 침입자 처치 필요'
+        tiny.draw(x+40,380,label,(187,202,207))

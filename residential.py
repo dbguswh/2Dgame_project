@@ -291,7 +291,7 @@ class ResidentialStage(Stage):
         if self.fixture_seen and not self.combat_seals[1].opened:return '운하 주택가 · 옥상 표식 침입자를 처치해 연결로를 여세요'
         if self.combat_seals[1].opened and not self.combat_seals[2].opened:return '운하 주택가 · 정비실 표식 침입자를 처치해 퓨즈를 확보하세요'
         if self.fixture_seen:
-            return '운하 주택가 · 오른쪽 정비실에서 퓨즈를 회수하세요'
+            return '운하 주택가 · 정비실 계단 꼭대기에서 복구 퓨즈를 회수하세요'
         return '운하 주택가 · 발판을 올라 중앙 제어함을 찾으세요'
 
     def interaction_prompt(self, player):
@@ -336,7 +336,7 @@ class ResidentialStage(Stage):
         small,_=fonts()
         # 목적지 이름만 고정 폭 명패로 표시한다. 보급/이동 화살표는 HUD와 중복하지 않는다.
         for wx,y,label,w in ((160,284,'대피소',72),
-                              (1968,324,'정비실',78),(2800,364,'병원',64)):
+                              (1968,200,'정비실',78),(2800,364,'병원',64)):
             x=wx-camera_x
             if not 18+w/2 <= x <= 942-w/2:continue
             pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,22,31,filled=True)

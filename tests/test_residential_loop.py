@@ -22,7 +22,7 @@ class ResidentialLoopTests(unittest.TestCase):
         self.player.x, self.player.feet_y = self.stage.fixture_position
         update_world(0, self.player, [], self.stage, self.game.records)
         self.assertTrue(self.stage.fixture_seen)
-        self.assertIn('오른쪽 정비실', self.stage.objective)
+        self.assertIn('정비실 계단 꼭대기', self.stage.objective)
         self.player.x, self.player.feet_y = self.stage.fuse_checkpoint
         update_world(0, self.player, [], self.stage, self.game.records)
         self.assertEqual(self.stage.fuse_state, 'CARRIED')

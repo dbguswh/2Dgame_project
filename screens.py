@@ -97,6 +97,9 @@ def draw_game(game, font, show_hud=True):
     if hasattr(stage, 'hud_status'):
         font.draw(635, SCREEN_HEIGHT - 28, stage.hud_status, (255, 223, 137))
     elif stage.fuse_state != 'ABSENT':
+        if stage.stage_id=='residential' and stage.fuse_state=='CARRIED':
+            from power_objectives import draw_fuse_art
+            draw_fuse_art(621,SCREEN_HEIGHT-28,22)
         label = {'WORLD': '미획득', 'CARRIED': '보유', 'INSTALLED': '설치 완료'}[stage.fuse_state]
         font.draw(635, SCREEN_HEIGHT - 28, f'퓨즈 {label}', (255, 223, 137))
     prompt = stage.interaction_prompt(player)
