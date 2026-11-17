@@ -11,6 +11,7 @@ from combat_feedback import HitPause, Impact
 from projectiles import ShadowBolt
 from flash import FLASH_STUN, FLASH_KNOCKBACK
 from lighting import LIGHT_PUSH_DISTANCE, LIGHT_PUSH_SPEED
+from combat_balance import SHADE_HEALTH,WEAPON_DAMAGE,FLASH_DAMAGE,BOMB_DAMAGE
 
 
 IMAGE_PATH = Path(__file__).resolve().parent / 'assets/images/characters/shade.png'
@@ -35,6 +36,7 @@ LUNGE_SPEED = 360
 
 
 class Shade:
+    MAX_HEALTH=SHADE_HEALTH
     def __init__(self, x, feet_y, identity=0, combat_bounds=(288, 544), can_shoot=False):
         self.identity = identity
         self.motion = Motion(x, feet_y, BODY_WIDTH, BODY_HEIGHT)
@@ -44,7 +46,9 @@ class Shade:
         self.reaction_image = pico2d.load_image(
             str(REACTION_DATA_PATH.with_name(self.reaction_data['image'])))
         self.face_dir = -1
-        self.health = 2
+        self.max_health=self.MAX_HEALTH
+        self.health = self.max_health
+        self.health_before_hit=self.health
         self.spawn_position = (x, feet_y)
         self.combat_bounds = combat_bounds
         self.escape_bounds = None
@@ -185,11 +189,12 @@ class Shade:
             self.bolts.append(ShadowBolt.aimed(*self.shot_event))
         self.shot_event = None
 
-    def take_damage(self, direction=None, heavy=False, point=None, sword_style=None):
+    def take_damage(self, direction=None, heavy=False, point=None, sword_style=None,amount=WEAPON_DAMAGE):
         if not self.alive:
             return False
         pose = self.animation_frame
-        self.health -= 1
+        self.health_before_hit=self.health
+        self.health = max(0,self.health-amount)
         self.hurt_duration = 0.26 if heavy else 0.22
         self.hurt_time = self.hurt_duration
         self.hit_direction = direction if direction is not None else -self.face_dir
@@ -211,7 +216,7 @@ class Shade:
                                 sword_style=None if kind=='ring' else kind)
 
     def receive_flash(self, direction, point=None):
-        if not self.take_damage(direction=direction, heavy=True, point=point):
+        if not self.take_damage(direction=direction, heavy=True, point=point,amount=FLASH_DAMAGE):
             return False
         self.attack_event = None
         self.shot_event = None
@@ -225,7 +230,7 @@ class Shade:
         return True
 
     def receive_bomb(self, direction, point=None):
-        if not self.take_damage(direction=direction, heavy=True, point=point):
+        if not self.take_damage(direction=direction, heavy=True, point=point,amount=BOMB_DAMAGE):
             return False
         self.attack_event = None
         self.shot_event = None
@@ -249,7 +254,8 @@ class Shade:
         self.motion.x, self.motion.feet_y = self.spawn_position
         self.motion.velocity_y = 0
         self.motion.on_ground = True
-        self.health = 2
+        self.health = self.max_health
+        self.health_before_hit=self.health
         self.face_dir = -1
         self.walk_distance = 0.0
         self.attack_event = None
@@ -659,11 +665,9 @@ class Shade:
     def draw_signals(self, camera_x=0, show_health=True):
         if not self.alive:
             return
-        for index in range(2 if show_health else 0):
-            left = self.x - camera_x - 12 + index * 13
-            color = (202, 91, 214) if index < self.health else (69, 57, 78)
-            pico2d.draw_rectangle(left, self.feet_y + 112, left + 10,
-                                  self.feet_y + 116, *color, filled=True)
+        if show_health:
+            from enemy_health import draw_health
+            draw_health(self,camera_x)
         if self.state in ('WINDUP', 'LUNGE_WINDUP'):
             left = self.x - camera_x - 12
             top = self.feet_y + 124

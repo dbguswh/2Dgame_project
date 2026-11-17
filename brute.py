@@ -1,19 +1,19 @@
 """정면 무기를 막고 후방·회복·제압 중 노출되는 갑각형 침입자."""
 
 from enemy import Shade
+from combat_balance import BRUTE_HEALTH
 
 
 class Brute(Shade):
     kind='brute'
+    MAX_HEALTH=BRUTE_HEALTH
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self.health=3
         self.block_flash=0.0
 
     def reset(self):
         super().reset()
-        self.health=3
         self.block_flash=0
 
     @property
@@ -42,16 +42,14 @@ class Brute(Shade):
         if signals:self.draw_signals(camera_x)
 
     def draw_signals(self,camera_x=0,show_health=True):
-        # 공격 예고·제압은 공유하고 체력은 갑각형 전용 세 칸만 표시한다.
+        # 공격 예고·제압은 공유하고 갑각형도 최대치에 대한 연속 게이지를 쓴다.
         super().draw_signals(camera_x,show_health=False)
         if not self.alive:return
         import pico2d
         from effects import blended,glow
         if show_health:
-            for i in range(3):
-                pico2d.draw_rectangle(self.x-camera_x-22+i*15,self.feet_y+113,
-                                      self.x-camera_x-10+i*15,self.feet_y+118,
-                                      *((225,179,98) if i<self.health else (63,51,47)),filled=True)
+            from enemy_health import draw_health
+            draw_health(self,camera_x,offset=115,color=(225,179,98),width=48)
         if self.block_flash>0:
             with blended():
                 glow(self.x-camera_x+self.face_dir*25,self.feet_y+48,24,(255,214,130),alpha=180)

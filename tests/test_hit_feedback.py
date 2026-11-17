@@ -24,7 +24,7 @@ class HitFeedbackTests(unittest.TestCase):
     def hit(self, stage=1, lethal=False):
         self.player.attack_stage = stage
         self.player.attack_elapsed = 0.12
-        self.enemy.health = 1 if lethal else 2
+        self.enemy.health = 35 if lethal else 70
         update_world(0.01, self.player, [self.enemy], self.stage)
         return self.enemy.impact
 
@@ -45,7 +45,7 @@ class HitFeedbackTests(unittest.TestCase):
                                   self.player.attack_elapsed, self.enemy.state_time))
         self.assertAlmostEqual(other.state_time, 0.02)
         self.assertIs(self.enemy.impact, impact)
-        self.assertEqual(self.enemy.health, 1)
+        self.assertEqual(self.enemy.health, 35)
 
     def test_empty_swing_does_not_freeze(self):
         self.player.attack_elapsed = 0.12

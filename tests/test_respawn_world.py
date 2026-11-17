@@ -23,6 +23,7 @@ class RespawnWorldTests(unittest.TestCase):
     def kill(self):
         self.enemy.take_damage()
         self.enemy.take_damage()
+        self.enemy.take_damage()
         self.game.update(0)
 
     def test_actual_roster_is_reused_and_spawn_is_not_an_immediate_attack(self):
@@ -32,7 +33,7 @@ class RespawnWorldTests(unittest.TestCase):
         self.game.update(9)
         self.assertEqual(self.point.state, 'WARNING')
         self.game.update(1)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertEqual(self.enemy.state, 'PATROL')
         self.assertIsNone(self.enemy.consume_attack())
         self.assertEqual(identities, [id(e) for e in self.game.enemies])
@@ -79,7 +80,7 @@ class RespawnWorldTests(unittest.TestCase):
         self.assertEqual(self.player.battery, 30)
         self.assertEqual(self.point.state, 'OCCUPIED')
         self.assertEqual(self.point.remaining, 9)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.kill()
         self.game.restart_stage()
         self.assertEqual(self.player.battery, 100)

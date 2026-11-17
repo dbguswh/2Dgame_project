@@ -42,7 +42,7 @@ class HospitalFlowTests(unittest.TestCase):
         self.assertFalse(self.s.room_cleared['A'])
 
     def test_unlocked_part_still_needs_e_and_warns_about_outage(self):
-        target=self.g.enemies[0];target.take_damage();target.take_damage()
+        target=self.g.enemies[0];target.take_damage();target.take_damage();target.take_damage()
         self.s.update_combat_seals(self.g.enemies)
         x,y=self.s.part_positions['A'];self.at((x,y-16));self.s.collect_pickups(self.p)
         self.assertFalse(self.s.parts['A'])
@@ -59,11 +59,15 @@ class HospitalFlowTests(unittest.TestCase):
                 self.s.circuit=key;self.s.update(.6)
                 target=self.g.enemies[0 if key=='A' else 6]
                 self.at((target.x+100,target.feet_y));self.p.face_dir=-1
-                for _ in range(2):
-                    tap(self.p,pico2d.SDLK_q)
-                    update_world(0,self.p,[target],self.s,self.g.records)
-                    for _ in range(100):update_world(1/120,self.p,[target],self.s,self.g.records)
-                self.assertTrue(self.s.room_cleared[key])
+                tap(self.p,pico2d.SDLK_q)
+                update_world(0,self.p,[target],self.s,self.g.records)
+                for _ in range(42):update_world(1/120,self.p,[target],self.s,self.g.records)
+                self.at((target.x+40,target.feet_y));self.p.face_dir=-1
+                tap(self.p,pico2d.SDLK_w)
+                for _ in range(24):update_world(1/120,self.p,[target],self.s,self.g.records)
+                tap(self.p,pico2d.SDLK_w)
+                for _ in range(96):update_world(1/120,self.p,[target],self.s,self.g.records)
+                self.assertTrue(self.s.room_cleared[key],(key,target.health,self.p.x,self.p.feet_y,target.x,target.feet_y,self.p.attack_id))
                 x,y=self.s.part_positions[key];self.at((x,y-16));self.s.interact(self.p)
                 self.assertTrue(self.s.parts[key]);self.s.update(.6)
                 self.assertFalse(self.s.doors[key].is_open)
@@ -74,10 +78,10 @@ class HospitalFlowTests(unittest.TestCase):
             self.at(self.s.fixture_position);self.s.interact(self.p);self.s.update(1.2)
             self.at(self.s.exit_position);self.s.interact(self.p)
             self.assertTrue(self.s.completed)
-            self.assertEqual((self.p.fragments,self.p.battery),(2,20))
+            self.assertEqual((self.p.fragments,self.p.battery),(2,60))
 
     def test_guard_unlock_survives_death_respawn_but_stage_restart_resets(self):
-        target=self.g.enemies[0];target.take_damage();target.take_damage()
+        target=self.g.enemies[0];target.take_damage();target.take_damage();target.take_damage()
         self.s.update_combat_seals(self.g.enemies);self.g.records.remember(self.p,self.s)
         self.g.records.restore_after_death(self.p,self.s);restore_enemies(self.g.enemies,self.s)
         self.assertTrue(target.alive);self.assertTrue(self.s.room_cleared['A'])

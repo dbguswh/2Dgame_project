@@ -91,7 +91,7 @@ class RangedAttackTests(unittest.TestCase):
         self.assertEqual(self.enemy.shot_cooldown, 0)
 
     def test_fatal_hit_cancels_pending_release(self):
-        self.enemy.health = 1
+        self.enemy.health = 35
         self.enemy.shot_event = ((610, 140), (400, 136))
         self.enemy.take_damage(direction=1)
         self.enemy.launch_pending_shot()

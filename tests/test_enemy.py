@@ -104,13 +104,14 @@ class ShadeTests(unittest.TestCase):
         self.enemy.update(0.2, self.player, self.stage)
         warning_time = self.enemy.state_time
         self.assertTrue(self.enemy.take_damage())
-        self.assertEqual(self.enemy.health, 1)
+        self.assertEqual(self.enemy.health, 65)
         self.assertEqual(self.enemy.state, 'WINDUP')
         self.assertEqual(self.enemy.state_time, warning_time)
 
-    def test_two_hits_kill_and_cancel_pending_strike(self):
+    def test_three_hits_kill_and_cancel_pending_strike(self):
         self.enemy._enter('STRIKE')
         self.enemy.attack_event = self.enemy._reach_box()
+        self.enemy.take_damage()
         self.enemy.take_damage()
         self.enemy.take_damage()
         self.assertEqual(self.enemy.health, 0)
@@ -121,6 +122,7 @@ class ShadeTests(unittest.TestCase):
     def test_dying_enemy_disappears_without_attacking(self):
         self.enemy.take_damage()
         self.enemy.take_damage()
+        self.enemy.take_damage()
         for _ in range(60):
             self.enemy.update(1 / 60, self.player, self.stage)
         self.assertEqual(self.enemy.state, 'DEAD')
@@ -129,9 +131,10 @@ class ShadeTests(unittest.TestCase):
     def test_reset_restores_original_enemy_state(self):
         self.enemy.take_damage()
         self.enemy.take_damage()
+        self.enemy.take_damage()
         self.enemy.reset()
         self.assertTrue(self.enemy.alive)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertEqual((self.enemy.x, self.enemy.feet_y), self.stage.enemy_spawn)
         self.assertEqual(self.enemy.state, 'PATROL')
         self.assertEqual(self.enemy.hurt_time, 0)
@@ -147,6 +150,7 @@ class ShadeTests(unittest.TestCase):
         self.assertEqual(self.enemy.animation_frame, 4)
         self.enemy.update(0.71, self.player, self.stage)
         self.assertEqual(self.enemy.animation_frame, 5)
+        self.enemy.take_damage()
         self.enemy.take_damage()
         self.enemy.take_damage()
         self.assertEqual(self.enemy.animation_frame, 5)

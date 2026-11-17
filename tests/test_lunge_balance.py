@@ -81,7 +81,7 @@ class LungeBalanceTests(unittest.TestCase):
                     self.assertEqual(game.player.health, 3)
                     self.assertEqual(game.player.battery, 100)
                     self.assertEqual(game.player.invulnerability, 0)
-                    self.assertEqual(enemy.health, 2)
+                    self.assertEqual(enemy.health, 100)
 
     def test_q_and_r_offer_distinct_paid_counters(self):
         for mode, battery in (('flash', 80), ('light', 50)):
@@ -89,7 +89,7 @@ class LungeBalanceTests(unittest.TestCase):
                 game, enemy = self.encounter(mode)
                 self.assertEqual(game.player.health, 3)
                 self.assertEqual(game.player.battery, battery)
-                self.assertEqual(enemy.health, 1 if mode == 'flash' else 2)
+                self.assertEqual(enemy.health, 65 if mode == 'flash' else 100)
 
     def test_lunge_has_warning_and_locks_direction(self):
         game = GameSession(stage_factory=flat_stage)
@@ -128,7 +128,7 @@ class LungeBalanceTests(unittest.TestCase):
         enemy.update(.01, game.player, game.stage, light)
         self.assertNotIn(enemy.state, ('LUNGE', 'LUNGE_WINDUP'))
         self.assertIsNone(enemy.consume_attack())
-        self.assertEqual(enemy.health, 2)
+        self.assertEqual(enemy.health, 100)
 
     def test_dash_stops_at_walls_and_platform_edges(self):
         for wall in (True, False):

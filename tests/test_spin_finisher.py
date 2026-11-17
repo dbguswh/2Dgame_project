@@ -79,10 +79,10 @@ class SpinFinisherTests(unittest.TestCase):
         enemies=[Shade(x,96,identity=str(x),combat_bounds=(0,960)) for x in (340,460)]
         self.p._begin_attack(3);self.p.attack_elapsed=.22
         update_world(0,self.p,enemies,s)
-        self.assertEqual([e.health for e in enemies],[1,1])
+        self.assertEqual([e.health for e in enemies],[65,65])
         self.assertEqual([e.knockback_direction for e in enemies],[-1,1])
         update_world(0,self.p,enemies,s)
-        self.assertEqual([e.health for e in enemies],[1,1])
+        self.assertEqual([e.health for e in enemies],[65,65])
 
     def test_new_sprite_pose_mirrors_and_keeps_body_anchored(self):
         self.p._begin_attack(3);self.p.attack_elapsed=.25

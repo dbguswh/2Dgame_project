@@ -46,7 +46,7 @@ class FlashCombatTests(unittest.TestCase):
         self.enemy.state_time = 0.69
         tap(self.player)
         update_world(0.02, self.player, [self.enemy], self.stage)
-        self.assertEqual((self.enemy.health, self.player.health), (1, 3))
+        self.assertEqual((self.enemy.health, self.player.health), (65, 3))
         self.assertEqual(self.enemy.state, 'STUNNED')
         self.assertIsNone(self.enemy.consume_attack())
 
@@ -56,7 +56,7 @@ class FlashCombatTests(unittest.TestCase):
         self.enemy.shot_target = (400, 136)
         tap(self.player)
         update_world(0.02, self.player, [self.enemy], self.stage)
-        self.assertEqual(self.enemy.health, 1)
+        self.assertEqual(self.enemy.health, 65)
         self.assertEqual(self.enemy.bolts, [])
         self.assertIsNone(self.enemy.shot_target)
 
@@ -95,25 +95,30 @@ class FlashCombatTests(unittest.TestCase):
         self.assertIn(self.enemy.state, ('RETREAT', 'DARK_PATROL'))
         self.assertGreater(self.enemy.x, 498)
 
-    def test_q_then_w_kills_with_one_battery_payment(self):
+    def test_q_then_two_sword_hits_kill_with_one_battery_payment(self):
         self.cast()
         self.tick(0.34)
         self.player.x = self.enemy.x - 40
         tap(self.player, pico2d.SDLK_w)
         self.tick(0.2)
+        tap(self.player, pico2d.SDLK_w)
+        self.tick(.5)
         self.assertFalse(self.enemy.alive)
         self.assertEqual(self.player.battery, 80)
         self.assertEqual(self.player.health, 3)
 
-    def test_two_flashes_kill_and_only_closest_enemy_is_damaged(self):
+    def test_three_flashes_kill_and_only_closest_enemy_is_damaged(self):
         farther = Shade(490, 96, identity=1, combat_bounds=(0, 960))
         tap(self.player)
         update_world(0, self.player, [farther, self.enemy], self.stage)
-        self.assertEqual((self.enemy.health, farther.health), (1, 2))
+        self.assertEqual((self.enemy.health, farther.health), (65, 100))
         self.tick(0.81)
         self.cast()
+        self.assertEqual(self.enemy.health,30)
+        self.tick(.81)
+        self.cast()
         self.assertFalse(self.enemy.alive)
-        self.assertEqual(self.player.battery, 60)
+        self.assertEqual(self.player.battery,40)
 
     def test_already_fired_bolt_is_not_erased_by_flash(self):
         bolt = ShadowBolt.aimed((470, 140), (400, 136))
@@ -132,7 +137,7 @@ class FlashCombatTests(unittest.TestCase):
         self.assertEqual(self.player.respawn_count, 1)
         self.assertEqual(self.player.battery, 80)
         self.assertEqual(self.enemy.stun_remaining, 0)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertIsNone(self.player.flash_effect)
 
     def test_pause_and_focus_loss_freeze_flash_and_stun(self):

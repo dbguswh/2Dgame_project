@@ -22,7 +22,7 @@ class CombatLoopTests(unittest.TestCase):
 
     def test_lethal_w_hit_cancels_same_frame_enemy_strike(self):
         self.player.attack_elapsed = 0.1
-        self.enemy.health = 1
+        self.enemy.health = 35
         update_world(0.02, self.player, [self.enemy], self.stage)
         self.assertEqual(self.enemy.health, 0)
         self.assertEqual(self.player.health, 3)
@@ -30,7 +30,7 @@ class CombatLoopTests(unittest.TestCase):
     def test_nonfatal_w_hit_does_not_cancel_enemy_strike(self):
         self.player.attack_elapsed = 0.1
         update_world(0.02, self.player, [self.enemy], self.stage)
-        self.assertEqual(self.enemy.health, 1)
+        self.assertEqual(self.enemy.health, 65)
         self.assertEqual(self.player.health, 2)
         self.assertFalse(self.player.is_attacking)
 
@@ -40,7 +40,7 @@ class CombatLoopTests(unittest.TestCase):
         self.assertEqual(self.player.respawn_count, 1)
         self.assertEqual(self.player.health, 3)
         self.assertEqual((self.player.x, self.player.feet_y), self.player.spawn_position)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertEqual(self.enemy.state, 'PATROL')
         self.assertEqual((self.enemy.x, self.enemy.feet_y), self.enemy.spawn_position)
 
@@ -55,7 +55,7 @@ class CombatLoopTests(unittest.TestCase):
         self.assertEqual(self.player.health, 3)
         self.assertEqual(self.player.battery, 50)
         self.assertEqual(self.enemy.state, 'RETREAT')
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertIsNone(self.enemy.consume_attack())
 
     def test_r_does_not_undo_damage_from_previous_frame(self):

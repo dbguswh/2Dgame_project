@@ -49,6 +49,7 @@ class ResidentialLoopTests(unittest.TestCase):
         guard = self.game.enemies[2]
         guard.take_damage()
         guard.take_damage()
+        guard.take_damage()
         self.stage.update_combat_seals(self.game.enemies)
         self.player.motion = Motion(guard.x, self.stage.UPPER_FLOOR_Y)
         director = self.stage.respawns

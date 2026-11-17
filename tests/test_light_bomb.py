@@ -196,11 +196,11 @@ class BombWorldTests(unittest.TestCase):
         bomb.explode()
         self.p.bombs.append(bomb)
         update_world(0, self.p, enemies, self.stage, self.game.records)
-        self.assertEqual([e.health for e in enemies], [1, 1])
+        self.assertEqual([e.health for e in enemies], [30, 30])
         self.assertEqual(self.p.health, 3)
         self.assertTrue(all(e.state == 'RECOVER' and e.shot_event is None and not e.bolts for e in enemies))
         update_world(0, self.p, [], self.stage, self.game.records)
-        self.assertEqual([e.health for e in enemies], [1, 1])
+        self.assertEqual([e.health for e in enemies], [30, 30])
 
     def test_already_fired_bolt_is_not_erased(self):
         enemy = self.game.enemies[0]

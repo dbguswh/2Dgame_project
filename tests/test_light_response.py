@@ -31,7 +31,7 @@ class LightResponseTests(unittest.TestCase):
         self.assertEqual(self.enemy.state, 'RETREAT')
         self.assertGreater(self.enemy.x, 440)
         self.assertIsNone(self.enemy.consume_attack())
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
 
     def test_zero_time_light_update_does_not_mistake_no_movement_for_blockage(self):
         self.enemy.update(0, self.player, self.stage, self.light)
@@ -181,7 +181,7 @@ class LightResponseTests(unittest.TestCase):
         self.assertGreaterEqual(self.enemy.x, 488)
         self.assertEqual(self.enemy.state, 'DARK_PATROL')
         self.assertTrue(self.enemy.is_moving)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
 
     def test_light_between_two_dark_actors_cannot_be_walked_through(self):
         self.enemy.motion.x = 550

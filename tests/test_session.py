@@ -32,7 +32,7 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(self.game.state, 'PLAY')
         self.assertEqual(self.game.player.health, 3)
         self.assertEqual(self.game.player.battery, 100)
-        self.assertEqual(self.game.enemies[0].health, 2)
+        self.assertEqual(self.game.enemies[0].health, 100)
 
     def test_title_menu_ignores_held_key_repeat(self):
         key(self.game, pico2d.SDLK_DOWN)
@@ -121,7 +121,7 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(self.game.player.battery, 100)
         self.assertFalse(self.game.stage.fixture_powered)
         self.assertEqual(self.game.player.checkpoint_position, (160, 96))
-        self.assertEqual(self.game.enemies[0].health, 2)
+        self.assertEqual(self.game.enemies[0].health, 100)
         self.assertEqual(self.game.enemies[0].state, 'PATROL')
         self.assertEqual(self.game.play_time, elapsed)
         self.assertEqual(self.game.records.latest, self.game.records.entry)

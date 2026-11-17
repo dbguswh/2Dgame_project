@@ -156,10 +156,8 @@ class Wraith(Shade):
             # 몸통 전체를 밝히지 않고 눈에 띄는 핵만 남겨 공중 위협을 읽게 한다.
             glow(self.x-camera_x,self.feet_y+24,5,(234,75,186),alpha=105)
         if show_health:
-            for i in range(2):
-                pico2d.draw_rectangle(self.x-camera_x-14+i*16,self.feet_y+78,
-                                      self.x-camera_x-2+i*16,self.feet_y+82,
-                                      *((189,122,238) if i<self.health else (52,39,65)),filled=True)
+            from enemy_health import draw_health
+            draw_health(self,camera_x,offset=80,color=(189,122,238),width=40)
         if self.state=='DIVE_WINDUP' and self.dive_target:
             tx,ty=self.dive_target
             with blended():

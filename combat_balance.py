@@ -1,0 +1,7 @@
+"""플레이어 하트와 별개인 침입자 체력·무기 피해 기준."""
+
+SHADE_HEALTH=100
+BRUTE_HEALTH=140
+WEAPON_DAMAGE=35
+FLASH_DAMAGE=35
+BOMB_DAMAGE=70

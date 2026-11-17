@@ -26,16 +26,16 @@ class EnemyVariantTests(unittest.TestCase):
             for placement in stage.enemy_placements:
                 actor=create_enemy(placement)
                 actor.health=0;actor.reset()
-                self.assertEqual(actor.health,3 if placement.kind=='brute' else 2)
+                self.assertEqual(actor.health,140 if placement.kind=='brute' else 100)
 
     def test_brute_front_blocks_but_rear_and_recovery_are_vulnerable(self):
         b=Brute(500,96,combat_bounds=(0,1000));b.face_dir=-1
         self.assertFalse(b.receive_weapon(1,(480,140),'ring'))
-        self.assertEqual(b.health,3)
+        self.assertEqual(b.health,140)
         self.assertTrue(b.receive_weapon(-1,(520,140),'ring'))
         b._enter('RECOVER')
         self.assertTrue(b.receive_weapon(1,(480,140),'sword'))
-        self.assertEqual(b.health,1)
+        self.assertEqual(b.health,70)
 
     def test_ring_block_does_not_consume_hit_and_return_hits_brute_back(self):
         b=Brute(250,96,combat_bounds=(0,1000));b.face_dir=-1
@@ -49,14 +49,14 @@ class EnemyVariantTests(unittest.TestCase):
                     h.hits.add('brute');landed=True
                 else:blocked=True
         self.assertTrue(blocked and landed)
-        self.assertEqual(b.health,2)
+        self.assertEqual(b.health,105)
 
     def test_flash_and_bomb_keep_their_effect_on_armored_enemy(self):
         b=Brute(500,96,combat_bounds=(0,1000))
         b.receive_flash(1)
-        self.assertEqual((b.health,b.state),(2,'STUNNED'))
+        self.assertEqual((b.health,b.state),(105,'STUNNED'))
         b.receive_bomb(1)
-        self.assertEqual((b.health,b.state),(1,'RECOVER'))
+        self.assertEqual((b.health,b.state),(35,'RECOVER'))
 
     def test_wraith_dive_locks_target_then_offers_low_recovery(self):
         w=Wraith(500,96,combat_bounds=(200,800))
@@ -98,7 +98,7 @@ class EnemyVariantTests(unittest.TestCase):
         self.assertEqual(w.state,'STUNNED')
         self.assertIsNone(w.consume_attack())
         w.reset()
-        self.assertEqual((w.state,w.health,w.feet_y),('FLY_PATROL',2,208))
+        self.assertEqual((w.state,w.health,w.feet_y),('FLY_PATROL',100,208))
 
     def test_wraith_weapon_hit_pause_freezes_motion_but_light_has_priority(self):
         w=Wraith(500,96,combat_bounds=(200,800))

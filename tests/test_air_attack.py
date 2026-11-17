@@ -213,7 +213,7 @@ class AirAttackTests(unittest.TestCase):
         self.start_air_attack()
         for _ in range(25):
             update_world(1 / 120, self.player, [enemy], stage)
-        self.assertEqual(enemy.health, 1)
+        self.assertEqual(enemy.health, 65)
         self.assertEqual(enemy.state, 'WINDUP')
         self.assertEqual(enemy.knockback_remaining, 0)
         self.assertEqual(self.player.health, 3)

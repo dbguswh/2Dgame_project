@@ -21,7 +21,7 @@ class CombatSealTests(unittest.TestCase):
 
     def defeat(self,index):
         enemy=self.enemies[index]
-        enemy.take_damage();enemy.take_damage()
+        enemy.take_damage();enemy.take_damage();enemy.take_damage()
         self.s.update_combat_seals(self.enemies)
 
     def test_sprint_and_speed_boosted_jumps_cannot_cross_closed_routes(self):
@@ -39,7 +39,7 @@ class CombatSealTests(unittest.TestCase):
         self.enemies[0].receive_flash(1)
         self.s.update_combat_seals(self.enemies)
         self.assertFalse(self.s.combat_seals[0].opened)
-        self.enemies[0].take_damage()
+        self.enemies[0].take_damage();self.enemies[0].take_damage()
         self.s.update_combat_seals(self.enemies)
         self.assertEqual(self.s.capture_state(),(True,False,False))
         self.assertNotIn(self.s.combat_seals[0].barrier,self.s.solids)
@@ -63,11 +63,13 @@ class CombatSealTests(unittest.TestCase):
         self.p.x=enemy.x-100
         tap(self.p,pico2d.SDLK_q)
         update_world(0,self.p,self.enemies,self.s,self.game.records)
-        self.assertEqual(enemy.health,1)
+        self.assertEqual(enemy.health,65)
         for _ in range(42):update_world(1/120,self.p,self.enemies,self.s,self.game.records)
         self.p.x=enemy.x-40
         tap(self.p,pico2d.SDLK_w)
         for _ in range(24):update_world(1/120,self.p,self.enemies,self.s,self.game.records)
+        tap(self.p,pico2d.SDLK_w)
+        for _ in range(60):update_world(1/120,self.p,self.enemies,self.s,self.game.records)
         self.assertFalse(enemy.alive)
         self.assertTrue(self.s.combat_seals[0].opened)
         self.assertEqual(self.p.battery,80)
@@ -83,7 +85,7 @@ class CombatSealTests(unittest.TestCase):
         self.assertIn(self.s.combat_seals[0].barrier,self.s.solids)
 
     def test_fatal_hit_in_same_update_does_not_lose_completed_encounter(self):
-        enemy=self.enemies[0];enemy.take_damage()
+        enemy=self.enemies[0];enemy.take_damage();enemy.take_damage()
         self.p.x=enemy.x-100;self.p.health=1
         self.enemies[1].bolts.append(ShadowBolt.aimed((self.p.x,140),(self.p.x+1,140)))
         tap(self.p,pico2d.SDLK_q)

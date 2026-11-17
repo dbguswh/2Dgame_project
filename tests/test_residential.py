@@ -143,7 +143,7 @@ class ResidentialLayoutTests(unittest.TestCase):
         game.enemies[0].motion.x = 480
         game.enemies[1].motion.x = 482
         game.update(0.01)
-        self.assertEqual(sorted(e.health for e in game.enemies[:2]), [1, 2])
+        self.assertEqual(sorted(e.health for e in game.enemies[:2]), [65, 100])
         for _ in range(100):
             game.update(1 / 60)
         for enemy in game.enemies:

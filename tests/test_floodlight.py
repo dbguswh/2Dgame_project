@@ -34,7 +34,7 @@ class FloodlightTests(unittest.TestCase):
         self.enemy.state_time = 0.64
         self.tick(0.3)
         self.assertAlmostEqual(self.enemy.x, 746)
-        self.assertEqual(self.enemy.health, 2)
+        self.assertEqual(self.enemy.health, 100)
         self.assertEqual(self.player.health, 3)
         self.assertEqual(self.enemy.bolts, [])
         self.assertEqual(self.enemy.state, 'RETREAT')
@@ -63,7 +63,7 @@ class FloodlightTests(unittest.TestCase):
                 self.assertFalse(enemy.is_moving)
         self.assertEqual(max(positions), min(positions))
         self.assertEqual(enemy.state, 'LIGHT_WAIT')
-        self.assertEqual(enemy.health, 2)
+        self.assertEqual(enemy.health, 100)
 
     def test_light_blocks_bolt_with_fragment_fade_and_no_hit(self):
         bolt = ShadowBolt.aimed((900, 140), (600, 136))
@@ -114,7 +114,7 @@ class FloodlightTests(unittest.TestCase):
         self.assertLess(left.x, 550)
         self.assertGreater(self.enemy.x, 650)
         self.assertEqual(self.player.health, 3)
-        self.assertEqual((left.health, self.enemy.health), (2, 2))
+        self.assertEqual((left.health, self.enemy.health), (100, 100))
         self.assertIsNone(left.consume_attack())
         self.assertIsNone(self.enemy.consume_attack())
 
