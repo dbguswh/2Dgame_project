@@ -48,6 +48,7 @@ def draw_game(game, font, show_hud=True):
     if hasattr(stage,'draw_foreground'):stage.draw_foreground(player,camera_x)
     draw_darkness(stage, player, camera_x, SCREEN_WIDTH, SCREEN_HEIGHT)
     draw_navigation(stage, player, camera_x, SCREEN_WIDTH)
+    if hasattr(stage,'draw_objective_signals'):stage.draw_objective_signals(player,camera_x)
     stage.draw_labels(font, camera_x)
     player.draw_flash(camera_x)
     player.draw_recovery(camera_x)

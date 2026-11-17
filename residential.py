@@ -295,7 +295,7 @@ class ResidentialStage(Stage):
             return (*self.exit_position, 'E: 출구 이동' if self.bridge_ready else '다리 복구 필요')
         if self.can_interact(player):
             label = ('복구 완료' if self.fixture_powered else
-                     'E: 퓨즈 설치' if self.fuse_state == 'CARRIED' else '퓨즈 필요')
+                     'E: 전력 복구 · 퓨즈 설치' if self.fuse_state == 'CARRIED' else '퓨즈 필요')
             return (*self.fixture_position, label)
         box = self.nearby_supply(player)
         if box is not None and not box.opened:
@@ -319,20 +319,6 @@ class ResidentialStage(Stage):
         for side in (-21, 18):
             pico2d.draw_rectangle(x + side, y, x + side + 3, y + 102, *color, filled=True)
         pico2d.draw_rectangle(x - 22, y + 101, x + 22, y + 105, *color, filled=True)
-        if self.fuse_state == 'WORLD':
-            from effects import blended, glow
-            x, y = self.fuse_position
-            x -= camera_x
-            with blended():
-                glow(x, y, 25, alpha=65)
-            pico2d.draw_rectangle(x - 5, y - 12, x + 5, y + 12, 107, 143, 151, filled=True)
-            for cap_y in (y - 12, y + 8):
-                pico2d.draw_rectangle(x - 7, cap_y, x + 7, cap_y + 4,
-                                      199, 173, 115, filled=True)
-            pico2d.draw_line(x, y - 6, x, y + 6, 245, 218, 146)
-            if not self.fuse_unlocked:
-                pico2d.draw_rectangle(x-17,y-16,x+17,y+28,149,83,152)
-                for dx in (-9,0,9):pico2d.draw_line(x+dx,y-15,x+dx,y+27,164,100,178)
         for position, collected in ((self.battery_pack_position, self.battery_pack_collected),
                                      (self.return_battery_position, self.return_battery_collected)):
             if not collected:
@@ -342,36 +328,24 @@ class ResidentialStage(Stage):
         from controls_view import fonts
         small,_=fonts()
         # 목적지 이름만 고정 폭 명패로 표시한다. 보급/이동 화살표는 HUD와 중복하지 않는다.
-        for wx,y,label,w in ((160,284,'대피소',72),(1184,382,'중앙 제어함',112),
+        for wx,y,label,w in ((160,284,'대피소',72),
                               (2112,408,'정비실',78),(2800,364,'병원',64)):
             x=wx-camera_x
             if not 18+w/2 <= x <= 942-w/2:continue
             pico2d.draw_rectangle(x-w/2,y-13,x+w/2,y+13,13,22,31,filled=True)
             pico2d.draw_line(x-w/2,y-13,x+w/2,y-13,105,115,119)
             small.draw(x-w/2+10,y,label,(202,201,183))
+        from power_objectives import draw_labels
+        draw_labels(self,camera_x)
 
     def draw_bridge(self, camera_x):
         from bridge_visuals import draw_bridge
         draw_bridge(self, camera_x)
 
     def draw_fixture(self, camera_x):
-        from effects import blended, glow
-        x, y = self.fixture_position
-        x -= camera_x
-        status = (255, 217, 129) if self.fixture_powered else (181, 95, 71)
-        pico2d.draw_rectangle(x - 18, y, x + 18, y + 66, 37, 48, 61, filled=True)
-        pico2d.draw_rectangle(x - 18, y, x + 18, y + 66, 135, 148, 153)
-        pico2d.draw_rectangle(x - 13, y + 37, x + 13, y + 57, 14, 26, 32, filled=True)
-        for row in range(3):
-            pico2d.draw_line(x - 8, y + 43 + row * 4, x + 7, y + 43 + row * 4, *status)
-        pico2d.draw_rectangle(x - 7, y + 10, x + 7, y + 29, 15, 24, 31, filled=True)
-        installed = self.fuse_state == 'INSTALLED'
-        for cap in (12, 24):
-            pico2d.draw_line(x - 4, y + cap, x + 4, y + cap,
-                              *(status if installed else (92, 107, 113)))
-        if installed:
-            pico2d.draw_line(x, y + 13, x, y + 24, 250, 222, 151)
-        if self.fixture_powered or self.fuse_state == 'CARRIED':
-            with blended():
-                glow(x, y + 47, 28, (255, 207, 119), alpha=65)
+        from power_objectives import draw_switchgear
+        draw_switchgear(self,camera_x)
 
+    def draw_objective_signals(self, player, camera_x):
+        from power_objectives import draw_signals
+        draw_signals(self,player,camera_x)

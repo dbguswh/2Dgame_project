@@ -194,18 +194,8 @@ class ResidentialScene:
                 pico2d.draw_rectangle(x+side,y+2,x+side+5,y+12,84,84,70,filled=True)
             indicator = accent if not box.opened else (58,69,74)
             pico2d.draw_line(x-18,y+2,x-8,y+2,*indicator)
-        # 정비실 끝의 충전 선반과 퓨즈 소켓을 서로 떨어뜨려 배치한다.
-        for position in (stage.return_battery_position, stage.fuse_position):
-            x, pickup_y = position
-            x -= camera_x
-            y = pickup_y - 16
-            if x < -48 or x > width + 48:
-                continue
-            pico2d.draw_rectangle(x - 24, y + 2, x + 24, y + 57, 32, 42, 51, filled=True)
-            pico2d.draw_rectangle(x - 24, y + 2, x + 24, y + 57, 88, 98, 101)
-            pico2d.draw_rectangle(x - 18, y + 34, x + 18, y + 49, 17, 27, 33, filled=True)
-            pico2d.draw_line(x - 16, y + 40, x + 12, y + 40, 112, 146, 152)
-            segment((x - 27, y + 3), (x + 27, y + 3), (126, 137, 134), width=3)
+        from power_objectives import draw_workshop
+        draw_workshop(stage,camera_x)
 
     @staticmethod
     def draw_street_details(stage, camera_x, width):
@@ -224,25 +214,13 @@ class ResidentialScene:
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33,
                                   38, 43, 47, filled=True)
             pico2d.draw_rectangle(sx, sign_y, sx + 96, sign_y + 33, 117, 105, 78)
-        pico2d.draw_rectangle(2144 - camera_x, 393, 2316 - camera_x, 423,
-                              36, 44, 47, filled=True)
-        pico2d.draw_rectangle(2144 - camera_x, 393, 2316 - camera_x, 423, 126, 114, 83)
         # 정비소의 전선은 제어함으로 이어지는 흐름을 암시한다.
         for left, right in ((1120, 1408), (2024, 2440)):
             for x in range(left, right, 16):
                 y = GROUND_Y + 148 - 14 * sin((x - left) / (right - left) * 3.14159)
                 pico2d.draw_line(x - camera_x, y, x + 16 - camera_x, y - 1, 67, 62, 56)
-        # 중앙 제어함에서 원격 교량으로 이어지는 고정 전력선이다.
-        control_x, control_y = stage.fixture_position
-        trunk_y = 252
-        wire = (164, 140, 84) if stage.fixture_powered else (63, 63, 64)
-        segment((control_x - camera_x, control_y + 5), (control_x - camera_x, trunk_y), wire, width=2)
-        segment((control_x - camera_x, trunk_y), (2336 - camera_x, trunk_y), wire, width=2)
-        if stage.fixture_powered:
-            with blended():
-                for offset in range(0, 1152, 96):
-                    wx = control_x + (offset + stage.visual_time * 72) % 1152
-                    glow(wx - camera_x, trunk_y, 5, (255, 212, 122), alpha=110)
+        from power_objectives import draw_network
+        draw_network(stage,camera_x)
 
     @staticmethod
     def draw_lamp(x, powered, y=GROUND_Y):

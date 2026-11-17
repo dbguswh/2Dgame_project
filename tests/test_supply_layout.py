@@ -33,7 +33,8 @@ class SupplyLayoutTests(unittest.TestCase):
                              for b in self.stage.supply_boxes))
         self.assertGreater(medkit.x, self.stage.enemy_placements[0].bounds[1])
         self.assertGreater(speed.x, self.stage.approach_ledges[0].right)
-        self.assertEqual(speed.feet_y, 96)
+        self.assertGreater(speed.feet_y, 96)
+        self.assertEqual(sum(b.feet_y==96 for b in self.stage.supply_boxes),1)
         self.assertGreaterEqual(self.stage.enemy_placements[0].bounds[0], crate.right)
 
     def test_every_supply_has_room_for_box_lid_and_loot_on_same_support(self):
@@ -58,7 +59,10 @@ class SupplyLayoutTests(unittest.TestCase):
         self.assertLess(shield.x, self.stage.enemy_placements[5].bounds[0])
         self.assertEqual(shield.feet_y, self.stage.workshop_ledges[0].top)
         self.assertEqual(bomb.feet_y, self.stage.UPPER_FLOOR_Y)
-        self.assertLess(bomb.x, self.stage.enemy_placements[2].bounds[0])
+        # 복구 설비 앞의 공짜 보급 대신 옥상 교전 중 선택하는 소모품이다.
+        bounds=self.stage.enemy_placements[2].bounds
+        self.assertTrue(bounds[0] < bomb.x < bounds[1])
+        self.assertGreater(bomb.x-self.stage.fixture_position[0],128)
 
     def test_workshop_reward_stations_are_separated_and_supported(self):
         medkit = self.stage.supply_boxes[1]
@@ -94,7 +98,7 @@ class SupplyLayoutTests(unittest.TestCase):
         box = self.stage.supply_boxes[2]
         box.open()
         self.stage.fuse_state = 'CARRIED'
-        self.player.x, self.player.feet_y = box.x - 24, box.feet_y
+        self.player.x, self.player.feet_y = self.stage.fixture_position
         self.assertIsNone(self.stage.nearby_supply(self.player))
         self.assertIn('퓨즈 설치', self.stage.interaction_prompt(self.player)[2])
         self.press_e()

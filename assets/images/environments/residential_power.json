@@ -1,0 +1,9 @@
+{
+  "image": "residential_power.png",
+  "size": [2172, 724],
+  "frames": [
+    {"name": "switchgear", "clip": [80, 12, 700, 712]},
+    {"name": "fuse_cabinet", "clip": [944, 12, 404, 624]},
+    {"name": "battery_rack", "clip": [1528, 12, 500, 492]}
+  ]
+}
