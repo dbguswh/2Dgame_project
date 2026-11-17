@@ -120,6 +120,16 @@ class ResidentialLayoutTests(unittest.TestCase):
                         self.assertLess(motion.x + motion.width / 2, right)
                     self.assertFalse(motion.on_ground and motion.x >= right)
 
+    def test_higher_fuse_peak_still_cannot_bypass_unpowered_canal(self):
+        # 새 최고 지점에서 달리기·속도 보급을 사용해도 미복구 교량을 건너뛰지 못한다.
+        motion=Motion(self.stage.fuse_ledges[-1].right-1,self.stage.FUSE_PEAK_Y)
+        motion.jump()
+        for _ in range(300):
+            motion.step(1/120,1,self.stage.solids,self.stage.width,speed=RUN_SPEED*1.3)
+            self.assertFalse(motion.on_ground and motion.x>=self.stage.canal[1])
+            if motion.feet_y<0:break
+        self.assertLess(motion.x,self.stage.canal[1])
+
     @patch('pico2d.load_image', return_value=Mock())
     def test_new_game_loads_residential_and_six_independent_enemies(self, _):
         game = GameSession()
